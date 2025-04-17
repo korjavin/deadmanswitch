@@ -1,0 +1,60 @@
+{{ template "layout.html" . }}
+
+{{ define "styles" }}
+<style>
+  .auth-container {
+    max-width: 480px;
+    margin: 2rem auto;
+  }
+  
+  .auth-title {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .auth-options {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
+  }
+</style>
+{{ end }}
+
+{{ define "content" }}
+<div class="auth-container">
+  <h1 class="auth-title">Login</h1>
+  
+  <div class="card">
+    <div class="card-body">
+      <form action="/login" method="POST">
+        <div class="form-group">
+          <label for="email" class="form-label">Email Address</label>
+          <input type="email" id="email" name="email" class="form-control" required autofocus>
+        </div>
+        
+        <div class="form-group">
+          <label for="password" class="form-label">Password</label>
+          <div style="position: relative;">
+            <input type="password" id="password" name="password" class="form-control" required>
+            <button type="button" class="password-toggle" data-target="password" style="position: absolute; right: 10px; top: 5px; border: none; background: none; cursor: pointer;">Show</button>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <div class="form-check">
+            <input type="checkbox" id="remember" name="remember" class="form-check-input">
+            <label for="remember" class="form-check-label">Remember me</label>
+          </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-block">Log In</button>
+      </form>
+    </div>
+  </div>
+  
+  <div class="auth-options">
+    <a href="/register">Don't have an account? Register</a>
+    <a href="/forgot-password">Forgot password?</a>
+  </div>
+</div>
+{{ end }}

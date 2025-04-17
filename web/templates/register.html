@@ -1,0 +1,185 @@
+{{ template "layout.html" . }}
+
+{{ define "styles" }}
+<style>
+  .auth-container {
+    max-width: 480px;
+    margin: 2rem auto;
+  }
+  
+  .auth-title {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .auth-options {
+    text-align: center;
+    margin-top: 1rem;
+  }
+
+  .password-requirements {
+    font-size: 0.85rem;
+    color: var(--gray-color);
+    margin-top: 0.5rem;
+  }
+
+  .password-requirement {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.25rem;
+  }
+
+  .password-requirement.met::before {
+    content: '✓';
+    color: var(--success-color);
+    margin-right: 0.5rem;
+  }
+
+  .password-requirement.unmet::before {
+    content: '✗';
+    color: var(--gray-color);
+    margin-right: 0.5rem;
+  }
+</style>
+{{ end }}
+
+{{ define "content" }}
+<div class="auth-container">
+  <h1 class="auth-title">Create Account</h1>
+  
+  <div class="card">
+    <div class="card-body">
+      <form action="/register" method="POST" id="registerForm">
+        <div class="form-group">
+          <label for="email" class="form-label">Email Address</label>
+          <input type="email" id="email" name="email" class="form-control" required autofocus>
+        </div>
+
+        <div class="form-group">
+          <label for="name" class="form-label">Full Name</label>
+          <input type="text" id="name" name="name" class="form-control" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="password" class="form-label">Password</label>
+          <div style="position: relative;">
+            <input type="password" id="password" name="password" class="form-control" required>
+            <button type="button" class="password-toggle" data-target="password" style="position: absolute; right: 10px; top: 5px; border: none; background: none; cursor: pointer;">Show</button>
+          </div>
+          <div class="password-requirements">
+            <div class="password-requirement unmet" id="req-length">At least 8 characters long</div>
+            <div class="password-requirement unmet" id="req-uppercase">Contains uppercase letter</div>
+            <div class="password-requirement unmet" id="req-lowercase">Contains lowercase letter</div>
+            <div class="password-requirement unmet" id="req-number">Contains number</div>
+            <div class="password-requirement unmet" id="req-special">Contains special character</div>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="confirmPassword" class="form-label">Confirm Password</label>
+          <div style="position: relative;">
+            <input type="password" id="confirmPassword" name="confirmPassword" class="form-control" required>
+            <button type="button" class="password-toggle" data-target="confirmPassword" style="position: absolute; right: 10px; top: 5px; border: none; background: none; cursor: pointer;">Show</button>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <div class="form-check">
+            <input type="checkbox" id="terms" name="terms" class="form-check-input" required>
+            <label for="terms" class="form-check-label">I agree to the <a href="/terms" target="_blank">Terms of Service</a> and <a href="/privacy" target="_blank">Privacy Policy</a></label>
+          </div>
+        </div>
+        
+        <button type="submit" class="btn btn-primary btn-block">Register</button>
+      </form>
+    </div>
+  </div>
+  
+  <div class="auth-options">
+    <a href="/login">Already have an account? Log in</a>
+  </div>
+</div>
+{{ end }}
+
+{{ define "scripts" }}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const passwordInput = document.getElementById('password');
+  const confirmPasswordInput = document.getElementById('confirmPassword');
+  const form = document.getElementById('registerForm');
+  
+  // Check password requirements
+  passwordInput.addEventListener('input', validatePassword);
+  
+  // Check password match
+  confirmPasswordInput.addEventListener('input', validatePasswordMatch);
+  
+  // Form validation before submit
+  form.addEventListener('submit', (e) => {
+    if (!validatePassword() || !validatePasswordMatch()) {
+      e.preventDefault();
+      alert('Please fix the errors in the form before submitting.');
+    }
+  });
+  
+  function validatePassword() {
+    const password = passwordInput.value;
+    
+    // Validate requirements
+    const requirements = {
+      'req-length': password.length >= 8,
+      'req-uppercase': /[A-Z]/.test(password),
+      'req-lowercase': /[a-z]/.test(password),
+      'req-number': /[0-9]/.test(password),
+      'req-special': /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)
+    };
+    
+    let allMet = true;
+    
+    // Update UI for each requirement
+    for (const [reqId, isMet] of Object.entries(requirements)) {
+      const reqElement = document.getElementById(reqId);
+      if (isMet) {
+        reqElement.classList.remove('unmet');
+        reqElement.classList.add('met');
+      } else {
+        reqElement.classList.remove('met');
+        reqElement.classList.add('unmet');
+        allMet = false;
+      }
+    }
+    
+    if (allMet) {
+      passwordInput.classList.remove('is-invalid');
+      passwordInput.classList.add('is-valid');
+    } else {
+      passwordInput.classList.remove('is-valid');
+      if (password.length > 0) {
+        passwordInput.classList.add('is-invalid');
+      }
+    }
+    
+    return allMet;
+  }
+  
+  function validatePasswordMatch() {
+    const password = passwordInput.value;
+    const confirmPassword = confirmPasswordInput.value;
+    
+    if (confirmPassword.length === 0) {
+      return false;
+    }
+    
+    if (password === confirmPassword) {
+      confirmPasswordInput.classList.remove('is-invalid');
+      confirmPasswordInput.classList.add('is-valid');
+      return true;
+    } else {
+      confirmPasswordInput.classList.remove('is-valid');
+      confirmPasswordInput.classList.add('is-invalid');
+      return false;
+    }
+  }
+});
+</script>
+{{ end }}

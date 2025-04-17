@@ -1,0 +1,260 @@
+{{ template "layout.html" . }}
+
+{{ define "styles" }}
+<style>
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-gap: 1.5rem;
+    margin-top: 2rem;
+  }
+  
+  .stat-card {
+    text-align: center;
+    padding: 1.5rem;
+  }
+  
+  .stat-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+  }
+  
+  .stat-label {
+    color: var(--gray-color);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  .check-in-box {
+    max-width: 500px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  
+  .status-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 6px;
+  }
+  
+  .status-indicator.active {
+    background-color: var(--success-color);
+    box-shadow: 0 0 8px var(--success-color);
+  }
+  
+  .status-indicator.caution {
+    background-color: var(--warning-color);
+    box-shadow: 0 0 8px var(--warning-color);
+  }
+  
+  .status-indicator.danger {
+    background-color: var(--danger-color);
+    box-shadow: 0 0 8px var(--danger-color);
+  }
+  
+  .timeline {
+    position: relative;
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 0;
+  }
+  
+  .timeline::after {
+    content: '';
+    position: absolute;
+    width: 3px;
+    background-color: var(--border-color);
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    margin-left: -1.5px;
+  }
+  
+  .timeline-item {
+    position: relative;
+    width: 50%;
+    margin-bottom: 1.5rem;
+  }
+  
+  .timeline-item:nth-child(odd) {
+    padding-right: 2rem;
+    left: 0;
+  }
+  
+  .timeline-item:nth-child(even) {
+    padding-left: 2rem;
+    left: 50%;
+  }
+  
+  .timeline-content {
+    padding: 1rem;
+    position: relative;
+    border-radius: 4px;
+  }
+  
+  .timeline-content::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background-color: white;
+    border: 3px solid var(--primary-color);
+    border-radius: 50%;
+    top: calc(50% - 9px);
+  }
+  
+  .timeline-item:nth-child(odd) .timeline-content::after {
+    right: -36px;
+  }
+  
+  .timeline-item:nth-child(even) .timeline-content::after {
+    left: -36px;
+  }
+  
+  .timeline-date {
+    color: var(--gray-color);
+    font-size: 0.85rem;
+  }
+</style>
+{{ end }}
+
+{{ define "content" }}
+<div class="page-header">
+  <h1>Dashboard</h1>
+  <p>Welcome back, {{ .User.Name }}!</p>
+</div>
+
+<!-- Status Overview -->
+<div class="check-in-box card">
+  <div class="card-body">
+    {{ if eq .Status "active" }}
+      <h2><span class="status-indicator active"></span> System Active</h2>
+      <p>Your dead man's switch is active and all systems are operational.</p>
+      <p>Next check-in required: <strong>{{ .NextCheckIn }}</strong></p>
+      <button id="checkInButton" class="btn btn-primary">Check In Now</button>
+    {{ else if eq .Status "caution" }}
+      <h2><span class="status-indicator caution"></span> Action Required</h2>
+      <p>Your check-in deadline is approaching. Please check in to keep your switch active.</p>
+      <p>Check-in deadline: <strong>{{ .NextCheckIn }}</strong></p>
+      <button id="checkInButton" class="btn btn-warning">Check In Now</button>
+    {{ else }}
+      <h2><span class="status-indicator danger"></span> Critical Action Required</h2>
+      <p>Your check-in deadline has passed! Your switch will trigger soon if you don't check in.</p>
+      <p>Trigger scheduled for: <strong>{{ .TriggerTime }}</strong></p>
+      <button id="checkInButton" class="btn btn-danger">Check In Now</button>
+    {{ end }}
+  </div>
+</div>
+
+<!-- Statistics -->
+<div class="dashboard-grid">
+  <div class="card stat-card">
+    <div class="stat-number">{{ .Stats.TotalSecrets }}</div>
+    <div class="stat-label">Total Secrets</div>
+  </div>
+  
+  <div class="card stat-card">
+    <div class="stat-number">{{ .Stats.ActiveRecipients }}</div>
+    <div class="stat-label">Recipients</div>
+  </div>
+  
+  <div class="card stat-card">
+    <div class="stat-number">{{ .Stats.DaysActive }} days</div>
+    <div class="stat-label">Account Active</div>
+  </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="section-header">
+  <h2>Recent Activity</h2>
+</div>
+
+<div class="timeline">
+  {{ range .Activities }}
+    <div class="timeline-item">
+      <div class="timeline-content card">
+        <div class="timeline-date">{{ .Time }}</div>
+        <p>{{ .Description }}</p>
+      </div>
+    </div>
+  {{ end }}
+</div>
+
+<div style="text-align: center; margin-top: 2rem;">
+  <a href="/history" class="btn btn-outline">View Full History</a>
+</div>
+{{ end }}
+
+{{ define "scripts" }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const checkInButton = document.getElementById('checkInButton');
+  
+  if (checkInButton) {
+    checkInButton.addEventListener('click', function() {
+      // Show loading state
+      checkInButton.disabled = true;
+      checkInButton.innerHTML = '<span class="spinner"></span> Checking in...';
+      
+      // Call check-in API
+      fetch('/api/check-in', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'same-origin'
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Show success message and reload page
+          const alertHTML = `
+            <div class="alert alert-success">
+              Check-in successful! Your new check-in deadline is ${data.nextCheckIn}.
+              <button type="button" class="alert-close">&times;</button>
+            </div>
+          `;
+          
+          document.querySelector('main.container').insertAdjacentHTML('afterbegin', alertHTML);
+          
+          // Reload after 2 seconds
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+        } else {
+          // Show error
+          const alertHTML = `
+            <div class="alert alert-danger">
+              ${data.message || 'Failed to check in. Please try again.'}
+              <button type="button" class="alert-close">&times;</button>
+            </div>
+          `;
+          
+          document.querySelector('main.container').insertAdjacentHTML('afterbegin', alertHTML);
+          checkInButton.disabled = false;
+          checkInButton.textContent = 'Check In Now';
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        // Show error message
+        const alertHTML = `
+          <div class="alert alert-danger">
+            Network error occurred. Please try again.
+            <button type="button" class="alert-close">&times;</button>
+          </div>
+        `;
+        
+        document.querySelector('main.container').insertAdjacentHTML('afterbegin', alertHTML);
+        checkInButton.disabled = false;
+        checkInButton.textContent = 'Check In Now';
+      });
+    });
+  }
+});
+</script>
+{{ end }}

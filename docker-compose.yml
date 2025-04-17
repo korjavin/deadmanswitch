@@ -1,0 +1,35 @@
+version: '3'
+
+services:
+  deadmanswitch:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      # Required environment variables
+      - BASE_DOMAIN=yourdomain.com
+      - TG_BOT_TOKEN=your_telegram_bot_token
+      - ADMIN_EMAIL=admin@example.com
+      
+      # Database settings
+      - DBPath=/app/data/deadmanswitch.db
+      
+      # SMTP settings
+      - SMTP_HOST=smtp.example.com
+      - SMTP_PORT=587
+      - SMTP_USERNAME=your_email@example.com
+      - SMTP_PASSWORD=your_password
+      - SMTP_FROM=noreply@yourdomain.com
+      
+      # Ping settings
+      - PING_FREQUENCY=24h
+      - PING_DEADLINE=72h
+      
+      # Debug settings
+      - DEBUG=false
+      - LOG_LEVEL=info
+    restart: unless-stopped
