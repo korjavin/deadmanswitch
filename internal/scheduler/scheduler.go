@@ -228,7 +228,6 @@ func (s *Scheduler) pingTask(ctx context.Context) error {
 
 		case "both", "":
 			// Try Telegram first
-			sentTelegram := false
 			if user.TelegramID != "" {
 				telegramPing := &models.PingHistory{
 					ID:     uuid.New().String(),
@@ -242,8 +241,6 @@ func (s *Scheduler) pingTask(ctx context.Context) error {
 				} else {
 					if err := s.telegramBot.SendPingMessage(ctx, user, telegramPing.ID); err != nil {
 						log.Printf("Failed to send Telegram ping to user %s: %v", user.ID, err)
-					} else {
-						sentTelegram = true
 					}
 				}
 			}

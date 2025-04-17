@@ -261,7 +261,7 @@ func (b *Bot) handleStart(ctx context.Context, message *tgbotapi.Message, args s
 
 	// Check if user already exists
 	tgID := strconv.FormatInt(message.From.ID, 10)
-	user, err := b.repo.GetUserByTelegramID(ctx, tgID)
+	_, err := b.repo.GetUserByTelegramID(ctx, tgID)
 
 	if err == nil {
 		// User exists

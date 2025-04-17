@@ -75,36 +75,36 @@ func (c *Client) SendEmail(options *MessageOptions) error {
 	message += "\r\n" + options.Body
 
 	// Connect to the server and enable TLS
-	c, err := smtp.Dial(fmt.Sprintf("%s:%d", c.config.SMTPHost, c.config.SMTPPort))
+	smtpClient, err := smtp.Dial(fmt.Sprintf("%s:%d", c.config.SMTPHost, c.config.SMTPPort))
 	if err != nil {
 		return fmt.Errorf("failed to connect to SMTP server: %w", err)
 	}
-	defer c.Close()
+	defer smtpClient.Close()
 
 	// Enable TLS if the server supports it
-	if err := c.StartTLS(&tls.Config{ServerName: c.config.SMTPHost}); err != nil {
+	if err := smtpClient.StartTLS(&tls.Config{ServerName: c.config.SMTPHost}); err != nil {
 		// Some servers might not support TLS, continue without it
 		// but log a warning
 		fmt.Printf("Warning: TLS not supported by SMTP server: %s\n", err)
 	}
 
 	// Authenticate
-	if err := c.Auth(c.auth); err != nil {
+	if err := smtpClient.Auth(c.auth); err != nil {
 		return fmt.Errorf("SMTP authentication failed: %w", err)
 	}
 
 	// Set the sender and recipients
-	if err := c.Mail(from); err != nil {
+	if err := smtpClient.Mail(from); err != nil {
 		return fmt.Errorf("failed to set sender: %w", err)
 	}
 	for _, addr := range options.To {
-		if err := c.Rcpt(addr); err != nil {
+		if err := smtpClient.Rcpt(addr); err != nil {
 			return fmt.Errorf("failed to set recipient %s: %w", addr, err)
 		}
 	}
 
 	// Send the email body
-	w, err := c.Data()
+	w, err := smtpClient.Data()
 	if err != nil {
 		return fmt.Errorf("failed to open data writer: %w", err)
 	}
@@ -117,7 +117,7 @@ func (c *Client) SendEmail(options *MessageOptions) error {
 		return fmt.Errorf("failed to close data writer: %w", err)
 	}
 
-	return c.Quit()
+	return smtpClient.Quit()
 }
 
 // SendPingEmail sends a ping email to a user with a verification link
