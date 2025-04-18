@@ -38,6 +38,12 @@ func FuncMap() template.FuncMap {
 		"add": func(a, b int) int {
 			return a + b
 		},
+		"truncate": func(s string, length int) string {
+			if len(s) <= length {
+				return s
+			}
+			return s[:length] + "..."
+		},
 		"dict": func(values ...interface{}) (map[string]interface{}, error) {
 			if len(values)%2 != 0 {
 				return nil, fmt.Errorf("invalid dict call")

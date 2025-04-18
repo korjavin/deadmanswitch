@@ -8,7 +8,8 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 - [x] Database models and storage layer
 - [x] Web server implementation
 - [x] User authentication system
-- [x] Secret storage and encryption
+- [x] Secret storage
+- [x] Secret proper encryption/re-encryption
 - [ ] Scheduler for check-in reminders and deadlines
 - [ ] Email notification system
 - [ ] Telegram bot integration
@@ -20,14 +21,22 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 - [ ] Production deployment guide
 
 ## Features & Improvements
-- [ ] Reduce settings - remove 2FA and complex notification settings, just use defaults from environment variables
+- [ ] Remove settings - remove 2FA and complex notification settings, just use defaults from environment variables
+- [ ] Show connected telegram bots in profile page
+- [ ] After connecting telegram bot, schedule sending pings with tg bot also, make it configurable in profile page
 - [ ] Implement re-encoding of all secrets when user changes password
-- [ ] Implement actual secret and recipients creation
-- [ ] Replace hardcoded mock activity data in history.go with data retrieved from database
-- [ ] Incorporate ping-checks history in activity data
-- [ ] Fix template error on /secrets page
+- [x] Implement actual secret and recipients creation with proper encryption
+- [x] Implement recipient creation, editing, and deletion functionality
+- [x] Implement recipient-secret management functionality
+- [x] Replace hardcoded mock activity data in history.go with data retrieved from database
+- [x] Incorporate ping-checks history in activity data
+- [x] Fix template error on /secrets page
 - [ ] Fix "in real implementation" TODOs in code
 - [ ] Implement 2FA with Google Authenticator or similar for login
+- [ ] implement key derivation for encrypting secrets from master password
+- [ ] understand how can we passover encrypted secrets to user since we have no way to know the master password. I think we have to create a key for every recipient, encode copy of the secret with this key, and provide key to user if switch is triggered. need to describe it well in diagram and security doc, brainstorm the idea and threats
+- [ ] Find a way to secure bind telegram handle to registered user, that somebody else couldn't do it, and by those prevent switch trigger. Expalin this threat in security doc, and explain the solution well
+- [ ] We don't use phone method for contacting receipients, remove it from everywhere. we use only email for recipients
 
 ## Next Steps
 1. Complete the scheduler implementation:

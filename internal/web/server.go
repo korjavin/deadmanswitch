@@ -73,7 +73,7 @@ func NewServer(
 	server.handlers.api = handlers.NewAPIHandler(repo)
 	server.handlers.profile = handlers.NewProfileHandler()
 	server.handlers.settings = handlers.NewSettingsHandler()
-	server.handlers.history = handlers.NewHistoryHandler()
+	server.handlers.history = handlers.NewHistoryHandler(repo)
 
 	// Set up routes
 	server.setupRoutes()
@@ -170,11 +170,36 @@ func (s *Server) setupRoutes() {
 		r.Get("/secrets", s.handlers.secrets.HandleListSecrets)
 		r.Get("/secrets/new", s.handlers.secrets.HandleNewSecretForm)
 		r.Post("/secrets/new", s.handlers.secrets.HandleCreateSecret)
+		r.Get("/secrets/{id}/assign", s.handlers.secrets.HandleManageRecipients)
+		r.Post("/secrets/{id}/assign", s.handlers.secrets.HandleUpdateSecretRecipients)
+		r.Delete("/secrets/{id}", s.handlers.secrets.HandleDeleteSecret)
+		// Handle POST requests with _method=DELETE
+		r.Post("/secrets/{id}", func(w http.ResponseWriter, r *http.Request) {
+			if r.FormValue("_method") == "DELETE" {
+				s.handlers.secrets.HandleDeleteSecret(w, r)
+				return
+			}
+			// If not a DELETE request, return 404
+			http.NotFound(w, r)
+		})
 
 		// Recipients management
 		r.Get("/recipients", s.handlers.recipients.HandleListRecipients)
 		r.Get("/recipients/new", s.handlers.recipients.HandleNewRecipientForm)
 		r.Post("/recipients/new", s.handlers.recipients.HandleCreateRecipient)
+		r.Get("/recipients/{id}", s.handlers.recipients.HandleEditRecipientForm)
+		r.Post("/recipients/{id}", func(w http.ResponseWriter, r *http.Request) {
+			if r.FormValue("_method") == "DELETE" {
+				s.handlers.recipients.HandleDeleteRecipient(w, r)
+				return
+			}
+			// If not a DELETE request, handle as update
+			s.handlers.recipients.HandleUpdateRecipient(w, r)
+		})
+		r.Delete("/recipients/{id}", s.handlers.recipients.HandleDeleteRecipient)
+		r.Get("/recipients/{id}/secrets", s.handlers.recipients.HandleManageSecrets)
+		r.Post("/recipients/{id}/secrets", s.handlers.recipients.HandleUpdateRecipientSecrets)
+		r.Get("/recipients/{id}/test", s.handlers.recipients.HandleTestContact)
 
 		// Profile and settings
 		r.Get("/profile", s.handlers.profile.HandleProfile)
@@ -659,7 +684,9 @@ func (s *Server) handleListSecrets(w http.ResponseWriter, r *http.Request) {
 			"Email": user.Email,
 			"Name":  user.Email, // Use email as name since we don't have a separate name field
 		},
-		"Secrets": secrets,
+		"Data": map[string]interface{}{
+			"Secrets": secrets,
+		},
 	}
 
 	if err := tmpl.ExecuteTemplate(w, "layout", data); err != nil {
@@ -716,7 +743,9 @@ func (s *Server) handleNewSecretForm(w http.ResponseWriter, r *http.Request) {
 			"Email": user.Email,
 			"Name":  user.Email, // Use email as name since we don't have a separate name field
 		},
-		"Recipients": recipients,
+		"Data": map[string]interface{}{
+			"Recipients": recipients,
+		},
 	}
 
 	if err := tmpl.ExecuteTemplate(w, "layout", data); err != nil {

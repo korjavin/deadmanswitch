@@ -6,12 +6,12 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "${PORT:-8080}:8080"
+      - "${PORT:-8082}:8080"
     volumes:
       - ${DATA_DIR:-./data}:/app/data
     environment:
       # Required environment variables
-      - BASE_DOMAIN=${BASE_DOMAIN:-localhost}
+      - BASE_DOMAIN=${BASE_DOMAIN:-localhost:8082}
       - TG_BOT_TOKEN=${TG_BOT_TOKEN:-}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
 
