@@ -64,12 +64,14 @@
   </nav>
 
   <!-- Alert messages -->
-  {{ if .FlashMessage }}
+  {{ if .Flash }}
     <div class="container" style="margin-top: 1rem;">
-      <div class="alert alert-{{ .FlashMessage.Type }}">
-        {{ .FlashMessage.Message }}
-        <button type="button" class="alert-close">&times;</button>
-      </div>
+      {{ range $type, $message := .Flash }}
+        <div class="alert alert-{{ $type }}">
+          {{ $message }}
+          <button type="button" class="alert-close">&times;</button>
+        </div>
+      {{ end }}
     </div>
   {{ end }}
 

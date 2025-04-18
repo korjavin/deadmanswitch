@@ -1,3 +1,5 @@
+{{ template "layout.html" . }}
+
 {{ define "content" }}
 <div class="hero">
   <div class="hero-content">
@@ -15,26 +17,26 @@
     <h2>How It Works</h2>
     <p>A simple yet powerful solution to protect your digital legacy</p>
   </div>
-  
+
   <div class="feature-grid">
     <div class="feature-card">
       <div class="feature-icon">🔒</div>
       <h3>Store Your Secrets</h3>
       <p>Securely encrypt and store passwords, cryptocurrency keys, important documents, and personal messages using military-grade encryption.</p>
     </div>
-    
+
     <div class="feature-card">
       <div class="feature-icon">👥</div>
       <h3>Designate Recipients</h3>
       <p>Choose trusted family members, friends, or colleagues who will receive your information when your switch activates.</p>
     </div>
-    
+
     <div class="feature-card">
       <div class="feature-icon">⏰</div>
       <h3>Regular Check-ins</h3>
       <p>Confirm you're still active with simple periodic check-ins. Choose your own schedule that works for your lifestyle.</p>
     </div>
-    
+
     <div class="feature-card">
       <div class="feature-icon">📨</div>
       <h3>Automatic Delivery</h3>
@@ -48,18 +50,18 @@
     <h2>Security First</h2>
     <p>Your data is protected with the highest security standards</p>
   </div>
-  
+
   <div class="security-features">
     <div class="security-item">
       <h3>End-to-End Encryption</h3>
       <p>Your data is encrypted on your device before being stored, ensuring that even we can't access your sensitive information.</p>
     </div>
-    
+
     <div class="security-item">
       <h3>Open Source</h3>
       <p>Our code is transparent and peer-reviewed by security experts to ensure there are no backdoors or vulnerabilities.</p>
     </div>
-    
+
     <div class="security-item">
       <h3>No Single Point of Failure</h3>
       <p>Multiple verification steps and authentication layers prevent accidental triggering of your switch.</p>
@@ -87,52 +89,52 @@
     border-radius: 8px;
     margin: 2rem 0;
   }
-  
+
   .hero-content {
     max-width: 800px;
     margin: 0 auto;
     padding: 0 1rem;
   }
-  
+
   .hero h1 {
     font-size: 3rem;
     margin-bottom: 1rem;
   }
-  
+
   .hero-subtitle {
     font-size: 1.2rem;
     margin-bottom: 2rem;
     opacity: 0.9;
   }
-  
+
   .hero-actions {
     display: flex;
     justify-content: center;
     gap: 1rem;
     flex-wrap: wrap;
   }
-  
+
   /* Feature section */
   .section {
     padding: 4rem 0;
   }
-  
+
   .section-header {
     text-align: center;
     margin-bottom: 3rem;
   }
-  
+
   .section-header h2 {
     font-size: 2.5rem;
     margin-bottom: 0.5rem;
   }
-  
+
   .feature-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 2rem;
   }
-  
+
   .feature-card {
     text-align: center;
     padding: 1.5rem;
@@ -141,30 +143,30 @@
     box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     transition: transform 0.3s ease;
   }
-  
+
   .feature-card:hover {
     transform: translateY(-5px);
   }
-  
+
   .feature-icon {
     font-size: 3rem;
     margin-bottom: 1rem;
   }
-  
+
   /* Security section */
   .alternate-bg {
     background-color: #f8f9fa;
   }
-  
+
   .security-features {
     max-width: 800px;
     margin: 0 auto;
   }
-  
+
   .security-item {
     margin-bottom: 2rem;
   }
-  
+
   /* CTA section */
   .cta-section {
     background: linear-gradient(135deg, var(--primary-color), var(--primary-color-light));
@@ -174,29 +176,29 @@
     border-radius: 8px;
     margin: 3rem 0;
   }
-  
+
   .cta-content {
     max-width: 700px;
     margin: 0 auto;
     padding: 0 1rem;
   }
-  
+
   .cta-section h2 {
     font-size: 2.5rem;
     margin-bottom: 1rem;
   }
-  
+
   .cta-section p {
     font-size: 1.2rem;
     margin-bottom: 2rem;
     opacity: 0.9;
   }
-  
+
   @media (max-width: 768px) {
     .hero h1 {
       font-size: 2.5rem;
     }
-    
+
     .section-header h2,
     .cta-section h2 {
       font-size: 2rem;

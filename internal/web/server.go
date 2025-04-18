@@ -78,8 +78,12 @@ func NewServer(
 // Start starts the web server
 func (s *Server) Start() error {
 	// Configure the HTTP server
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
 	s.httpServer = &http.Server{
-		Addr:         ":8080", // TODO: Make configurable
+		Addr:         ":" + port,
 		Handler:      s.router,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
