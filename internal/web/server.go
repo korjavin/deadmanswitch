@@ -6,10 +6,10 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
-	"text/template"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -20,6 +20,9 @@ import (
 	"github.com/korjavin/deadmanswitch/internal/scheduler"
 	"github.com/korjavin/deadmanswitch/internal/storage"
 	"github.com/korjavin/deadmanswitch/internal/telegram"
+	"github.com/korjavin/deadmanswitch/internal/web/handlers"
+	authMiddleware "github.com/korjavin/deadmanswitch/internal/web/middleware"
+	"github.com/korjavin/deadmanswitch/internal/web/utils"
 )
 
 // Server represents the web server
@@ -31,39 +34,14 @@ type Server struct {
 	scheduler   *scheduler.Scheduler
 	router      *chi.Mux
 	httpServer  *http.Server
-}
-
-// UserWithProfile extends the User model with additional profile information
-// used in the web interface
-type UserWithProfile struct {
-	*models.User
-	Name              string
-	VerificationToken string
-	Verified          bool
-	// Any other fields needed by the templates
-}
-
-// SecretWithMetadata extends the Secret model with additional metadata
-// used in the web interface
-type SecretWithMetadata struct {
-	*models.Secret
-	Type         string
-	Description  string
-	Metadata     map[string]string
-	LastModified time.Time
-	// Any other fields needed by the templates
-}
-
-// RecipientWithDetails extends the Recipient model with additional details
-// used in the web interface
-type RecipientWithDetails struct {
-	*models.Recipient
-	Relationship     string
-	ContactMethod    string
-	TelegramUsername string
-	Notes            string
-	Verified         bool
-	// Any other fields needed by the templates
+	handlers    struct {
+		index      *handlers.IndexHandler
+		auth       *handlers.AuthHandler
+		dashboard  *handlers.DashboardHandler
+		secrets    *handlers.SecretsHandler
+		recipients *handlers.RecipientsHandler
+		api        *handlers.APIHandler
+	}
 }
 
 // NewServer creates a new web server
@@ -82,6 +60,14 @@ func NewServer(
 		scheduler:   scheduler,
 		router:      chi.NewRouter(),
 	}
+
+	// Initialize handlers
+	server.handlers.index = handlers.NewIndexHandler()
+	server.handlers.auth = handlers.NewAuthHandler(repo, emailClient)
+	server.handlers.dashboard = handlers.NewDashboardHandler(repo)
+	server.handlers.secrets = handlers.NewSecretsHandler(repo)
+	server.handlers.recipients = handlers.NewRecipientsHandler(repo)
+	server.handlers.api = handlers.NewAPIHandler(repo)
 
 	// Set up routes
 	server.setupRoutes()
@@ -127,13 +113,13 @@ func (s *Server) setupRoutes() {
 	// Public routes
 	r.Group(func(r chi.Router) {
 		// Landing page
-		r.Get("/", s.handleIndex)
+		r.Get("/", s.handlers.index.HandleIndex)
 
 		// Authentication
-		r.Get("/login", s.handleLoginForm)
-		r.Post("/login", s.handleLogin)
-		r.Get("/register", s.handleRegisterForm)
-		r.Post("/register", s.handleRegister)
+		r.Get("/login", s.handlers.auth.HandleLoginForm)
+		r.Post("/login", s.handlers.auth.HandleLogin)
+		r.Get("/register", s.handlers.auth.HandleRegisterForm)
+		r.Post("/register", s.handlers.auth.HandleRegister)
 
 		// Static files - try multiple paths
 		// First try absolute path in container, then relative path
@@ -158,89 +144,30 @@ func (s *Server) setupRoutes() {
 		}
 
 		r.Handle("/static/*", http.StripPrefix("/static", fileServer))
+
+		// Logout (accessible without authentication)
+		r.Get("/logout", s.handlers.auth.HandleLogout)
 	})
 
 	// Protected routes (require authentication)
 	r.Group(func(r chi.Router) {
-		r.Use(s.authMiddleware)
+		r.Use(authMiddleware.Auth(s.repo))
 
 		// Dashboard
-		r.Get("/dashboard", s.handleDashboard)
+		r.Get("/dashboard", s.handlers.dashboard.HandleDashboard)
 
 		// Secrets management
-		r.Get("/secrets", s.handleListSecrets)
-		r.Get("/secrets/new", s.handleNewSecretForm)
-		r.Post("/secrets/new", s.handleNewSecret)
+		r.Get("/secrets", s.handlers.secrets.HandleListSecrets)
+		r.Get("/secrets/new", s.handlers.secrets.HandleNewSecretForm)
+		r.Post("/secrets/new", s.handlers.secrets.HandleCreateSecret)
 
 		// Recipients management
-		r.Get("/recipients", s.handleListRecipients)
-		r.Get("/recipients/new", s.handleNewRecipientForm)
-		r.Post("/recipients/new", s.handleNewRecipient)
+		r.Get("/recipients", s.handlers.recipients.HandleListRecipients)
+		r.Get("/recipients/new", s.handlers.recipients.HandleNewRecipientForm)
+		r.Post("/recipients/new", s.handlers.recipients.HandleCreateRecipient)
 
 		// Check-in
-		r.Post("/api/check-in", s.handleCheckIn)
-
-		// Logout
-		r.Get("/logout", s.handleLogout)
-	})
-}
-
-// authMiddleware checks if the user is authenticated
-func (s *Server) authMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Get the session token from cookie
-		cookie, err := r.Cookie("session_token")
-		if err != nil {
-			// No session token, redirect to login
-			http.Redirect(w, r, "/login", http.StatusFound)
-			return
-		}
-
-		// Validate the session token
-		ctx := r.Context()
-		session, err := s.repo.GetSessionByToken(ctx, cookie.Value)
-		if err != nil {
-			// Invalid session token, redirect to login
-			http.Redirect(w, r, "/login", http.StatusFound)
-			return
-		}
-
-		// Check if session has expired
-		if session.ExpiresAt.Before(time.Now()) {
-			// Session expired, delete it and redirect to login
-			_ = s.repo.DeleteSession(ctx, session.ID) // Ignore error, just try to clean up
-			http.Redirect(w, r, "/login?expired=true", http.StatusFound)
-			return
-		}
-
-		// Get the user associated with this session
-		user, err := s.repo.GetUserByID(ctx, session.UserID)
-		if err != nil {
-			// User not found, delete session and redirect to login
-			_ = s.repo.DeleteSession(ctx, session.ID)
-			http.Redirect(w, r, "/login", http.StatusFound)
-			return
-		}
-
-		// Update last activity time
-		user.LastActivity = time.Now()
-		if err := s.repo.UpdateUser(ctx, user); err != nil {
-			log.Printf("Error updating user last activity: %v", err)
-			// Continue anyway, this is not critical
-		}
-
-		// Update session activity
-		if err := s.repo.UpdateSessionActivity(ctx, session.ID); err != nil {
-			log.Printf("Error updating session activity: %v", err)
-			// Continue anyway, this is not critical
-		}
-
-		// Add user and session to context for handlers to use
-		ctx = context.WithValue(ctx, "user", user)
-		ctx = context.WithValue(ctx, "session", session)
-
-		// Call the next handler with the updated context
-		next.ServeHTTP(w, r.WithContext(ctx))
+		r.Post("/api/check-in", s.handlers.api.HandleCheckIn)
 	})
 }
 
@@ -380,10 +307,8 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify password (using a secure password comparison)
-	// Note: In a real implementation, you'd use a library like bcrypt to compare hashed passwords
-	// This would need to be adapted based on how passwords are actually stored
-	if !verifyPassword(user.PasswordHash, password) {
+	// Verify password using bcrypt
+	if !utils.VerifyPassword(user.PasswordHash, password) {
 		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
 		return
 	}
@@ -443,18 +368,6 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 	// Redirect to dashboard
 	http.Redirect(w, r, "/dashboard", http.StatusFound)
-}
-
-// verifyPassword verifies a password against a hashed password
-// This is a placeholder; in a real implementation you would use bcrypt or similar
-func verifyPassword(hashedPassword []byte, password string) bool {
-	// TODO: Replace with proper bcrypt or similar password checking
-	// Example of proper implementation:
-	// return bcrypt.CompareHashAndPassword(hashedPassword, []byte(password)) == nil
-
-	// Simulated check - DO NOT USE IN PRODUCTION
-	// This is just for testing/development
-	return string(hashedPassword) == password
 }
 
 func (s *Server) handleRegisterForm(w http.ResponseWriter, r *http.Request) {
@@ -529,12 +442,19 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Hash the password
+	hashedPassword, err := utils.HashPassword(password)
+	if err != nil {
+		http.Error(w, "Failed to create user", http.StatusInternalServerError)
+		log.Printf("Error hashing password: %v", err)
+		return
+	}
+
 	// Create new user
-	// In a real implementation, the password would be hashed with bcrypt or similar
 	user := &models.User{
 		ID:                generateID(),
 		Email:             email,
-		PasswordHash:      []byte(password), // Should be hashed in production
+		PasswordHash:      hashedPassword,
 		CreatedAt:         time.Now().UTC(),
 		UpdatedAt:         time.Now().UTC(),
 		LastActivity:      time.Now().UTC(),
@@ -1085,7 +1005,7 @@ func adaptSecretToUI(secret *models.Secret) map[string]interface{} {
 // determineSecretType attempts to determine the type of secret from its encrypted data
 // In a real implementation, this would be stored in metadata or determined by decryption
 func determineSecretType(secret *models.Secret) string {
-	// This is a placeholder; in a real implementation, the type would be stored
+	// Store the secret type for categorization
 	// in metadata or could be determined from the decrypted data
 	return "note" // Default type
 }
