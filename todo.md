@@ -1,11 +1,8 @@
-# Dead Man's Switch Implementation Plan
+# Dead Man's Switch Todo List
 
-## Project Overview
-The Dead Man's Switch application allows users to store sensitive information that will be sent to designated contacts if the user fails to check in regularly. This document outlines the implementation plan and tracks progress.
+This document tracks remaining tasks and implementation status for the Dead Man's Switch application.
 
-## Implementation Status
-
-### Core Components
+## Core Components
 - [x] Basic project structure
 - [x] Configuration management system
 - [x] Database models and storage layer
@@ -16,14 +13,23 @@ The Dead Man's Switch application allows users to store sensitive information th
 - [ ] Email notification system
 - [ ] Telegram bot integration
 
-### Deployment
+## Deployment
 - [x] Dockerfile created
 - [x] Docker Compose configuration
 - [ ] Environment variable documentation
 - [ ] Production deployment guide
 
-## Next Steps
+## Features & Improvements
+- [ ] Reduce settings - remove 2FA and complex notification settings, just use defaults from environment variables
+- [ ] Implement re-encoding of all secrets when user changes password
+- [ ] Implement actual secret and recipients creation
+- [ ] Replace hardcoded mock activity data in history.go with data retrieved from database
+- [ ] Incorporate ping-checks history in activity data
+- [ ] Fix template error on /secrets page
+- [ ] Fix "in real implementation" TODOs in code
+- [ ] Implement 2FA with Google Authenticator or similar for login
 
+## Next Steps
 1. Complete the scheduler implementation:
    - Implement time-based triggers for check-ins
    - Set up deadline monitoring
@@ -43,26 +49,6 @@ The Dead Man's Switch application allows users to store sensitive information th
    - Complete user guide
    - Document API endpoints
    - Create admin documentation
-
-## Environment Variables
-
-The application requires the following environment variables to be set:
-
-| Variable | Required | Description | Default |
-|----------|----------|-------------|---------|
-| BASE_DOMAIN | Yes | Base domain for application URLs | - |
-| TG_BOT_TOKEN | Yes | Telegram bot token for notifications | - |
-| ADMIN_EMAIL | Yes | Administrator email address | - |
-| DBPath | No | Path to SQLite database file | ./data/deadmanswitch.db |
-| SMTP_HOST | No | SMTP server host | - |
-| SMTP_PORT | No | SMTP server port | 587 |
-| SMTP_USERNAME | No | SMTP authentication username | - |
-| SMTP_PASSWORD | No | SMTP authentication password | - |
-| SMTP_FROM | No | Email sender address | - |
-| PING_FREQUENCY | No | How often users need to check in | 24h |
-| PING_DEADLINE | No | Time after which secrets are released | 72h |
-| DEBUG | No | Enable debug mode | false |
-| LOG_LEVEL | No | Log verbosity level | info |
 
 ## Testing Checklist
 - [ ] User registration
