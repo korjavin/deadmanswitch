@@ -6,7 +6,7 @@
     max-width: 480px;
     margin: 2rem auto;
   }
-  
+
   .auth-title {
     text-align: center;
     margin-bottom: 2rem;
@@ -46,7 +46,7 @@
 {{ define "content" }}
 <div class="auth-container">
   <h1 class="auth-title">Create Account</h1>
-  
+
   <div class="card">
     <div class="card-body">
       <form action="/register" method="POST" id="registerForm">
@@ -59,7 +59,7 @@
           <label for="name" class="form-label">Full Name</label>
           <input type="text" id="name" name="name" class="form-control" required>
         </div>
-        
+
         <div class="form-group">
           <label for="password" class="form-label">Password</label>
           <div style="position: relative;">
@@ -74,7 +74,7 @@
             <div class="password-requirement unmet" id="req-special">Contains special character</div>
           </div>
         </div>
-        
+
         <div class="form-group">
           <label for="confirmPassword" class="form-label">Confirm Password</label>
           <div style="position: relative;">
@@ -82,19 +82,18 @@
             <button type="button" class="password-toggle" data-target="confirmPassword" style="position: absolute; right: 10px; top: 5px; border: none; background: none; cursor: pointer;">Show</button>
           </div>
         </div>
-        
+
         <div class="form-group">
-          <div class="form-check">
-            <input type="checkbox" id="terms" name="terms" class="form-check-input" required>
-            <label for="terms" class="form-check-label">I agree to the <a href="/terms" target="_blank">Terms of Service</a> and <a href="/privacy" target="_blank">Privacy Policy</a></label>
+          <div class="form-info">
+            <p class="text-muted">This is a self-hosted application. Your data remains on your server and is never shared with third parties.</p>
           </div>
         </div>
-        
+
         <button type="submit" class="btn btn-primary btn-block">Register</button>
       </form>
     </div>
   </div>
-  
+
   <div class="auth-options">
     <a href="/login">Already have an account? Log in</a>
   </div>
@@ -107,13 +106,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const passwordInput = document.getElementById('password');
   const confirmPasswordInput = document.getElementById('confirmPassword');
   const form = document.getElementById('registerForm');
-  
+
   // Check password requirements
   passwordInput.addEventListener('input', validatePassword);
-  
+
   // Check password match
   confirmPasswordInput.addEventListener('input', validatePasswordMatch);
-  
+
   // Form validation before submit
   form.addEventListener('submit', (e) => {
     if (!validatePassword() || !validatePasswordMatch()) {
@@ -121,10 +120,10 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Please fix the errors in the form before submitting.');
     }
   });
-  
+
   function validatePassword() {
     const password = passwordInput.value;
-    
+
     // Validate requirements
     const requirements = {
       'req-length': password.length >= 8,
@@ -133,9 +132,9 @@ document.addEventListener('DOMContentLoaded', () => {
       'req-number': /[0-9]/.test(password),
       'req-special': /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)
     };
-    
+
     let allMet = true;
-    
+
     // Update UI for each requirement
     for (const [reqId, isMet] of Object.entries(requirements)) {
       const reqElement = document.getElementById(reqId);
@@ -148,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
         allMet = false;
       }
     }
-    
+
     if (allMet) {
       passwordInput.classList.remove('is-invalid');
       passwordInput.classList.add('is-valid');
@@ -158,18 +157,18 @@ document.addEventListener('DOMContentLoaded', () => {
         passwordInput.classList.add('is-invalid');
       }
     }
-    
+
     return allMet;
   }
-  
+
   function validatePasswordMatch() {
     const password = passwordInput.value;
     const confirmPassword = confirmPasswordInput.value;
-    
+
     if (confirmPassword.length === 0) {
       return false;
     }
-    
+
     if (password === confirmPassword) {
       confirmPasswordInput.classList.remove('is-invalid');
       confirmPasswordInput.classList.add('is-valid');

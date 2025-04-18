@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"text/template"
 	"time"
 
@@ -134,8 +135,28 @@ func (s *Server) setupRoutes() {
 		r.Get("/register", s.handleRegisterForm)
 		r.Post("/register", s.handleRegister)
 
-		// Static files
-		fileServer := http.FileServer(http.Dir("./web/static"))
+		// Static files - try multiple paths
+		// First try absolute path in container, then relative path
+		staticDirs := []string{"/app/web/static", "./web/static"}
+		var fileServer http.Handler
+
+		// Try each path until we find one that exists
+		for _, dir := range staticDirs {
+			if _, err := os.Stat(dir); err == nil {
+				if s.config.Debug {
+					log.Printf("Using static files from: %s", dir)
+				}
+				fileServer = http.FileServer(http.Dir(dir))
+				break
+			}
+		}
+
+		// If no valid path was found, use the first one as a fallback
+		if fileServer == nil {
+			log.Printf("Warning: Could not find static files directory, using fallback")
+			fileServer = http.FileServer(http.Dir(staticDirs[0]))
+		}
+
 		r.Handle("/static/*", http.StripPrefix("/static", fileServer))
 	})
 
@@ -227,10 +248,39 @@ func (s *Server) authMiddleware(next http.Handler) http.Handler {
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	// For now, just render a simple index page
-	tmpl, err := template.ParseFiles(
-		"./web/templates/layout.html",
-		"./web/templates/index.html",
-	)
+	// Check if we're in debug mode and print the current working directory
+	if s.config.Debug {
+		cwd, err := os.Getwd()
+		if err == nil {
+			log.Printf("Current working directory: %s", cwd)
+		}
+	}
+
+	// Try to find templates in multiple locations
+	templatePaths := [][]string{
+		{"/app/web/templates/layout.html", "/app/web/templates/index.html"},
+		{"./web/templates/layout.html", "./web/templates/index.html"},
+	}
+
+	var tmpl *template.Template
+	var err error
+	var templateErr error
+
+	for _, paths := range templatePaths {
+		tmpl, err = template.ParseFiles(paths...)
+		if err == nil {
+			break
+		}
+		if templateErr == nil {
+			templateErr = err
+		}
+	}
+
+	if tmpl == nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		log.Printf("Error parsing index template: %v", templateErr)
+		return
+	}
 	if err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		log.Printf("Error parsing index template: %v", err)
@@ -269,14 +319,29 @@ func (s *Server) handleLoginForm(w http.ResponseWriter, r *http.Request) {
 		"IsAuthenticated": false,
 	}
 
-	// Parse the login page template
-	tmpl, err := template.ParseFiles(
-		"./web/templates/layout.html",
-		"./web/templates/login.html",
-	)
-	if err != nil {
+	// Try to find templates in multiple locations
+	templatePaths := [][]string{
+		{"/app/web/templates/layout.html", "/app/web/templates/login.html"},
+		{"./web/templates/layout.html", "./web/templates/login.html"},
+	}
+
+	var tmpl *template.Template
+	var err error
+	var templateErr error
+
+	for _, paths := range templatePaths {
+		tmpl, err = template.ParseFiles(paths...)
+		if err == nil {
+			break
+		}
+		if templateErr == nil {
+			templateErr = err
+		}
+	}
+
+	if tmpl == nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
-		log.Printf("Error parsing login template: %v", err)
+		log.Printf("Error parsing login template: %v", templateErr)
 		return
 	}
 
@@ -393,14 +458,29 @@ func verifyPassword(hashedPassword []byte, password string) bool {
 }
 
 func (s *Server) handleRegisterForm(w http.ResponseWriter, r *http.Request) {
-	// For now, just render the register page
-	tmpl, err := template.ParseFiles(
-		"./web/templates/layout.html",
-		"./web/templates/register.html",
-	)
-	if err != nil {
+	// Try to find templates in multiple locations
+	templatePaths := [][]string{
+		{"/app/web/templates/layout.html", "/app/web/templates/register.html"},
+		{"./web/templates/layout.html", "./web/templates/register.html"},
+	}
+
+	var tmpl *template.Template
+	var err error
+	var templateErr error
+
+	for _, paths := range templatePaths {
+		tmpl, err = template.ParseFiles(paths...)
+		if err == nil {
+			break
+		}
+		if templateErr == nil {
+			templateErr = err
+		}
+	}
+
+	if tmpl == nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
-		log.Printf("Error parsing register template: %v", err)
+		log.Printf("Error parsing register template: %v", templateErr)
 		return
 	}
 
@@ -429,8 +509,6 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	name := r.FormValue("name")
 	password := r.FormValue("password")
 	confirmPassword := r.FormValue("confirmPassword")
-	termsAgreed := r.FormValue("terms") == "on"
-
 	// Validate inputs
 	if email == "" || name == "" || password == "" {
 		http.Error(w, "All fields are required", http.StatusBadRequest)
@@ -439,11 +517,6 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 
 	if password != confirmPassword {
 		http.Error(w, "Passwords do not match", http.StatusBadRequest)
-		return
-	}
-
-	if !termsAgreed {
-		http.Error(w, "You must agree to the terms and conditions", http.StatusBadRequest)
 		return
 	}
 
@@ -522,14 +595,29 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
-	// Simple dashboard implementation
-	tmpl, err := template.ParseFiles(
-		"./web/templates/layout.html",
-		"./web/templates/dashboard.html",
-	)
-	if err != nil {
+	// Try to find templates in multiple locations
+	templatePaths := [][]string{
+		{"/app/web/templates/layout.html", "/app/web/templates/dashboard.html"},
+		{"./web/templates/layout.html", "./web/templates/dashboard.html"},
+	}
+
+	var tmpl *template.Template
+	var err error
+	var templateErr error
+
+	for _, paths := range templatePaths {
+		tmpl, err = template.ParseFiles(paths...)
+		if err == nil {
+			break
+		}
+		if templateErr == nil {
+			templateErr = err
+		}
+	}
+
+	if tmpl == nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
-		log.Printf("Error parsing dashboard template: %v", err)
+		log.Printf("Error parsing dashboard template: %v", templateErr)
 		return
 	}
 
@@ -567,14 +655,29 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListSecrets(w http.ResponseWriter, r *http.Request) {
-	// Placeholder for listing secrets
-	tmpl, err := template.ParseFiles(
-		"./web/templates/layout.html",
-		"./web/templates/secrets.html",
-	)
-	if err != nil {
+	// Try to find templates in multiple locations
+	templatePaths := [][]string{
+		{"/app/web/templates/layout.html", "/app/web/templates/secrets.html"},
+		{"./web/templates/layout.html", "./web/templates/secrets.html"},
+	}
+
+	var tmpl *template.Template
+	var err error
+	var templateErr error
+
+	for _, paths := range templatePaths {
+		tmpl, err = template.ParseFiles(paths...)
+		if err == nil {
+			break
+		}
+		if templateErr == nil {
+			templateErr = err
+		}
+	}
+
+	if tmpl == nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
-		log.Printf("Error parsing secrets template: %v", err)
+		log.Printf("Error parsing secrets template: %v", templateErr)
 		return
 	}
 
@@ -608,14 +711,29 @@ func (s *Server) handleListSecrets(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleNewSecretForm(w http.ResponseWriter, r *http.Request) {
-	// Placeholder for new secret form
-	tmpl, err := template.ParseFiles(
-		"./web/templates/layout.html",
-		"./web/templates/new-secret.html",
-	)
-	if err != nil {
+	// Try to find templates in multiple locations
+	templatePaths := [][]string{
+		{"/app/web/templates/layout.html", "/app/web/templates/new-secret.html"},
+		{"./web/templates/layout.html", "./web/templates/new-secret.html"},
+	}
+
+	var tmpl *template.Template
+	var err error
+	var templateErr error
+
+	for _, paths := range templatePaths {
+		tmpl, err = template.ParseFiles(paths...)
+		if err == nil {
+			break
+		}
+		if templateErr == nil {
+			templateErr = err
+		}
+	}
+
+	if tmpl == nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
-		log.Printf("Error parsing new-secret template: %v", err)
+		log.Printf("Error parsing new-secret template: %v", templateErr)
 		return
 	}
 
@@ -646,14 +764,29 @@ func (s *Server) handleNewSecret(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListRecipients(w http.ResponseWriter, r *http.Request) {
-	// Placeholder for listing recipients
-	tmpl, err := template.ParseFiles(
-		"./web/templates/layout.html",
-		"./web/templates/recipients.html",
-	)
-	if err != nil {
+	// Try to find templates in multiple locations
+	templatePaths := [][]string{
+		{"/app/web/templates/layout.html", "/app/web/templates/recipients.html"},
+		{"./web/templates/layout.html", "./web/templates/recipients.html"},
+	}
+
+	var tmpl *template.Template
+	var err error
+	var templateErr error
+
+	for _, paths := range templatePaths {
+		tmpl, err = template.ParseFiles(paths...)
+		if err == nil {
+			break
+		}
+		if templateErr == nil {
+			templateErr = err
+		}
+	}
+
+	if tmpl == nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
-		log.Printf("Error parsing recipients template: %v", err)
+		log.Printf("Error parsing recipients template: %v", templateErr)
 		return
 	}
 
@@ -714,14 +847,29 @@ func (s *Server) handleListRecipients(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleNewRecipientForm(w http.ResponseWriter, r *http.Request) {
-	// Placeholder for new recipient form
-	tmpl, err := template.ParseFiles(
-		"./web/templates/layout.html",
-		"./web/templates/new-recipient.html",
-	)
-	if err != nil {
+	// Try to find templates in multiple locations
+	templatePaths := [][]string{
+		{"/app/web/templates/layout.html", "/app/web/templates/new-recipient.html"},
+		{"./web/templates/layout.html", "./web/templates/new-recipient.html"},
+	}
+
+	var tmpl *template.Template
+	var err error
+	var templateErr error
+
+	for _, paths := range templatePaths {
+		tmpl, err = template.ParseFiles(paths...)
+		if err == nil {
+			break
+		}
+		if templateErr == nil {
+			templateErr = err
+		}
+	}
+
+	if tmpl == nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
-		log.Printf("Error parsing new-recipient template: %v", err)
+		log.Printf("Error parsing new-recipient template: %v", templateErr)
 		return
 	}
 

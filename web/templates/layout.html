@@ -1,3 +1,4 @@
+{{ define "layout" }}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5,14 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ .Title }} - Dead Man's Switch</title>
   <meta name="description" content="A secure dead man's switch service for digital asset protection.">
-  
+
   <!-- Favicon -->
   <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
-  
+
   <!-- Base styles -->
   <link rel="stylesheet" href="/static/css/normalize.css">
   <link rel="stylesheet" href="/static/css/main.css">
-  
+
   <!-- Page-specific styles -->
   {{ block "styles" . }}{{ end }}
 </head>
@@ -24,14 +25,14 @@
         <span class="brand-icon">🔐</span>
         <span class="brand-text">Dead Man's Switch</span>
       </a>
-      
+
       <input type="checkbox" id="navbar-toggle-checkbox">
       <label for="navbar-toggle-checkbox" class="navbar-toggle">
         <span></span>
         <span></span>
         <span></span>
       </label>
-      
+
       <div class="navbar-menu">
         {{ if .IsAuthenticated }}
           <a href="/dashboard" class="navbar-item {{ if eq .ActivePage "dashboard" }}active{{ end }}">Dashboard</a>
@@ -50,9 +51,8 @@
             </div>
           </div>
         {{ else }}
-          <a href="/features" class="navbar-item {{ if eq .ActivePage "features" }}active{{ end }}">Features</a>
-          <a href="/pricing" class="navbar-item {{ if eq .ActivePage "pricing" }}active{{ end }}">Pricing</a>
-          <a href="/about" class="navbar-item {{ if eq .ActivePage "about" }}active{{ end }}">About</a>
+          <a href="https://github.com/korjavin/deadmanswitch#key-features" class="navbar-item {{ if eq .ActivePage "features" }}active{{ end }}">Features</a>
+          <a href="https://github.com/korjavin/deadmanswitch#what-is-a-dead-mans-switch" class="navbar-item {{ if eq .ActivePage "about" }}active{{ end }}">About</a>
           <div class="navbar-right">
             <a href="/login" class="navbar-item {{ if eq .ActivePage "login" }}active{{ end }}">Login</a>
             <a href="/register" class="navbar-item {{ if eq .ActivePage "register" }}active{{ end }}">Register</a>
@@ -61,7 +61,7 @@
       </div>
     </div>
   </nav>
-  
+
   <!-- Alert messages -->
   {{ if .FlashMessage }}
     <div class="container" style="margin-top: 1rem;">
@@ -71,12 +71,12 @@
       </div>
     </div>
   {{ end }}
-  
+
   <!-- Main content -->
   <main class="container">
     {{ block "content" . }}{{ end }}
   </main>
-  
+
   <!-- Footer -->
   <footer>
     <div class="container">
@@ -84,45 +84,37 @@
         <div style="margin-bottom: 1rem;">
           <h3>Dead Man's Switch</h3>
           <p>Secure digital asset protection</p>
+          <p>A free, self-hosted solution for your most sensitive data</p>
         </div>
-        
+
         <div style="margin-bottom: 1rem;">
           <h4>Resources</h4>
           <ul style="list-style: none; padding: 0;">
-            <li><a href="/docs">Documentation</a></li>
-            <li><a href="/faq">FAQ</a></li>
-            <li><a href="/support">Support</a></li>
+            <li><a href="https://github.com/korjavin/deadmanswitch/blob/master/README.md" target="_blank">Documentation</a></li>
+            <li><a href="https://github.com/korjavin/deadmanswitch/blob/master/docs/faq.md" target="_blank">FAQ</a></li>
           </ul>
         </div>
-        
-        <div style="margin-bottom: 1rem;">
-          <h4>Legal</h4>
-          <ul style="list-style: none; padding: 0;">
-            <li><a href="/terms">Terms of Service</a></li>
-            <li><a href="/privacy">Privacy Policy</a></li>
-          </ul>
-        </div>
-        
+
         <div style="margin-bottom: 1rem;">
           <h4>Connect</h4>
           <ul style="list-style: none; padding: 0;">
-            <li><a href="https://twitter.com/deadmanswitch" target="_blank">Twitter</a></li>
-            <li><a href="https://github.com/deadmanswitch" target="_blank">GitHub</a></li>
-            <li><a href="mailto:contact@deadmanswitch.io">Email</a></li>
+            <li><a href="https://github.com/korjavin" target="_blank">GitHub</a></li>
+            <li><a href="https://github.com/sponsors/korjavin" target="_blank">Sponsor</a></li>
           </ul>
         </div>
       </div>
-      
+
       <div style="margin-top: 2rem; text-align: center; color: var(--light-gray);">
         <p>&copy; 2025 Dead Man's Switch. All rights reserved.</p>
       </div>
     </div>
   </footer>
-  
+
   <!-- Base scripts -->
   <script src="/static/js/main.js"></script>
-  
+
   <!-- Page-specific scripts -->
   {{ block "scripts" . }}{{ end }}
 </body>
 </html>
+{{ end }}

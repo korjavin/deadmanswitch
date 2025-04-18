@@ -16,7 +16,9 @@ A dead man's switch is a device or system that is triggered if the human operato
 
 ## Why Self-Hosted?
 
-Self-hosting this application offers several critical advantages:
+I strongly believe that users should own their data, especially when it comes to highly sensitive information like what's stored in a dead man's switch. This is why I created this as a free, self-hosted solution rather than a paid service.
+
+Self-hosting offers several critical advantages:
 
 1. **Complete privacy** - Your sensitive data never leaves your control
 2. **No third-party dependencies** - No reliance on external services that might disappear
@@ -25,6 +27,8 @@ Self-hosting this application offers several critical advantages:
 5. **Security** - Eliminate potential vulnerabilities from third-party hosting
 
 For truly confidential information, entrusting it to any third-party service creates unnecessary risk. By self-hosting, you maintain complete control over your sensitive data throughout its lifecycle.
+
+This project will always remain free and open source. If you find it valuable, please consider [sponsoring me on GitHub](https://github.com/sponsors/korjavin) to support ongoing development and maintenance.
 
 ## Key Features
 
