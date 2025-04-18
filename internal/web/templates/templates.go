@@ -81,7 +81,7 @@ func RenderTemplate(w http.ResponseWriter, templateName string, data TemplateDat
 		}
 
 		// Parse the templates with the function map
-		tmpl, err = template.New("layout.html").Funcs(FuncMap()).ParseFiles(layoutPath, contentPath)
+		tmpl, err = template.New(filepath.Base(layoutPath)).Funcs(FuncMap()).ParseFiles(layoutPath, contentPath)
 		if err == nil {
 			break
 		}
