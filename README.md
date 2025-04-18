@@ -38,7 +38,13 @@ For truly confidential information, entrusting it to any third-party service cre
 
 ## Getting Started
 
-See the [Installation Guide](./docs/installation.md) for details on deploying the application.
+### Quick Start with Docker Compose
+
+1. Clone this repository
+2. Copy `.env.example` to `.env` and modify the variables as needed
+3. Run `docker-compose up -d`
+
+For more detailed instructions, see the [Installation Guide](./docs/installation.md).
 
 ## Security
 

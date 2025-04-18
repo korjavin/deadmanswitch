@@ -9,9 +9,33 @@ This guide will help you set up and run the Dead Man's Switch application on you
 - Email account for sending notifications (or use a service like SendGrid)
 - Telegram account (to create a bot for notifications)
 
-## Quick Start with Docker
+## Installation Options
 
-The simplest way to deploy the Dead Man's Switch is using our pre-built Docker image:
+### Option 1: Quick Start with Docker Compose (Recommended)
+
+This is the easiest way to get started with environment variable management:
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/korjavin/deadmanswitch.git
+   cd deadmanswitch
+   ```
+
+2. Copy the example environment file and modify it with your settings:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your preferred text editor
+   nano .env
+   ```
+
+3. Start the application:
+   ```bash
+   docker-compose up -d
+   ```
+
+### Option 2: Using Docker Run
+
+Alternatively, you can deploy the Dead Man's Switch using our pre-built Docker image:
 
 ```bash
 docker run -d \
@@ -30,7 +54,11 @@ docker run -d \
   ghcr.io/korjavin/deadmanswitch:latest
 ```
 
-## Required Environment Variables
+## Environment Variables
+
+When using Docker Compose, you can configure these variables in the `.env` file. For Docker Run, pass them using the `-e` flag.
+
+### Required Environment Variables
 
 | Variable | Description |
 |----------|-------------|
@@ -38,7 +66,7 @@ docker run -d \
 | TG_BOT_TOKEN | Token for your Telegram bot (get from BotFather) |
 | ADMIN_EMAIL | Email address for admin notifications |
 
-## Optional Environment Variables
+### Optional Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -53,6 +81,8 @@ docker run -d \
 | LOG_LEVEL | Logging verbosity (debug, info, warn, error) | info |
 | ENABLE_METRICS | Enable Prometheus metrics | false |
 | DEBUG | Enable debug mode | false |
+| PORT | Port to expose the application on | 8080 |
+| DATA_DIR | Directory to store data | ./data |
 
 ## Setting up a Telegram Bot
 

@@ -6,30 +6,30 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "${PORT:-8080}:8080"
     volumes:
-      - ./data:/app/data
+      - ${DATA_DIR:-./data}:/app/data
     environment:
       # Required environment variables
-      - BASE_DOMAIN=yourdomain.com
-      - TG_BOT_TOKEN=your_telegram_bot_token
-      - ADMIN_EMAIL=admin@example.com
-      
+      - BASE_DOMAIN=${BASE_DOMAIN:-localhost}
+      - TG_BOT_TOKEN=${TG_BOT_TOKEN:-}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
+
       # Database settings
-      - DBPath=/app/data/deadmanswitch.db
-      
+      - DBPath=${DB_PATH:-/app/data/deadmanswitch.db}
+
       # SMTP settings
-      - SMTP_HOST=smtp.example.com
-      - SMTP_PORT=587
-      - SMTP_USERNAME=your_email@example.com
-      - SMTP_PASSWORD=your_password
-      - SMTP_FROM=noreply@yourdomain.com
-      
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USERNAME=${SMTP_USERNAME:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+      - SMTP_FROM=${SMTP_FROM:-}
+
       # Ping settings
-      - PING_FREQUENCY=24h
-      - PING_DEADLINE=72h
-      
+      - PING_FREQUENCY=${PING_FREQUENCY:-24h}
+      - PING_DEADLINE=${PING_DEADLINE:-72h}
+
       # Debug settings
-      - DEBUG=false
-      - LOG_LEVEL=info
+      - DEBUG=${DEBUG:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
     restart: unless-stopped
