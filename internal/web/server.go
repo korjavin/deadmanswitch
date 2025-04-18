@@ -41,6 +41,9 @@ type Server struct {
 		secrets    *handlers.SecretsHandler
 		recipients *handlers.RecipientsHandler
 		api        *handlers.APIHandler
+		profile    *handlers.ProfileHandler
+		settings   *handlers.SettingsHandler
+		history    *handlers.HistoryHandler
 	}
 }
 
@@ -68,6 +71,9 @@ func NewServer(
 	server.handlers.secrets = handlers.NewSecretsHandler(repo)
 	server.handlers.recipients = handlers.NewRecipientsHandler(repo)
 	server.handlers.api = handlers.NewAPIHandler(repo)
+	server.handlers.profile = handlers.NewProfileHandler()
+	server.handlers.settings = handlers.NewSettingsHandler()
+	server.handlers.history = handlers.NewHistoryHandler()
 
 	// Set up routes
 	server.setupRoutes()
@@ -169,6 +175,16 @@ func (s *Server) setupRoutes() {
 		r.Get("/recipients", s.handlers.recipients.HandleListRecipients)
 		r.Get("/recipients/new", s.handlers.recipients.HandleNewRecipientForm)
 		r.Post("/recipients/new", s.handlers.recipients.HandleCreateRecipient)
+
+		// Profile and settings
+		r.Get("/profile", s.handlers.profile.HandleProfile)
+		r.Post("/profile", s.handlers.profile.HandleUpdateProfile)
+		r.Get("/settings", s.handlers.settings.HandleSettings)
+		r.Post("/settings/notifications", s.handlers.settings.HandleUpdateNotificationSettings)
+		r.Post("/settings/security", s.handlers.settings.HandleUpdateSecuritySettings)
+
+		// History
+		r.Get("/history", s.handlers.history.HandleHistory)
 
 		// Check-in
 		r.Post("/api/check-in", s.handlers.api.HandleCheckIn)

@@ -1,0 +1,232 @@
+{{ template "layout.html" . }}
+
+{{ define "content" }}
+<div class="history-page">
+    <div class="header-actions">
+        <h1>Activity History</h1>
+    </div>
+    
+    <div class="alert alert-info">
+        <p>This page shows all activity related to your Dead Man's Switch account, including check-ins, settings changes, and recipient/secret management.</p>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            <div class="filter-controls">
+                <div class="form-group">
+                    <label for="activityType" class="form-label">Filter by Type</label>
+                    <select id="activityType" class="form-control">
+                        <option value="all">All Activities</option>
+                        <option value="checkin">Check-ins</option>
+                        <option value="secret">Secret Management</option>
+                        <option value="recipient">Recipient Management</option>
+                        <option value="settings">Settings Changes</option>
+                        <option value="security">Security Events</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="dateRange" class="form-label">Time Period</label>
+                    <select id="dateRange" class="form-control">
+                        <option value="7">Last 7 days</option>
+                        <option value="30">Last 30 days</option>
+                        <option value="90">Last 3 months</option>
+                        <option value="365">Last year</option>
+                        <option value="all">All time</option>
+                    </select>
+                </div>
+            </div>
+            
+            {{ if .Data.Activities }}
+                <div class="timeline">
+                    {{ range .Data.Activities }}
+                        <div class="timeline-item" data-type="{{ .Type }}">
+                            <div class="timeline-marker {{ .Type }}"></div>
+                            <div class="timeline-content">
+                                <div class="timeline-date">{{ .Timestamp }}</div>
+                                <h4>{{ .Title }}</h4>
+                                <p>{{ .Description }}</p>
+                                {{ if .Details }}
+                                    <div class="activity-details">
+                                        <button class="btn btn-sm btn-outline-secondary toggle-details">Show Details</button>
+                                        <div class="details-content" style="display: none;">
+                                            <pre>{{ .Details }}</pre>
+                                        </div>
+                                    </div>
+                                {{ end }}
+                            </div>
+                        </div>
+                    {{ end }}
+                </div>
+            {{ else }}
+                <div class="empty-state">
+                    <p>No activity history found for the selected filters.</p>
+                </div>
+            {{ end }}
+        </div>
+    </div>
+</div>
+{{ end }}
+
+{{ define "styles" }}
+<style>
+.header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.filter-controls {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.filter-controls .form-group {
+    flex: 1;
+}
+
+.timeline {
+    position: relative;
+    margin: 30px 0;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 10px;
+    width: 2px;
+    background-color: var(--border-color);
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 30px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -30px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: var(--primary-color);
+    border: 3px solid white;
+    box-shadow: 0 0 0 1px var(--border-color);
+}
+
+.timeline-marker.checkin {
+    background-color: var(--success-color);
+}
+
+.timeline-marker.secret {
+    background-color: var(--primary-color);
+}
+
+.timeline-marker.recipient {
+    background-color: var(--info-color);
+}
+
+.timeline-marker.settings {
+    background-color: var(--warning-color);
+}
+
+.timeline-marker.security {
+    background-color: var(--danger-color);
+}
+
+.timeline-content {
+    padding: 15px;
+    background-color: white;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.timeline-date {
+    color: var(--gray-color);
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+}
+
+.timeline-content h4 {
+    margin: 0 0 10px 0;
+}
+
+.activity-details {
+    margin-top: 10px;
+}
+
+.details-content {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.details-content pre {
+    margin: 0;
+    white-space: pre-wrap;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 30px;
+    color: var(--gray-color);
+}
+</style>
+{{ end }}
+
+{{ define "scripts" }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Activity filtering
+    const activityTypeSelect = document.getElementById('activityType');
+    const dateRangeSelect = document.getElementById('dateRange');
+    const timelineItems = document.querySelectorAll('.timeline-item');
+    
+    function filterActivities() {
+        const activityType = activityTypeSelect.value;
+        
+        timelineItems.forEach(item => {
+            if (activityType === 'all' || item.dataset.type === activityType) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+    
+    if (activityTypeSelect) {
+        activityTypeSelect.addEventListener('change', filterActivities);
+    }
+    
+    if (dateRangeSelect) {
+        dateRangeSelect.addEventListener('change', function() {
+            // In a real implementation, this would reload the data with the new date range
+            // For now, we'll just show a message
+            alert('In a real implementation, this would filter activities by date range: ' + this.value + ' days');
+        });
+    }
+    
+    // Toggle activity details
+    const toggleButtons = document.querySelectorAll('.toggle-details');
+    toggleButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const detailsContent = this.nextElementSibling;
+            if (detailsContent.style.display === 'none') {
+                detailsContent.style.display = 'block';
+                this.textContent = 'Hide Details';
+            } else {
+                detailsContent.style.display = 'none';
+                this.textContent = 'Show Details';
+            }
+        });
+    });
+});
+</script>
+{{ end }}

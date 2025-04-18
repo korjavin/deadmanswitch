@@ -1,0 +1,91 @@
+{{ template "layout.html" . }}
+
+{{ define "content" }}
+<div class="profile-page">
+    <div class="header-actions">
+        <h1>My Profile</h1>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            <form action="/profile" method="POST">
+                <div class="form-group">
+                    <label for="name" class="form-label">Full Name</label>
+                    <input type="text" name="name" id="name" class="form-control" 
+                           value="{{ .Data.User.Name }}" placeholder="Your full name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="email" class="form-label">Email Address</label>
+                    <input type="email" name="email" id="email" class="form-control" 
+                           value="{{ .Data.User.Email }}" readonly>
+                    <small class="form-help">Email address cannot be changed. This is your unique identifier.</small>
+                </div>
+                
+                <div class="form-group">
+                    <h3>Change Password</h3>
+                    <p>Leave blank if you don't want to change your password.</p>
+                    
+                    <div class="form-group">
+                        <label for="currentPassword" class="form-label">Current Password</label>
+                        <input type="password" name="currentPassword" id="currentPassword" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="newPassword" class="form-label">New Password</label>
+                        <input type="password" name="newPassword" id="newPassword" class="form-control">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                        <input type="password" name="confirmPassword" id="confirmPassword" class="form-control">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card" style="margin-top: 2rem;">
+        <div class="card-header">
+            <h3>Account Information</h3>
+        </div>
+        <div class="card-body">
+            <p><strong>Account Created:</strong> {{ .Data.User.CreatedAt }}</p>
+            <p><strong>Last Login:</strong> {{ .Data.User.LastLogin }}</p>
+            <p><strong>Account Status:</strong> <span class="badge badge-success">Active</span></p>
+        </div>
+    </div>
+</div>
+{{ end }}
+
+{{ define "styles" }}
+<style>
+.header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+}
+
+.badge-success {
+    color: #fff;
+    background-color: var(--success-color);
+}
+</style>
+{{ end }}

@@ -38,10 +38,11 @@
           <a href="/dashboard" class="navbar-item {{ if eq .ActivePage "dashboard" }}active{{ end }}">Dashboard</a>
           <a href="/secrets" class="navbar-item {{ if eq .ActivePage "secrets" }}active{{ end }}">Secrets</a>
           <a href="/recipients" class="navbar-item {{ if eq .ActivePage "recipients" }}active{{ end }}">Recipients</a>
+          <a href="/history" class="navbar-item {{ if eq .ActivePage "history" }}active{{ end }}">History</a>
           <div class="navbar-right">
             <div class="dropdown">
               <button class="dropdown-toggle">
-                {{ .User.Name }} <span class="caret"></span>
+                {{ .Data.User.Email }} <span class="caret"></span>
               </button>
               <div class="dropdown-menu">
                 <a href="/profile" class="dropdown-item">Profile</a>
