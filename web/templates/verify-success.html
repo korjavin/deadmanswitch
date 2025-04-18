@@ -6,9 +6,9 @@
     <div class="card-body text-center">
       <div class="success-icon">✓</div>
       <h1>Email Verified!</h1>
-      <p>Thank you for verifying your email address, {{ .User.Name }}.</p>
+      <p>Thank you for verifying your email address, {{ .Data.User.Name }}.</p>
       <p>Your account is now fully active and you can start using the Dead Man's Switch service.</p>
-      
+
       <div class="action-buttons">
         <a href="/login" class="btn btn-primary btn-lg">Log In Now</a>
       </div>
@@ -23,25 +23,25 @@
     max-width: 600px;
     margin: 4rem auto;
   }
-  
+
   .success-icon {
     font-size: 5rem;
     color: var(--success-color);
     margin-bottom: 1rem;
   }
-  
+
   .card-body {
     padding: 3rem;
   }
-  
+
   .action-buttons {
     margin-top: 2rem;
   }
-  
+
   h1 {
     margin-bottom: 1rem;
   }
-  
+
   p {
     font-size: 1.1rem;
     margin-bottom: 0.5rem;

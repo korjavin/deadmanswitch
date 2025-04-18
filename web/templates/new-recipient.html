@@ -3,84 +3,84 @@
 {{ define "content" }}
 <div class="new-recipient-page">
     <div class="header-actions">
-        <h1>{{ if .Recipient }}Edit Recipient{{ else }}Add Recipient{{ end }}</h1>
+        <h1>{{ if .Data.Recipient }}Edit Recipient{{ else }}Add Recipient{{ end }}</h1>
         <a href="/recipients" class="btn btn-secondary">Back to Recipients</a>
     </div>
-    
+
     <div class="card">
         <div class="card-body">
-            <form action="{{ if .Recipient }}/recipients/{{ .Recipient.ID }}{{ else }}/recipients/new{{ end }}" method="POST">
+            <form action="{{ if .Data.Recipient }}/recipients/{{ .Data.Recipient.ID }}{{ else }}/recipients/new{{ end }}" method="POST">
                 <div class="form-group">
                     <label for="name" class="form-label">Full Name</label>
-                    <input type="text" name="name" id="name" class="form-control" required 
-                           value="{{ if .Recipient }}{{ .Recipient.Name }}{{ end }}"
+                    <input type="text" name="name" id="name" class="form-control" required
+                           value="{{ if .Data.Recipient }}{{ .Data.Recipient.Name }}{{ end }}"
                            placeholder="Enter recipient's full name">
                 </div>
-                
+
                 <div class="form-group">
                     <label for="email" class="form-label">Email Address</label>
-                    <input type="email" name="email" id="email" class="form-control" required 
-                           value="{{ if .Recipient }}{{ .Recipient.Email }}{{ end }}"
+                    <input type="email" name="email" id="email" class="form-control" required
+                           value="{{ if .Data.Recipient }}{{ .Data.Recipient.Email }}{{ end }}"
                            placeholder="Their email address for receiving secrets">
                     <small class="form-help">This is where secrets will be sent when your switch is triggered.</small>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="relationship" class="form-label">Relationship</label>
                     <select name="relationship" id="relationship" class="form-control" required>
                         <option value="">-- Select Relationship --</option>
-                        <option value="family" {{ if and .Recipient (eq .Recipient.Relationship "family") }}selected{{ end }}>Family</option>
-                        <option value="friend" {{ if and .Recipient (eq .Recipient.Relationship "friend") }}selected{{ end }}>Friend</option>
-                        <option value="colleague" {{ if and .Recipient (eq .Recipient.Relationship "colleague") }}selected{{ end }}>Colleague</option>
-                        <option value="legal" {{ if and .Recipient (eq .Recipient.Relationship "legal") }}selected{{ end }}>Legal Representative</option>
-                        <option value="other" {{ if and .Recipient (eq .Recipient.Relationship "other") }}selected{{ end }}>Other</option>
+                        <option value="family" {{ if and .Data.Recipient (eq .Data.Recipient.Relationship "family") }}selected{{ end }}>Family</option>
+                        <option value="friend" {{ if and .Data.Recipient (eq .Data.Recipient.Relationship "friend") }}selected{{ end }}>Friend</option>
+                        <option value="colleague" {{ if and .Data.Recipient (eq .Data.Recipient.Relationship "colleague") }}selected{{ end }}>Colleague</option>
+                        <option value="legal" {{ if and .Data.Recipient (eq .Data.Recipient.Relationship "legal") }}selected{{ end }}>Legal Representative</option>
+                        <option value="other" {{ if and .Data.Recipient (eq .Data.Recipient.Relationship "other") }}selected{{ end }}>Other</option>
                     </select>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="contactMethod" class="form-label">Preferred Contact Method</label>
                     <select name="contactMethod" id="contactMethod" class="form-control" required onchange="toggleContactFields()">
                         <option value="">-- Select Contact Method --</option>
-                        <option value="email" {{ if and .Recipient (eq .Recipient.ContactMethod "email") }}selected{{ end }}>Email Only</option>
-                        <option value="phone" {{ if and .Recipient (eq .Recipient.ContactMethod "phone") }}selected{{ end }}>Email + Phone</option>
-                        <option value="telegram" {{ if and .Recipient (eq .Recipient.ContactMethod "telegram") }}selected{{ end }}>Email + Telegram</option>
+                        <option value="email" {{ if and .Data.Recipient (eq .Data.Recipient.ContactMethod "email") }}selected{{ end }}>Email Only</option>
+                        <option value="phone" {{ if and .Data.Recipient (eq .Data.Recipient.ContactMethod "phone") }}selected{{ end }}>Email + Phone</option>
+                        <option value="telegram" {{ if and .Data.Recipient (eq .Data.Recipient.ContactMethod "telegram") }}selected{{ end }}>Email + Telegram</option>
                     </select>
                 </div>
-                
+
                 <div id="phoneFields" class="contact-fields" style="display: none;">
                     <div class="form-group">
                         <label for="phoneNumber" class="form-label">Phone Number</label>
                         <input type="tel" name="phoneNumber" id="phoneNumber" class="form-control"
-                               value="{{ if .Recipient }}{{ .Recipient.PhoneNumber }}{{ end }}"
+                               value="{{ if .Data.Recipient }}{{ .Data.Recipient.PhoneNumber }}{{ end }}"
                                placeholder="Include country code, e.g. +1 555 123 4567">
                     </div>
                 </div>
-                
+
                 <div id="telegramFields" class="contact-fields" style="display: none;">
                     <div class="form-group">
                         <label for="telegramUsername" class="form-label">Telegram Username</label>
                         <input type="text" name="telegramUsername" id="telegramUsername" class="form-control"
-                               value="{{ if .Recipient }}{{ .Recipient.TelegramUsername }}{{ end }}"
+                               value="{{ if .Data.Recipient }}{{ .Data.Recipient.TelegramUsername }}{{ end }}"
                                placeholder="Username without @ symbol">
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <label for="notes" class="form-label">Additional Notes</label>
-                    <textarea name="notes" id="notes" class="form-control" rows="3" 
-                              placeholder="Optional notes about this recipient">{{ if .Recipient }}{{ .Recipient.Notes }}{{ end }}</textarea>
+                    <textarea name="notes" id="notes" class="form-control" rows="3"
+                              placeholder="Optional notes about this recipient">{{ if .Data.Recipient }}{{ .Data.Recipient.Notes }}{{ end }}</textarea>
                 </div>
-                
+
                 <div class="form-group">
                     <div class="form-check">
                         <input type="checkbox" id="verified" name="verified" class="form-check-input"
-                               {{ if and .Recipient .Recipient.Verified }}checked{{ end }}>
+                               {{ if and .Data.Recipient .Data.Recipient.Verified }}checked{{ end }}>
                         <label for="verified" class="form-check-label">I trust this recipient to access my sensitive information</label>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
-                    <button type="submit" class="btn btn-primary">{{ if .Recipient }}Update Recipient{{ else }}Add Recipient{{ end }}</button>
+                    <button type="submit" class="btn btn-primary">{{ if .Data.Recipient }}Update Recipient{{ else }}Add Recipient{{ end }}</button>
                     <a href="/recipients" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>
@@ -109,10 +109,10 @@ function toggleContactFields() {
     // Hide all contact fields first
     const fields = document.querySelectorAll('.contact-fields');
     fields.forEach(field => field.style.display = 'none');
-    
+
     // Show fields based on selected contact method
     const contactMethod = document.getElementById('contactMethod').value;
-    
+
     if (contactMethod === 'phone') {
         document.getElementById('phoneFields').style.display = 'block';
     } else if (contactMethod === 'telegram') {

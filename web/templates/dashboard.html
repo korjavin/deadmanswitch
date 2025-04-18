@@ -8,31 +8,31 @@
     grid-gap: 1.5rem;
     margin-top: 2rem;
   }
-  
+
   .stat-card {
     text-align: center;
     padding: 1.5rem;
   }
-  
+
   .stat-number {
     font-size: 2.5rem;
     font-weight: bold;
     margin-bottom: 0.5rem;
   }
-  
+
   .stat-label {
     color: var(--gray-color);
     font-size: 0.9rem;
     text-transform: uppercase;
     letter-spacing: 1px;
   }
-  
+
   .check-in-box {
     max-width: 500px;
     margin: 0 auto;
     text-align: center;
   }
-  
+
   .status-indicator {
     display: inline-block;
     width: 12px;
@@ -40,29 +40,29 @@
     border-radius: 50%;
     margin-right: 6px;
   }
-  
+
   .status-indicator.active {
     background-color: var(--success-color);
     box-shadow: 0 0 8px var(--success-color);
   }
-  
+
   .status-indicator.caution {
     background-color: var(--warning-color);
     box-shadow: 0 0 8px var(--warning-color);
   }
-  
+
   .status-indicator.danger {
     background-color: var(--danger-color);
     box-shadow: 0 0 8px var(--danger-color);
   }
-  
+
   .timeline {
     position: relative;
     max-width: 600px;
     margin: 2rem auto;
     padding: 0;
   }
-  
+
   .timeline::after {
     content: '';
     position: absolute;
@@ -73,29 +73,29 @@
     left: 50%;
     margin-left: -1.5px;
   }
-  
+
   .timeline-item {
     position: relative;
     width: 50%;
     margin-bottom: 1.5rem;
   }
-  
+
   .timeline-item:nth-child(odd) {
     padding-right: 2rem;
     left: 0;
   }
-  
+
   .timeline-item:nth-child(even) {
     padding-left: 2rem;
     left: 50%;
   }
-  
+
   .timeline-content {
     padding: 1rem;
     position: relative;
     border-radius: 4px;
   }
-  
+
   .timeline-content::after {
     content: '';
     position: absolute;
@@ -106,15 +106,15 @@
     border-radius: 50%;
     top: calc(50% - 9px);
   }
-  
+
   .timeline-item:nth-child(odd) .timeline-content::after {
     right: -36px;
   }
-  
+
   .timeline-item:nth-child(even) .timeline-content::after {
     left: -36px;
   }
-  
+
   .timeline-date {
     color: var(--gray-color);
     font-size: 0.85rem;
@@ -131,20 +131,20 @@
 <!-- Status Overview -->
 <div class="check-in-box card">
   <div class="card-body">
-    {{ if eq .Status "active" }}
+    {{ if eq .Data.Status "active" }}
       <h2><span class="status-indicator active"></span> System Active</h2>
       <p>Your dead man's switch is active and all systems are operational.</p>
-      <p>Next check-in required: <strong>{{ .NextCheckIn }}</strong></p>
+      <p>Next check-in required: <strong>{{ .Data.NextCheckIn }}</strong></p>
       <button id="checkInButton" class="btn btn-primary">Check In Now</button>
-    {{ else if eq .Status "caution" }}
+    {{ else if eq .Data.Status "caution" }}
       <h2><span class="status-indicator caution"></span> Action Required</h2>
       <p>Your check-in deadline is approaching. Please check in to keep your switch active.</p>
-      <p>Check-in deadline: <strong>{{ .NextCheckIn }}</strong></p>
+      <p>Check-in deadline: <strong>{{ .Data.NextCheckIn }}</strong></p>
       <button id="checkInButton" class="btn btn-warning">Check In Now</button>
     {{ else }}
       <h2><span class="status-indicator danger"></span> Critical Action Required</h2>
       <p>Your check-in deadline has passed! Your switch will trigger soon if you don't check in.</p>
-      <p>Trigger scheduled for: <strong>{{ .TriggerTime }}</strong></p>
+      <p>Trigger scheduled for: <strong>{{ .Data.TriggerTime }}</strong></p>
       <button id="checkInButton" class="btn btn-danger">Check In Now</button>
     {{ end }}
   </div>
@@ -153,17 +153,17 @@
 <!-- Statistics -->
 <div class="dashboard-grid">
   <div class="card stat-card">
-    <div class="stat-number">{{ .Stats.TotalSecrets }}</div>
+    <div class="stat-number">{{ .Data.Stats.TotalSecrets }}</div>
     <div class="stat-label">Total Secrets</div>
   </div>
-  
+
   <div class="card stat-card">
-    <div class="stat-number">{{ .Stats.ActiveRecipients }}</div>
+    <div class="stat-number">{{ .Data.Stats.ActiveRecipients }}</div>
     <div class="stat-label">Recipients</div>
   </div>
-  
+
   <div class="card stat-card">
-    <div class="stat-number">{{ .Stats.DaysActive }} days</div>
+    <div class="stat-number">{{ .Data.Stats.DaysActive }} days</div>
     <div class="stat-label">Account Active</div>
   </div>
 </div>
@@ -174,7 +174,7 @@
 </div>
 
 <div class="timeline">
-  {{ range .Activities }}
+  {{ range .Data.Activities }}
     <div class="timeline-item">
       <div class="timeline-content card">
         <div class="timeline-date">{{ .Time }}</div>
@@ -193,13 +193,13 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const checkInButton = document.getElementById('checkInButton');
-  
+
   if (checkInButton) {
     checkInButton.addEventListener('click', function() {
       // Show loading state
       checkInButton.disabled = true;
       checkInButton.innerHTML = '<span class="spinner"></span> Checking in...';
-      
+
       // Call check-in API
       fetch('/api/check-in', {
         method: 'POST',
@@ -218,9 +218,9 @@ document.addEventListener('DOMContentLoaded', function() {
               <button type="button" class="alert-close">&times;</button>
             </div>
           `;
-          
+
           document.querySelector('main.container').insertAdjacentHTML('afterbegin', alertHTML);
-          
+
           // Reload after 2 seconds
           setTimeout(() => {
             window.location.reload();
@@ -233,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function() {
               <button type="button" class="alert-close">&times;</button>
             </div>
           `;
-          
+
           document.querySelector('main.container').insertAdjacentHTML('afterbegin', alertHTML);
           checkInButton.disabled = false;
           checkInButton.textContent = 'Check In Now';
@@ -248,7 +248,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <button type="button" class="alert-close">&times;</button>
           </div>
         `;
-        
+
         document.querySelector('main.container').insertAdjacentHTML('afterbegin', alertHTML);
         checkInButton.disabled = false;
         checkInButton.textContent = 'Check In Now';

@@ -6,14 +6,14 @@
         <h1>Recipients</h1>
         <a href="/recipients/new" class="btn btn-primary">Add New Recipient</a>
     </div>
-    
+
     <div class="alert alert-info">
         <p>Recipients are trusted contacts who will receive your secrets when your Dead Man's Switch is triggered. Make sure they have secure email access and are trustworthy.</p>
     </div>
-    
-    {{ if .Recipients }}
+
+    {{ if .Data.Recipients }}
         <div class="card-grid">
-            {{ range .Recipients }}
+            {{ range .Data.Recipients }}
                 <div class="card recipient-card">
                     <div class="card-header">
                         <h3>{{ .Name }}</h3>
