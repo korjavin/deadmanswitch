@@ -595,6 +595,14 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
+	// Get the authenticated user from context
+	ctx := r.Context()
+	user, ok := ctx.Value("user").(*models.User)
+	if !ok || user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	// Try to find templates in multiple locations
 	templatePaths := [][]string{
 		{"/app/web/templates/layout.html", "/app/web/templates/dashboard.html"},
@@ -621,28 +629,38 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get actual counts from database
+	secretCount := 0
+	recipientCount := 0
+
+	// Calculate days active
+	daysActive := int(time.Since(user.CreatedAt).Hours() / 24)
+	if daysActive < 1 {
+		daysActive = 1 // At least 1 day
+	}
+
+	// Calculate next check-in time
+	nextCheckIn := user.LastActivity.AddDate(0, 0, user.PingFrequency)
+
 	data := map[string]interface{}{
 		"Title":           "Dashboard",
 		"ActivePage":      "dashboard",
 		"IsAuthenticated": true,
 		"User": map[string]interface{}{
-			"Email": "user@example.com",
+			"Email": user.Email,
+			"Name":  user.Email, // Use email as name since we don't have a separate name field
 		},
 		"Status":      "active",
-		"NextCheckIn": time.Now().Add(7 * 24 * time.Hour).Format("Jan 2, 2006 15:04 MST"),
+		"NextCheckIn": nextCheckIn.Format("Jan 2, 2006 15:04 MST"),
 		"Stats": map[string]interface{}{
-			"TotalSecrets":     3,
-			"ActiveRecipients": 2,
-			"DaysActive":       30,
+			"TotalSecrets":     secretCount,
+			"ActiveRecipients": recipientCount,
+			"DaysActive":       daysActive,
 		},
 		"Activities": []map[string]string{
 			{
-				"Time":        time.Now().Add(-24 * time.Hour).Format("Jan 2, 2006 15:04"),
-				"Description": "Check-in via web",
-			},
-			{
-				"Time":        time.Now().Add(-8 * 24 * time.Hour).Format("Jan 2, 2006 15:04"),
-				"Description": "Check-in via email",
+				"Time":        user.CreatedAt.Format("Jan 2, 2006 15:04"),
+				"Description": "Account created",
 			},
 		},
 	}
@@ -655,6 +673,14 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListSecrets(w http.ResponseWriter, r *http.Request) {
+	// Get the authenticated user from context
+	ctx := r.Context()
+	user, ok := ctx.Value("user").(*models.User)
+	if !ok || user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	// Try to find templates in multiple locations
 	templatePaths := [][]string{
 		{"/app/web/templates/layout.html", "/app/web/templates/secrets.html"},
@@ -681,26 +707,19 @@ func (s *Server) handleListSecrets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// In a real implementation, we would fetch the user's secrets from the database
+	// For now, we'll just show an empty list
+	secrets := []map[string]interface{}{}
+
 	data := map[string]interface{}{
 		"Title":           "My Secrets",
 		"ActivePage":      "secrets",
 		"IsAuthenticated": true,
 		"User": map[string]interface{}{
-			"Email": "user@example.com",
+			"Email": user.Email,
+			"Name":  user.Email, // Use email as name since we don't have a separate name field
 		},
-		// Example secrets data
-		"Secrets": []map[string]interface{}{
-			{
-				"ID":          "1",
-				"Title":       "Bank Account",
-				"Type":        "login",
-				"Description": "My main bank account credentials",
-				"Username":    "myusername",
-				"Recipients": []map[string]interface{}{
-					{"Name": "John Doe", "Email": "john@example.com"},
-				},
-			},
-		},
+		"Secrets": secrets,
 	}
 
 	if err := tmpl.ExecuteTemplate(w, "layout", data); err != nil {
@@ -711,6 +730,14 @@ func (s *Server) handleListSecrets(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleNewSecretForm(w http.ResponseWriter, r *http.Request) {
+	// Get the authenticated user from context
+	ctx := r.Context()
+	user, ok := ctx.Value("user").(*models.User)
+	if !ok || user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	// Try to find templates in multiple locations
 	templatePaths := [][]string{
 		{"/app/web/templates/layout.html", "/app/web/templates/new-secret.html"},
@@ -737,18 +764,19 @@ func (s *Server) handleNewSecretForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// In a real implementation, we would fetch the user's recipients from the database
+	// For now, we'll just show an empty list
+	recipients := []map[string]interface{}{}
+
 	data := map[string]interface{}{
 		"Title":           "Add New Secret",
 		"ActivePage":      "secrets",
 		"IsAuthenticated": true,
 		"User": map[string]interface{}{
-			"Email": "user@example.com",
+			"Email": user.Email,
+			"Name":  user.Email, // Use email as name since we don't have a separate name field
 		},
-		// Example recipients data
-		"Recipients": []map[string]interface{}{
-			{"ID": "1", "Name": "John Doe", "Email": "john@example.com"},
-			{"ID": "2", "Name": "Jane Smith", "Email": "jane@example.com"},
-		},
+		"Recipients": recipients,
 	}
 
 	if err := tmpl.ExecuteTemplate(w, "layout", data); err != nil {
@@ -764,18 +792,34 @@ func (s *Server) handleNewSecret(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListRecipients(w http.ResponseWriter, r *http.Request) {
+	// Get the authenticated user from context
+	ctx := r.Context()
+	user, ok := ctx.Value("user").(*models.User)
+	if !ok || user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	// Try to find templates in multiple locations
 	templatePaths := [][]string{
 		{"/app/web/templates/layout.html", "/app/web/templates/recipients.html"},
 		{"./web/templates/layout.html", "./web/templates/recipients.html"},
 	}
 
+	// Customize the function map to include formatDate
+	funcMap := template.FuncMap{
+		"formatDate": func(t time.Time) string {
+			return t.Format("Jan 2, 2006")
+		},
+	}
+
 	var tmpl *template.Template
 	var err error
 	var templateErr error
 
+	// Try each template path with the function map
 	for _, paths := range templatePaths {
-		tmpl, err = template.ParseFiles(paths...)
+		tmpl, err = template.New(paths[0]).Funcs(funcMap).ParseFiles(paths...)
 		if err == nil {
 			break
 		}
@@ -790,53 +834,19 @@ func (s *Server) handleListRecipients(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Customize the function map to include formatDate
-	funcMap := template.FuncMap{
-		"formatDate": func(t time.Time) string {
-			return t.Format("Jan 2, 2006")
-		},
-	}
-
-	// Parse with function map
-	tmpl, err = template.New("layout.html").Funcs(funcMap).ParseFiles(
-		"./web/templates/layout.html",
-		"./web/templates/recipients.html",
-	)
-	if err != nil {
-		http.Error(w, "Template error", http.StatusInternalServerError)
-		log.Printf("Error parsing recipients template with funcMap: %v", err)
-		return
-	}
+	// In a real implementation, we would fetch the user's recipients from the database
+	// For now, we'll just show an empty list
+	recipients := []map[string]interface{}{}
 
 	data := map[string]interface{}{
 		"Title":           "Recipients",
 		"ActivePage":      "recipients",
 		"IsAuthenticated": true,
 		"User": map[string]interface{}{
-			"Email": "user@example.com",
+			"Email": user.Email,
+			"Name":  user.Email, // Use email as name since we don't have a separate name field
 		},
-		// Example recipients data
-		"Recipients": []map[string]interface{}{
-			{
-				"ID":              "1",
-				"Name":            "John Doe",
-				"Email":           "john@example.com",
-				"Relationship":    "family",
-				"ContactMethod":   "email",
-				"CreatedAt":       time.Now().AddDate(0, -1, 0),
-				"AssignedSecrets": []string{"1", "2"},
-			},
-			{
-				"ID":              "2",
-				"Name":            "Jane Smith",
-				"Email":           "jane@example.com",
-				"Relationship":    "friend",
-				"ContactMethod":   "phone",
-				"PhoneNumber":     "+1234567890",
-				"CreatedAt":       time.Now().AddDate(0, -2, 0),
-				"AssignedSecrets": []string{"1"},
-			},
-		},
+		"Recipients": recipients,
 	}
 
 	if err := tmpl.ExecuteTemplate(w, "layout", data); err != nil {
@@ -847,6 +857,14 @@ func (s *Server) handleListRecipients(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleNewRecipientForm(w http.ResponseWriter, r *http.Request) {
+	// Get the authenticated user from context
+	ctx := r.Context()
+	user, ok := ctx.Value("user").(*models.User)
+	if !ok || user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	// Try to find templates in multiple locations
 	templatePaths := [][]string{
 		{"/app/web/templates/layout.html", "/app/web/templates/new-recipient.html"},
@@ -878,7 +896,8 @@ func (s *Server) handleNewRecipientForm(w http.ResponseWriter, r *http.Request) 
 		"ActivePage":      "recipients",
 		"IsAuthenticated": true,
 		"User": map[string]interface{}{
-			"Email": "user@example.com",
+			"Email": user.Email,
+			"Name":  user.Email, // Use email as name since we don't have a separate name field
 		},
 	}
 

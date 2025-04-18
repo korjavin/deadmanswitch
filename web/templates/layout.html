@@ -37,6 +37,7 @@
         {{ if .IsAuthenticated }}
           <a href="/dashboard" class="navbar-item {{ if eq .ActivePage "dashboard" }}active{{ end }}">Dashboard</a>
           <a href="/secrets" class="navbar-item {{ if eq .ActivePage "secrets" }}active{{ end }}">Secrets</a>
+          <a href="/recipients" class="navbar-item {{ if eq .ActivePage "recipients" }}active{{ end }}">Recipients</a>
           <div class="navbar-right">
             <div class="dropdown">
               <button class="dropdown-toggle">
