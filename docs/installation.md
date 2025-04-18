@@ -75,8 +75,8 @@ When using Docker Compose, you can configure these variables in the `.env` file.
 | SMTP_USERNAME | SMTP username | (required for email) |
 | SMTP_PASSWORD | SMTP password | (required for email) |
 | SMTP_FROM | From address for emails | admin@yourdomain.com |
-| PING_FREQUENCY | How often to ping users (days) | 3 |
-| PING_DEADLINE | Time until switch activates (days) | 14 |
+| PING_FREQUENCY | How often to ping users (days) | 1 |
+| PING_DEADLINE | Time until switch activates (days, must be between 7 and 30) | 7 |
 | DB_PATH | Database file location | /app/data/db.sqlite |
 | LOG_LEVEL | Logging verbosity (debug, info, warn, error) | info |
 | ENABLE_METRICS | Enable Prometheus metrics | false |

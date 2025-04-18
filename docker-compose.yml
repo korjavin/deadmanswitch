@@ -26,8 +26,8 @@ services:
       - SMTP_FROM=${SMTP_FROM:-}
 
       # Ping settings
-      - PING_FREQUENCY=${PING_FREQUENCY:-24h}
-      - PING_DEADLINE=${PING_DEADLINE:-72h}
+      - PING_FREQUENCY=${PING_FREQUENCY:-1}
+      - PING_DEADLINE=${PING_DEADLINE:-7}
 
       # Debug settings
       - DEBUG=${DEBUG:-false}
