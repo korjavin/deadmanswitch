@@ -98,6 +98,10 @@ func (r *SQLiteRepository) initialize() error {
 		created_at DATETIME NOT NULL,
 		updated_at DATETIME NOT NULL,
 		phone_number TEXT,
+		is_confirmed BOOLEAN NOT NULL DEFAULT 0,
+		confirmed_at DATETIME DEFAULT NULL,
+		confirmation_code TEXT DEFAULT NULL,
+		confirmation_sent_at DATETIME DEFAULT NULL,
 		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 	);
 
@@ -238,8 +242,8 @@ func (r *SQLiteRepository) CreateUser(ctx context.Context, user *models.User) er
 	// Execute insert query
 	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO users (
-			id, email, password_hash, telegram_id, telegram_username, 
-			last_activity, created_at, updated_at, 
+			id, email, password_hash, telegram_id, telegram_username,
+			last_activity, created_at, updated_at,
 			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`,
@@ -259,9 +263,9 @@ func (r *SQLiteRepository) CreateUser(ctx context.Context, user *models.User) er
 func (r *SQLiteRepository) GetUserByID(ctx context.Context, id string) (*models.User, error) {
 	user := &models.User{}
 	err := r.db.QueryRowContext(ctx, `
-		SELECT 
-			id, email, password_hash, telegram_id, telegram_username, 
-			last_activity, created_at, updated_at, 
+		SELECT
+			id, email, password_hash, telegram_id, telegram_username,
+			last_activity, created_at, updated_at,
 			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping
 		FROM users
 		WHERE id = ?
@@ -285,9 +289,9 @@ func (r *SQLiteRepository) GetUserByID(ctx context.Context, id string) (*models.
 func (r *SQLiteRepository) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	user := &models.User{}
 	err := r.db.QueryRowContext(ctx, `
-		SELECT 
-			id, email, password_hash, telegram_id, telegram_username, 
-			last_activity, created_at, updated_at, 
+		SELECT
+			id, email, password_hash, telegram_id, telegram_username,
+			last_activity, created_at, updated_at,
 			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping
 		FROM users
 		WHERE email = ?
@@ -311,9 +315,9 @@ func (r *SQLiteRepository) GetUserByEmail(ctx context.Context, email string) (*m
 func (r *SQLiteRepository) GetUserByTelegramID(ctx context.Context, telegramID string) (*models.User, error) {
 	user := &models.User{}
 	err := r.db.QueryRowContext(ctx, `
-		SELECT 
-			id, email, password_hash, telegram_id, telegram_username, 
-			last_activity, created_at, updated_at, 
+		SELECT
+			id, email, password_hash, telegram_id, telegram_username,
+			last_activity, created_at, updated_at,
 			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping
 		FROM users
 		WHERE telegram_id = ?
@@ -379,9 +383,9 @@ func (r *SQLiteRepository) DeleteUser(ctx context.Context, id string) error {
 // ListUsers returns all users
 func (r *SQLiteRepository) ListUsers(ctx context.Context) ([]*models.User, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT 
-			id, email, password_hash, telegram_id, telegram_username, 
-			last_activity, created_at, updated_at, 
+		SELECT
+			id, email, password_hash, telegram_id, telegram_username,
+			last_activity, created_at, updated_at,
 			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping
 		FROM users
 		ORDER BY created_at DESC
@@ -537,13 +541,21 @@ func (r *SQLiteRepository) CreateRecipient(ctx context.Context, recipient *model
 	recipient.CreatedAt = now
 	recipient.UpdatedAt = now
 
+	// Default values for confirmation fields
+	recipient.IsConfirmed = false
+	recipient.ConfirmedAt = nil
+	recipient.ConfirmationCode = ""
+	recipient.ConfirmationSentAt = nil
+
 	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO recipients (
-			id, user_id, email, name, message, created_at, updated_at, phone_number
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+			id, user_id, email, name, message, created_at, updated_at, phone_number,
+			is_confirmed, confirmed_at, confirmation_code, confirmation_sent_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`,
 		recipient.ID, recipient.UserID, recipient.Email, recipient.Name,
 		recipient.Message, recipient.CreatedAt, recipient.UpdatedAt, recipient.PhoneNumber,
+		recipient.IsConfirmed, recipient.ConfirmedAt, recipient.ConfirmationCode, recipient.ConfirmationSentAt,
 	)
 
 	if err != nil {
@@ -557,12 +569,14 @@ func (r *SQLiteRepository) CreateRecipient(ctx context.Context, recipient *model
 func (r *SQLiteRepository) GetRecipientByID(ctx context.Context, id string) (*models.Recipient, error) {
 	recipient := &models.Recipient{}
 	err := r.db.QueryRowContext(ctx, `
-		SELECT id, user_id, email, name, message, created_at, updated_at, phone_number
+		SELECT id, user_id, email, name, message, created_at, updated_at, phone_number,
+		       is_confirmed, confirmed_at, confirmation_code, confirmation_sent_at
 		FROM recipients
 		WHERE id = ?
 	`, id).Scan(
 		&recipient.ID, &recipient.UserID, &recipient.Email, &recipient.Name,
 		&recipient.Message, &recipient.CreatedAt, &recipient.UpdatedAt, &recipient.PhoneNumber,
+		&recipient.IsConfirmed, &recipient.ConfirmedAt, &recipient.ConfirmationCode, &recipient.ConfirmationSentAt,
 	)
 
 	if err != nil {
@@ -578,7 +592,8 @@ func (r *SQLiteRepository) GetRecipientByID(ctx context.Context, id string) (*mo
 // ListRecipientsByUserID lists all recipients for a user
 func (r *SQLiteRepository) ListRecipientsByUserID(ctx context.Context, userID string) ([]*models.Recipient, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, user_id, email, name, message, created_at, updated_at, phone_number
+		SELECT id, user_id, email, name, message, created_at, updated_at, phone_number,
+		       is_confirmed, confirmed_at, confirmation_code, confirmation_sent_at
 		FROM recipients
 		WHERE user_id = ?
 		ORDER BY name ASC
@@ -594,6 +609,7 @@ func (r *SQLiteRepository) ListRecipientsByUserID(ctx context.Context, userID st
 		if err := rows.Scan(
 			&recipient.ID, &recipient.UserID, &recipient.Email, &recipient.Name,
 			&recipient.Message, &recipient.CreatedAt, &recipient.UpdatedAt, &recipient.PhoneNumber,
+			&recipient.IsConfirmed, &recipient.ConfirmedAt, &recipient.ConfirmationCode, &recipient.ConfirmationSentAt,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan recipient row: %w", err)
 		}
@@ -617,11 +633,16 @@ func (r *SQLiteRepository) UpdateRecipient(ctx context.Context, recipient *model
 			name = ?,
 			message = ?,
 			updated_at = ?,
-			phone_number = ?
+			phone_number = ?,
+			is_confirmed = ?,
+			confirmed_at = ?,
+			confirmation_code = ?,
+			confirmation_sent_at = ?
 		WHERE id = ? AND user_id = ?
 	`,
 		recipient.Email, recipient.Name, recipient.Message,
 		recipient.UpdatedAt, recipient.PhoneNumber,
+		recipient.IsConfirmed, recipient.ConfirmedAt, recipient.ConfirmationCode, recipient.ConfirmationSentAt,
 		recipient.ID, recipient.UserID,
 	)
 
@@ -1136,9 +1157,9 @@ func (r *SQLiteRepository) UpdateSessionActivity(ctx context.Context, id string)
 // GetUsersForPinging retrieves all users who need to be pinged
 func (r *SQLiteRepository) GetUsersForPinging(ctx context.Context) ([]*models.User, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT 
-			id, email, password_hash, telegram_id, telegram_username, 
-			last_activity, created_at, updated_at, 
+		SELECT
+			id, email, password_hash, telegram_id, telegram_username,
+			last_activity, created_at, updated_at,
 			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping
 		FROM users
 		WHERE pinging_enabled = 1 AND (next_scheduled_ping IS NULL OR next_scheduled_ping <= ?)
@@ -1169,9 +1190,9 @@ func (r *SQLiteRepository) GetUsersForPinging(ctx context.Context) ([]*models.Us
 func (r *SQLiteRepository) GetUsersWithExpiredPings(ctx context.Context) ([]*models.User, error) {
 	now := time.Now().UTC()
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT 
-			u.id, u.email, u.password_hash, u.telegram_id, u.telegram_username, 
-			u.last_activity, u.created_at, u.updated_at, 
+		SELECT
+			u.id, u.email, u.password_hash, u.telegram_id, u.telegram_username,
+			u.last_activity, u.created_at, u.updated_at,
 			u.ping_frequency, u.ping_deadline, u.pinging_enabled, u.ping_method, u.next_scheduled_ping
 		FROM users u
 		WHERE u.pinging_enabled = 1

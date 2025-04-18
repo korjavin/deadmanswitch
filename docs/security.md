@@ -1,5 +1,7 @@
 # Security Documentation
 
+> ⚠️ **CRITICAL SECURITY WARNING**: The current implementation uses placeholder encryption keys and simplified cryptography methods for development purposes only. The encryption described in this document represents the target security model, but is **NOT FULLY IMPLEMENTED** in the current version. Using this application for sensitive information in its current state is **STRONGLY DISCOURAGED**.
+
 ## Encryption Strategy
 
 ### Secret Encryption
@@ -83,6 +85,17 @@ The Dead Man's Switch application uses a layered encryption approach to protect 
 4. **Updates**
    - Keep the application and its dependencies up to date
    - Monitor security advisories
+
+## Current Implementation Status
+
+The current version of the application has the following limitations:
+
+1. **Hardcoded Master Key** - A static, hardcoded master key is used for development purposes
+2. **Simplified Key Management** - The full key derivation and management system is not yet implemented
+3. **Limited Authentication** - Password security features are partially implemented
+4. **Incomplete Audit Logging** - Not all security events are properly logged and monitored
+
+These issues will be addressed before the first stable release. The application should only be used in isolated, trusted environments for testing and development purposes until these issues are resolved.
 
 ## Security Disclosure
 

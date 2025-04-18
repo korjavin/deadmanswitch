@@ -9,7 +9,7 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 - [x] Web server implementation
 - [x] User authentication system
 - [x] Secret storage
-- [x] Secret proper encryption/re-encryption
+- [ ] Secret proper encryption/re-encryption
 - [ ] Scheduler for check-in reminders and deadlines
 - [ ] Email notification system
 - [ ] Telegram bot integration
@@ -21,9 +21,11 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 - [ ] Production deployment guide
 
 ## Features & Improvements
-- [ ] Remove settings - remove 2FA and complex notification settings, just use defaults from environment variables
+- [ ] Remove settings functionality - remove 2FA and complex notification settings, just use defaults from environment variables
 - [ ] Show connected telegram bots in profile page
 - [ ] After connecting telegram bot, schedule sending pings with tg bot also, make it configurable in profile page
+- [ ] When user logins send message to tg bot first if it's connected, then to email with explanation that someone just logged in and a link that can immediately invalidate all the sessions if user is not recognizing this activity.
+- [ ] If we add recipient to already created secret we need to re-encrypt secret with key for this recipient
 - [ ] Implement re-encoding of all secrets when user changes password
 - [x] Implement actual secret and recipients creation with proper encryption
 - [x] Implement recipient creation, editing, and deletion functionality
@@ -31,6 +33,8 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 - [x] Replace hardcoded mock activity data in history.go with data retrieved from database
 - [x] Incorporate ping-checks history in activity data
 - [x] Fix template error on /secrets page
+- [x] Implement real email sending for test contact with recipients
+- [x] Add recipient confirmation functionality
 - [ ] Fix "in real implementation" TODOs in code
 - [ ] Implement 2FA with Google Authenticator or similar for login
 - [ ] implement key derivation for encrypting secrets from master password

@@ -1,0 +1,52 @@
+{{ template "layout.html" . }}
+
+{{ define "content" }}
+<div class="confirmation-page">
+    <div class="card">
+        <div class="card-header">
+            <h2>Confirmation Successful</h2>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-success">
+                <p>{{ .Data.Message }}</p>
+            </div>
+            <p>You have successfully confirmed your contact information. The user who added you as a contact has been notified.</p>
+            <p>This confirmation helps ensure that the Dead Man's Switch system can reach you if needed.</p>
+            <p>You don't need to take any further action at this time.</p>
+        </div>
+    </div>
+</div>
+
+<style>
+.confirmation-page {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.card {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    padding: 15px 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+.alert-success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+</style>
+{{ end }}

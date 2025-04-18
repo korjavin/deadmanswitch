@@ -413,6 +413,265 @@ func (h *SecretsHandler) HandleDeleteSecret(w http.ResponseWriter, r *http.Reque
 	http.Redirect(w, r, "/secrets", http.StatusSeeOther)
 }
 
+// HandleViewSecretForm handles the view/edit secret form page
+func (h *SecretsHandler) HandleViewSecretForm(w http.ResponseWriter, r *http.Request) {
+	// Get the authenticated user from context
+	user, ok := middleware.GetUserFromContext(r)
+	if !ok || user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Get the secret ID from the URL
+	secretID := r.PathValue("id")
+	if secretID == "" {
+		http.Error(w, "Secret ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Fetch the secret from the database
+	secret, err := h.repo.GetSecretByID(context.Background(), secretID)
+	if err != nil {
+		http.Error(w, "Error fetching secret", http.StatusInternalServerError)
+		log.Printf("Error fetching secret: %v", err)
+		return
+	}
+
+	// Verify that the secret belongs to the user
+	if secret.UserID != user.ID {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Fetch all recipients for the user
+	dbRecipients, err := h.repo.ListRecipientsByUserID(context.Background(), user.ID)
+	if err != nil {
+		http.Error(w, "Error fetching recipients", http.StatusInternalServerError)
+		log.Printf("Error fetching recipients: %v", err)
+		return
+	}
+
+	// Fetch all secret assignments for the secret
+	assignments, err := h.repo.ListSecretAssignmentsBySecretID(context.Background(), secretID)
+	if err != nil {
+		http.Error(w, "Error fetching secret assignments", http.StatusInternalServerError)
+		log.Printf("Error fetching secret assignments: %v", err)
+		return
+	}
+
+	// Create a map of assigned recipient IDs for quick lookup
+	assignedRecipientIDs := make(map[string]bool)
+	for _, a := range assignments {
+		assignedRecipientIDs[a.RecipientID] = true
+	}
+
+	// Convert to template-friendly format
+	recipients := make([]map[string]interface{}, 0, len(dbRecipients))
+	for _, r := range dbRecipients {
+		recipientEntry := map[string]interface{}{
+			"ID":         r.ID,
+			"Name":       r.Name,
+			"Email":      r.Email,
+			"IsAssigned": assignedRecipientIDs[r.ID],
+		}
+
+		recipients = append(recipients, recipientEntry)
+	}
+
+	// Decrypt the secret content for editing
+	// In a real implementation, we would get the master key from the user's session
+	// For now, we'll use a dummy master key for demonstration
+	masterKey := []byte("this-is-a-dummy-master-key-for-demo-only")
+
+	// Log the secret details for debugging
+	log.Printf("Secret details - ID: %s, Name: %s, EncryptionType: %s, EncryptedData length: %d",
+		secret.ID, secret.Name, secret.EncryptionType, len(secret.EncryptedData))
+
+	// Decrypt the secret content
+	decryptedContent := ""
+	log.Printf("Attempting to decrypt secret %s with encrypted data length: %d", secret.ID, len(secret.EncryptedData))
+	if secret.EncryptedData != "" {
+		decryptedBytes, err := crypto.DecryptSecret(secret.EncryptedData, masterKey)
+		if err != nil {
+			log.Printf("Error decrypting secret %s: %v", secret.ID, err)
+			// If decryption fails, we'll show a placeholder
+			decryptedContent = "[Unable to decrypt content. The encryption key may have changed.]"
+		} else {
+			decryptedContent = string(decryptedBytes)
+			log.Printf("Successfully decrypted secret %s, content length: %d", secret.ID, len(decryptedContent))
+		}
+	} else {
+		log.Printf("Secret %s has no encrypted data", secret.ID)
+	}
+
+	secretData := map[string]interface{}{
+		"ID":             secret.ID,
+		"Name":           secret.Name,
+		"Type":           "note", // Default type
+		"Content":        decryptedContent,
+		"CreatedAt":      secret.CreatedAt,
+		"LastModified":   secret.UpdatedAt,
+		"EncryptionType": secret.EncryptionType,
+	}
+
+	data := templates.TemplateData{
+		Title:           "Edit Secret",
+		ActivePage:      "secrets",
+		IsAuthenticated: true,
+		User: map[string]interface{}{
+			"Email": user.Email,
+			"Name":  user.Email, // Use email as name since we don't have a separate name field
+		},
+		Data: map[string]interface{}{
+			"Secret":     secretData,
+			"Recipients": recipients,
+		},
+	}
+
+	if err := templates.RenderTemplate(w, "view-secret.html", data); err != nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		log.Printf("Error rendering view-secret template: %v", err)
+	}
+}
+
+// HandleUpdateSecret handles the update of a secret
+func (h *SecretsHandler) HandleUpdateSecret(w http.ResponseWriter, r *http.Request) {
+	// Get the authenticated user from context
+	user, ok := middleware.GetUserFromContext(r)
+	if !ok || user == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Get the secret ID from the URL
+	secretID := r.PathValue("id")
+	if secretID == "" {
+		http.Error(w, "Secret ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Fetch the secret from the database
+	secret, err := h.repo.GetSecretByID(context.Background(), secretID)
+	if err != nil {
+		http.Error(w, "Error fetching secret", http.StatusInternalServerError)
+		log.Printf("Error fetching secret: %v", err)
+		return
+	}
+
+	// Verify that the secret belongs to the user
+	if secret.UserID != user.ID {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Parse form data
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	// Get form values
+	title := r.FormValue("title")
+	content := r.FormValue("content")
+
+	if title == "" {
+		http.Error(w, "Title is required", http.StatusBadRequest)
+		return
+	}
+
+	// In a real implementation, we would get the master key from the user's session
+	// For now, we'll use a dummy master key for demonstration
+	masterKey := []byte("this-is-a-dummy-master-key-for-demo-only")
+
+	// Only re-encrypt if content was provided
+	if content != "" {
+		// Encrypt the secret content
+		encryptedData, err := crypto.EncryptSecret([]byte(content), masterKey)
+		if err != nil {
+			http.Error(w, "Error encrypting secret", http.StatusInternalServerError)
+			log.Printf("Error encrypting secret: %v", err)
+			return
+		}
+		secret.EncryptedData = encryptedData
+	}
+
+	// Update the secret in the database
+	secret.Name = title
+	secret.UpdatedAt = time.Now().UTC()
+
+	if err := h.repo.UpdateSecret(context.Background(), secret); err != nil {
+		http.Error(w, "Error updating secret", http.StatusInternalServerError)
+		log.Printf("Error updating secret: %v", err)
+		return
+	}
+
+	// Process recipient assignments
+	recipientIDs := r.Form["recipients"]
+
+	// Fetch all current assignments for the secret
+	currentAssignments, err := h.repo.ListSecretAssignmentsBySecretID(context.Background(), secretID)
+	if err != nil {
+		http.Error(w, "Error fetching secret assignments", http.StatusInternalServerError)
+		log.Printf("Error fetching secret assignments: %v", err)
+		return
+	}
+
+	// Create a map of current assignments for quick lookup
+	currentAssignmentMap := make(map[string]*models.SecretAssignment)
+	for _, a := range currentAssignments {
+		currentAssignmentMap[a.RecipientID] = a
+	}
+
+	// Create a map of selected recipient IDs for quick lookup
+	selectedRecipientMap := make(map[string]bool)
+	for _, id := range recipientIDs {
+		selectedRecipientMap[id] = true
+	}
+
+	// Remove assignments that are no longer selected
+	for recipientID, assignment := range currentAssignmentMap {
+		if !selectedRecipientMap[recipientID] {
+			if err := h.repo.DeleteSecretAssignment(context.Background(), assignment.ID); err != nil {
+				log.Printf("Error deleting secret assignment: %v", err)
+				// Continue anyway, don't fail the whole request
+			}
+		}
+	}
+
+	// Add new assignments for newly selected recipients
+	for _, recipientID := range recipientIDs {
+		if _, exists := currentAssignmentMap[recipientID]; !exists {
+			// Create a new assignment
+			assignment := &models.SecretAssignment{
+				SecretID:    secretID,
+				RecipientID: recipientID,
+				UserID:      user.ID,
+			}
+
+			if err := h.repo.CreateSecretAssignment(context.Background(), assignment); err != nil {
+				log.Printf("Error creating secret assignment: %v", err)
+				// Continue anyway, don't fail the whole request
+			}
+		}
+	}
+
+	// Create an audit log entry
+	auditLog := &models.AuditLog{
+		UserID:    user.ID,
+		Action:    "update_secret",
+		Timestamp: time.Now(),
+		Details:   "Updated secret: " + secret.Name,
+	}
+
+	if err := h.repo.CreateAuditLog(context.Background(), auditLog); err != nil {
+		log.Printf("Error creating audit log: %v", err)
+		// Continue anyway, don't fail the whole request
+	}
+
+	// Redirect to the secrets list page
+	http.Redirect(w, r, "/secrets", http.StatusSeeOther)
+}
+
 // HandleCreateSecret handles the new secret form submission
 func (h *SecretsHandler) HandleCreateSecret(w http.ResponseWriter, r *http.Request) {
 	// Get the authenticated user from context
@@ -453,6 +712,9 @@ func (h *SecretsHandler) HandleCreateSecret(w http.ResponseWriter, r *http.Reque
 		log.Printf("Error encrypting secret: %v", err)
 		return
 	}
+
+	log.Printf("Successfully encrypted content of length %d, resulting in encrypted data of length %d",
+		len(content), len(encryptedData))
 
 	// Create the secret in the database
 	secret := &models.Secret{

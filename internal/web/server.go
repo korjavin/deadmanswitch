@@ -69,7 +69,7 @@ func NewServer(
 	server.handlers.auth = handlers.NewAuthHandler(repo, emailClient)
 	server.handlers.dashboard = handlers.NewDashboardHandler(repo)
 	server.handlers.secrets = handlers.NewSecretsHandler(repo)
-	server.handlers.recipients = handlers.NewRecipientsHandler(repo)
+	server.handlers.recipients = handlers.NewRecipientsHandler(repo, emailClient)
 	server.handlers.api = handlers.NewAPIHandler(repo)
 	server.handlers.profile = handlers.NewProfileHandler()
 	server.handlers.settings = handlers.NewSettingsHandler()
@@ -131,6 +131,9 @@ func (s *Server) setupRoutes() {
 		r.Get("/register", s.handlers.auth.HandleRegisterForm)
 		r.Post("/register", s.handlers.auth.HandleRegister)
 
+		// Recipient confirmation
+		r.Get("/confirm/{code}", s.handlers.recipients.HandleConfirmRecipient)
+
 		// Static files - try multiple paths
 		// First try absolute path in container, then relative path
 		staticDirs := []string{"/app/web/static", "./web/static"}
@@ -170,17 +173,18 @@ func (s *Server) setupRoutes() {
 		r.Get("/secrets", s.handlers.secrets.HandleListSecrets)
 		r.Get("/secrets/new", s.handlers.secrets.HandleNewSecretForm)
 		r.Post("/secrets/new", s.handlers.secrets.HandleCreateSecret)
+		r.Get("/secrets/{id}", s.handlers.secrets.HandleViewSecretForm)
 		r.Get("/secrets/{id}/assign", s.handlers.secrets.HandleManageRecipients)
 		r.Post("/secrets/{id}/assign", s.handlers.secrets.HandleUpdateSecretRecipients)
 		r.Delete("/secrets/{id}", s.handlers.secrets.HandleDeleteSecret)
-		// Handle POST requests with _method=DELETE
+		// Handle POST requests with _method=DELETE or regular updates
 		r.Post("/secrets/{id}", func(w http.ResponseWriter, r *http.Request) {
 			if r.FormValue("_method") == "DELETE" {
 				s.handlers.secrets.HandleDeleteSecret(w, r)
 				return
 			}
-			// If not a DELETE request, return 404
-			http.NotFound(w, r)
+			// If not a DELETE request, handle as update
+			s.handlers.secrets.HandleUpdateSecret(w, r)
 		})
 
 		// Recipients management

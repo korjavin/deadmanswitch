@@ -30,6 +30,22 @@
                             <p><strong>Email:</strong> {{ .Email }}</p>
                             <p><strong>Relationship:</strong> {{ .Relationship }}</p>
                             <p><strong>Contact Method:</strong> {{ .ContactMethod }}</p>
+                            <p>
+                                <strong>Status:</strong>
+                                {{ if .IsConfirmed }}
+                                    <span class="badge bg-success">Confirmed</span>
+                                    {{ if .ConfirmedAt }}
+                                        <small class="text-muted">({{ formatDate .ConfirmedAt }})</small>
+                                    {{ end }}
+                                {{ else }}
+                                    {{ if .ConfirmationSentAt }}
+                                        <span class="badge bg-warning">Pending Confirmation</span>
+                                        <small class="text-muted">(sent {{ formatDate .ConfirmationSentAt }})</small>
+                                    {{ else }}
+                                        <span class="badge bg-secondary">Not Verified</span>
+                                    {{ end }}
+                                {{ end }}
+                            </p>
                         </div>
                         {{ if .PhoneNumber }}
                             <p><strong>Phone:</strong> {{ .PhoneNumber }}</p>
@@ -117,6 +133,37 @@
     max-width: 500px;
     margin: 0 auto;
     margin-top: 40px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25em 0.4em;
+    font-size: 75%;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+}
+
+.bg-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.bg-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.bg-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.text-muted {
+    color: #6c757d;
 }
 </style>
 {{ end }}

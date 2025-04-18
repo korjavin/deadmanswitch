@@ -2,10 +2,14 @@ package handlers
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/korjavin/deadmanswitch/internal/email"
 	"github.com/korjavin/deadmanswitch/internal/models"
 	"github.com/korjavin/deadmanswitch/internal/storage"
 	"github.com/korjavin/deadmanswitch/internal/web/middleware"
@@ -14,13 +18,15 @@ import (
 
 // RecipientsHandler handles recipients-related requests
 type RecipientsHandler struct {
-	repo storage.Repository
+	repo        storage.Repository
+	emailClient *email.Client
 }
 
 // NewRecipientsHandler creates a new RecipientsHandler
-func NewRecipientsHandler(repo storage.Repository) *RecipientsHandler {
+func NewRecipientsHandler(repo storage.Repository, emailClient *email.Client) *RecipientsHandler {
 	return &RecipientsHandler{
-		repo: repo,
+		repo:        repo,
+		emailClient: emailClient,
 	}
 }
 
@@ -73,16 +79,18 @@ func (h *RecipientsHandler) HandleListRecipients(w http.ResponseWriter, r *http.
 		}
 
 		recipientEntry := map[string]interface{}{
-			"ID":              r.ID,
-			"Name":            r.Name,
-			"Email":           r.Email,
-			"PhoneNumber":     r.PhoneNumber,
-			"CreatedAt":       r.CreatedAt,
-			"UpdatedAt":       r.UpdatedAt,
-			"Relationship":    "other", // Default value, not in the base model
-			"ContactMethod":   contactMethod,
-			"Verified":        true, // Default value, not in the base model
-			"AssignedSecrets": assignedSecrets,
+			"ID":                 r.ID,
+			"Name":               r.Name,
+			"Email":              r.Email,
+			"PhoneNumber":        r.PhoneNumber,
+			"CreatedAt":          r.CreatedAt,
+			"UpdatedAt":          r.UpdatedAt,
+			"Relationship":       "other", // Default value, not in the base model
+			"ContactMethod":      contactMethod,
+			"IsConfirmed":        r.IsConfirmed,
+			"ConfirmedAt":        r.ConfirmedAt,
+			"ConfirmationSentAt": r.ConfirmationSentAt,
+			"AssignedSecrets":    assignedSecrets,
 		}
 		recipients = append(recipients, recipientEntry)
 	}
@@ -561,8 +569,67 @@ func (h *RecipientsHandler) HandleTestContact(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// In a real implementation, we would send a test email or other notification to the recipient
-	// For now, we'll just log it and redirect back to the recipients page
+	// Check if email client is configured
+	if h.emailClient == nil {
+		http.Error(w, "Email client not configured", http.StatusInternalServerError)
+		log.Printf("Email client not configured, cannot send test contact")
+		return
+	}
+
+	// Generate a confirmation code
+	confirmationCode, err := generateConfirmationCode()
+	if err != nil {
+		http.Error(w, "Error generating confirmation code", http.StatusInternalServerError)
+		log.Printf("Error generating confirmation code: %v", err)
+		return
+	}
+
+	// Update the recipient with the confirmation code
+	now := time.Now().UTC()
+	recipient.ConfirmationCode = confirmationCode
+	recipient.ConfirmationSentAt = &now
+	recipient.IsConfirmed = false
+	recipient.ConfirmedAt = nil
+
+	if err := h.repo.UpdateRecipient(context.Background(), recipient); err != nil {
+		http.Error(w, "Error updating recipient", http.StatusInternalServerError)
+		log.Printf("Error updating recipient with confirmation code: %v", err)
+		return
+	}
+
+	// Construct the confirmation URL
+	scheme := "http"
+	if r.TLS != nil {
+		scheme = "https"
+	}
+	host := r.Host
+	confirmationURL := fmt.Sprintf("%s://%s/confirm/%s", scheme, host, confirmationCode)
+
+	// Construct the email message
+	subject := "Dead Man's Switch - Contact Confirmation"
+	message := fmt.Sprintf(`
+		<html>
+		<body>
+			<h2>Dead Man's Switch - Contact Confirmation</h2>
+			<p>Hello %s,</p>
+			<p>You have been added as a contact by %s to be reached if something happens to them.</p>
+			<p>This is just a test message to confirm that your contact information is correct.</p>
+			<p>If you wish to confirm that you received this message, please click on the link below:</p>
+			<p><a href="%s">Confirm Receipt</a></p>
+			<p>This confirmation link will be valid for 7 days.</p>
+			<p>If you have any questions, please contact %s directly.</p>
+			<p>Thank you,<br>Dead Man's Switch</p>
+		</body>
+		</html>
+	`, recipient.Name, user.Email, confirmationURL, user.Email)
+
+	// Send the email
+	if err := h.emailClient.SendEmailSimple([]string{recipient.Email}, subject, message, true); err != nil {
+		http.Error(w, "Error sending test contact email", http.StatusInternalServerError)
+		log.Printf("Error sending test contact email: %v", err)
+		return
+	}
+
 	log.Printf("Test contact sent to recipient: %s (%s)", recipient.Name, recipient.Email)
 
 	// Create an audit log entry
@@ -580,6 +647,149 @@ func (h *RecipientsHandler) HandleTestContact(w http.ResponseWriter, r *http.Req
 
 	// Redirect to the recipients list page with a success message
 	http.Redirect(w, r, "/recipients?test_contact=success", http.StatusSeeOther)
+}
+
+// generateConfirmationCode generates a random confirmation code
+func generateConfirmationCode() (string, error) {
+	bytes := make([]byte, 16)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
+
+// HandleConfirmRecipient handles the confirmation of a recipient
+func (h *RecipientsHandler) HandleConfirmRecipient(w http.ResponseWriter, r *http.Request) {
+	// Get the confirmation code from the URL
+	code := r.PathValue("code")
+	if code == "" {
+		http.Error(w, "Confirmation code is required", http.StatusBadRequest)
+		return
+	}
+
+	// Find the recipient with this confirmation code
+	ctx := context.Background()
+	recipients, err := h.findRecipientsByConfirmationCode(ctx, code)
+	if err != nil {
+		http.Error(w, "Error finding recipient", http.StatusInternalServerError)
+		log.Printf("Error finding recipient by confirmation code: %v", err)
+		return
+	}
+
+	if len(recipients) == 0 {
+		http.Error(w, "Invalid confirmation code", http.StatusBadRequest)
+		return
+	}
+
+	recipient := recipients[0]
+
+	// Check if the confirmation code is expired (7 days)
+	if recipient.ConfirmationSentAt == nil {
+		http.Error(w, "Invalid confirmation code", http.StatusBadRequest)
+		return
+	}
+
+	expiration := recipient.ConfirmationSentAt.Add(7 * 24 * time.Hour)
+	if time.Now().UTC().After(expiration) {
+		http.Error(w, "Confirmation code has expired", http.StatusBadRequest)
+		return
+	}
+
+	// Mark the recipient as confirmed
+	now := time.Now().UTC()
+	recipient.IsConfirmed = true
+	recipient.ConfirmedAt = &now
+
+	if err := h.repo.UpdateRecipient(ctx, recipient); err != nil {
+		http.Error(w, "Error updating recipient", http.StatusInternalServerError)
+		log.Printf("Error updating recipient confirmation status: %v", err)
+		return
+	}
+
+	// Create an audit log entry
+	auditLog := &models.AuditLog{
+		UserID:    recipient.UserID,
+		Action:    "recipient_confirmed",
+		Timestamp: now,
+		Details:   "Recipient confirmed: " + recipient.Name,
+	}
+
+	if err := h.repo.CreateAuditLog(ctx, auditLog); err != nil {
+		log.Printf("Error creating audit log: %v", err)
+		// Continue anyway, don't fail the whole request
+	}
+
+	// Notify the user that the recipient has confirmed
+	user, err := h.repo.GetUserByID(ctx, recipient.UserID)
+	if err != nil {
+		log.Printf("Error fetching user for notification: %v", err)
+		// Continue anyway, don't fail the whole request
+	} else if h.emailClient != nil {
+		// Send notification email to the user
+		subject := "Dead Man's Switch - Contact Confirmed"
+		message := fmt.Sprintf(`
+			<html>
+			<body>
+				<h2>Dead Man's Switch - Contact Confirmed</h2>
+				<p>Hello,</p>
+				<p>Your contact %s (%s) has confirmed receipt of your test message.</p>
+				<p>This contact is now marked as confirmed in your Dead Man's Switch account.</p>
+				<p>Thank you,<br>Dead Man's Switch</p>
+			</body>
+			</html>
+		`, recipient.Name, recipient.Email)
+
+		if err := h.emailClient.SendEmailSimple([]string{user.Email}, subject, message, true); err != nil {
+			log.Printf("Error sending confirmation notification email: %v", err)
+			// Continue anyway, don't fail the whole request
+		}
+	}
+
+	// Render a confirmation success page
+	data := templates.TemplateData{
+		Title:           "Confirmation Successful",
+		ActivePage:      "",
+		IsAuthenticated: false,
+		Data: map[string]interface{}{
+			"Message": "Thank you for confirming your contact information. The user has been notified.",
+		},
+	}
+
+	if err := templates.RenderTemplate(w, "confirmation.html", data); err != nil {
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		log.Printf("Error rendering confirmation template: %v", err)
+	}
+}
+
+// findRecipientsByConfirmationCode finds recipients by confirmation code
+func (h *RecipientsHandler) findRecipientsByConfirmationCode(ctx context.Context, code string) ([]*models.Recipient, error) {
+	// This is a workaround since we don't have a direct method to find by confirmation code
+	// In a real implementation, we would add a method to the repository to find by confirmation code
+
+	// Get all users
+	users, err := h.repo.ListUsers(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list users: %w", err)
+	}
+
+	var matchingRecipients []*models.Recipient
+
+	// For each user, get their recipients and check for a matching confirmation code
+	for _, user := range users {
+		recipients, err := h.repo.ListRecipientsByUserID(ctx, user.ID)
+		if err != nil {
+			log.Printf("Error listing recipients for user %s: %v", user.ID, err)
+			continue
+		}
+
+		for _, recipient := range recipients {
+			if recipient.ConfirmationCode == code {
+				matchingRecipients = append(matchingRecipients, recipient)
+			}
+		}
+	}
+
+	return matchingRecipients, nil
 }
 
 // HandleDeleteRecipient handles the delete recipient request

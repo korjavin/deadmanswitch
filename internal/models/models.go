@@ -34,14 +34,18 @@ type Secret struct {
 
 // Recipient represents someone who will receive secrets
 type Recipient struct {
-	ID          string    `json:"id"`
-	UserID      string    `json:"user_id"` // The user who created this recipient
-	Email       string    `json:"email"`
-	Name        string    `json:"name"`
-	Message     string    `json:"message"` // Custom message to send with the secrets
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	PhoneNumber string    `json:"phone_number,omitempty"`
+	ID                 string     `json:"id"`
+	UserID             string     `json:"user_id"` // The user who created this recipient
+	Email              string     `json:"email"`
+	Name               string     `json:"name"`
+	Message            string     `json:"message"` // Custom message to send with the secrets
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
+	PhoneNumber        string     `json:"phone_number,omitempty"`
+	IsConfirmed        bool       `json:"is_confirmed"`
+	ConfirmedAt        *time.Time `json:"confirmed_at,omitempty"`
+	ConfirmationCode   string     `json:"confirmation_code,omitempty"`
+	ConfirmationSentAt *time.Time `json:"confirmation_sent_at,omitempty"`
 }
 
 // SecretAssignment links secrets to recipients
