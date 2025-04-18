@@ -1,0 +1,138 @@
+{{ template "layout.html" . }}
+
+{{ define "content" }}
+<div class="recipients-page">
+    <div class="header-actions">
+        <h1>Recipients</h1>
+        <a href="/recipients/new" class="btn btn-primary">Add New Recipient</a>
+    </div>
+    
+    <div class="alert alert-info">
+        <p>Recipients are trusted contacts who will receive your secrets when your Dead Man's Switch is triggered. Make sure they have secure email access and are trustworthy.</p>
+    </div>
+    
+    {{ if .Recipients }}
+        <div class="card-grid">
+            {{ range .Recipients }}
+                <div class="card recipient-card">
+                    <div class="card-header">
+                        <h3>{{ .Name }}</h3>
+                        <div class="recipient-actions">
+                            <a href="/recipients/{{ .ID }}" class="btn btn-sm btn-secondary">Edit</a>
+                            <form action="/recipients/{{ .ID }}" method="POST" class="inline-form">
+                                <input type="hidden" name="_method" value="DELETE">
+                                <button type="submit" class="btn btn-sm btn-danger confirm-delete">Remove</button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="recipient-info">
+                            <p><strong>Email:</strong> {{ .Email }}</p>
+                            <p><strong>Relationship:</strong> {{ .Relationship }}</p>
+                            <p><strong>Contact Method:</strong> {{ .ContactMethod }}</p>
+                        </div>
+                        {{ if .PhoneNumber }}
+                            <p><strong>Phone:</strong> {{ .PhoneNumber }}</p>
+                        {{ end }}
+                        {{ if .TelegramUsername }}
+                            <p><strong>Telegram:</strong> {{ .TelegramUsername }}</p>
+                        {{ end }}
+                    </div>
+                    <div class="card-footer">
+                        <p><strong>Added:</strong> {{ formatDate .CreatedAt }}</p>
+                        <p><strong>Assigned Secrets:</strong> {{ len .AssignedSecrets }}</p>
+                        <div style="margin-top: 10px;">
+                            <a href="/recipients/{{ .ID }}/secrets" class="btn btn-sm btn-secondary">Manage Secrets</a>
+                            <a href="/recipients/{{ .ID }}/test" class="btn btn-sm btn-outline-secondary">Test Contact</a>
+                        </div>
+                    </div>
+                </div>
+            {{ end }}
+        </div>
+    {{ else }}
+        <div class="empty-state">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h3>No Recipients Yet</h3>
+                    <p>You haven't added any recipients to your Dead Man's Switch yet.</p>
+                    <p>Add at least one trusted recipient to receive your secrets when your switch is triggered.</p>
+                    <a href="/recipients/new" class="btn btn-primary">Add First Recipient</a>
+                </div>
+            </div>
+        </div>
+    {{ end }}
+</div>
+
+{{ end }}
+
+{{ define "styles" }}
+<style>
+.recipients-page {
+    margin-bottom: 2rem;
+}
+
+.header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.recipient-card {
+    transition: transform 0.2s ease;
+}
+
+.recipient-card:hover {
+    transform: translateY(-5px);
+}
+
+.inline-form {
+    display: inline;
+}
+
+.recipient-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.recipient-info {
+    margin-bottom: 1rem;
+}
+
+.recipient-info p {
+    margin-bottom: 0.5rem;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.empty-state {
+    max-width: 500px;
+    margin: 0 auto;
+    margin-top: 40px;
+}
+</style>
+{{ end }}
+
+{{ define "scripts" }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Confirm deletion of recipients
+    const deleteButtons = document.querySelectorAll('.confirm-delete');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            if (!confirm('Are you sure you want to remove this recipient? Any secret assignments will also be removed.')) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>
+{{ end }}

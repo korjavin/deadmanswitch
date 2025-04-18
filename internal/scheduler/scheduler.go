@@ -401,6 +401,7 @@ func (s *Scheduler) deliverSecrets(ctx context.Context, user *models.User) error
 
 // cleanupTask handles cleanup operations
 func (s *Scheduler) cleanupTask(ctx context.Context) error {
+	log.Println("Running cleanupTask")
 	// Delete expired sessions
 	if err := s.repo.DeleteExpiredSessions(ctx); err != nil {
 		return fmt.Errorf("failed to delete expired sessions: %w", err)
