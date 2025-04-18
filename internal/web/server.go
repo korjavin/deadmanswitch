@@ -483,22 +483,20 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		Hello %s,
 
 		Welcome to Dead Man's Switch!
-		
+
 		Your account has been created successfully.
-		
+
 		Best regards,
 		Dead Man's Switch Team
 	`, name)
 
-	// Using the correct method signature for the email client
-	emailOpts := &email.MessageOptions{
-		To:      []string{email},
-		Subject: "Welcome to Dead Man's Switch",
-		Body:    welcomeMessage,
-	}
-	err = s.emailClient.SendEmail(emailOpts)
-
-	if err != nil {
+	// Send welcome email
+	if err := s.sendEmail(
+		[]string{email},
+		"Welcome to Dead Man's Switch",
+		welcomeMessage,
+		false,
+	); err != nil {
 		log.Printf("Error sending welcome email: %v", err)
 		// Continue anyway, this is not critical
 	}
@@ -945,4 +943,14 @@ func determineContactMethod(recipient *models.Recipient) string {
 		return "phone"
 	}
 	return "email" // Default contact method
+}
+
+// sendEmail is a helper method to send emails
+func (s *Server) sendEmail(to []string, subject, body string, isHTML bool) error {
+	if s.emailClient == nil {
+		return fmt.Errorf("email client not configured")
+	}
+
+	// Use the simplified email sending method
+	return s.emailClient.SendEmailSimple(to, subject, body, isHTML)
 }

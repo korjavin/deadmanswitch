@@ -42,27 +42,29 @@ func NewClient(config *config.Config) (*Client, error) {
 
 // SendEmail sends an email with the specified options
 func (c *Client) SendEmail(options *MessageOptions) error {
-	if len(options.To) == 0 {
+	return c.SendEmailSimple(options.To, options.Subject, options.Body, options.IsHTML)
+}
+
+// SendEmailSimple sends an email with basic parameters
+func (c *Client) SendEmailSimple(to []string, subject, body string, isHTML bool) error {
+	if len(to) == 0 {
 		return fmt.Errorf("no recipients specified")
 	}
 
-	// Use configured From address if not provided
-	from := options.From
-	if from == "" {
-		from = c.config.SMTPFrom
-	}
+	// Use configured From address
+	from := c.config.SMTPFrom
 
 	// Build headers
 	headers := make(map[string]string)
 	headers["From"] = from
-	headers["To"] = strings.Join(options.To, ", ")
-	headers["Subject"] = options.Subject
+	headers["To"] = strings.Join(to, ", ")
+	headers["Subject"] = subject
 	headers["Date"] = time.Now().Format(time.RFC1123Z)
 	headers["MIME-Version"] = "1.0"
 
 	// Set content type based on IsHTML flag
 	contentType := "text/plain; charset=utf-8"
-	if options.IsHTML {
+	if isHTML {
 		contentType = "text/html; charset=utf-8"
 	}
 	headers["Content-Type"] = contentType
@@ -72,7 +74,7 @@ func (c *Client) SendEmail(options *MessageOptions) error {
 	for k, v := range headers {
 		message += fmt.Sprintf("%s: %s\r\n", k, v)
 	}
-	message += "\r\n" + options.Body
+	message += "\r\n" + body
 
 	// Connect to the server and enable TLS
 	smtpClient, err := smtp.Dial(fmt.Sprintf("%s:%d", c.config.SMTPHost, c.config.SMTPPort))
@@ -97,7 +99,7 @@ func (c *Client) SendEmail(options *MessageOptions) error {
 	if err := smtpClient.Mail(from); err != nil {
 		return fmt.Errorf("failed to set sender: %w", err)
 	}
-	for _, addr := range options.To {
+	for _, addr := range to {
 		if err := smtpClient.Rcpt(addr); err != nil {
 			return fmt.Errorf("failed to set recipient %s: %w", addr, err)
 		}
@@ -137,22 +139,22 @@ func (c *Client) SendPingEmail(email string, name string, verificationCode strin
     <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
         <h2 style="color: #343a40;">Dead Man's Switch: Action Required</h2>
     </div>
-    
+
     <p>Hello %s,</p>
-    
+
     <p>This is an automated check-in request from your Dead Man's Switch service.</p>
-    
+
     <p><strong>Action Required:</strong> Please confirm you're okay by clicking the button below within your configured deadline.</p>
-    
+
     <div style="text-align: center; margin: 30px 0;">
         <a href="%s" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">I'm OK - Confirm</a>
     </div>
-    
+
     <p><strong>Important:</strong> If you don't respond, your pre-configured secrets will be automatically sent to your designated recipients.</p>
-    
+
     <p>If you can't click the button, copy and paste this URL into your browser:</p>
     <p style="word-break: break-all; background-color: #f8f9fa; padding: 10px; border-radius: 4px;">%s</p>
-    
+
     <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #6c757d;">
         <p>This is an automated message from your self-hosted Dead Man's Switch service.</p>
         <p>If you did not set up this service, please disregard this email.</p>
@@ -186,28 +188,28 @@ func (c *Client) SendSecretDeliveryEmail(recipientEmail, recipientName, message 
     <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
         <h2 style="color: #343a40;">Confidential Information Access</h2>
     </div>
-    
+
     <p>Hello %s,</p>
-    
+
     <p>Someone has designated you as a recipient of confidential information through their Dead Man's Switch service.</p>
-    
+
     <p>They have left you the following message:</p>
-    
+
     <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0; font-style: italic;">
         %s
     </div>
-    
+
     <p>To access the confidential information they've shared with you, please click the button below:</p>
-    
+
     <div style="text-align: center; margin: 30px 0;">
         <a href="%s" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Access Confidential Information</a>
     </div>
-    
+
     <p>If you can't click the button, copy and paste this URL into your browser:</p>
     <p style="word-break: break-all; background-color: #f8f9fa; padding: 10px; border-radius: 4px;">%s</p>
-    
+
     <p><strong>Important:</strong> This link will expire after a limited time for security reasons.</p>
-    
+
     <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #6c757d;">
         <p>This is a one-time notification. No further action is required if you choose not to access the information.</p>
     </div>
