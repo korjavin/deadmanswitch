@@ -163,7 +163,7 @@ func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	email := r.FormValue("email")
 	name := r.FormValue("name")
 	password := r.FormValue("password")
-	confirmPassword := r.FormValue("confirm_password")
+	confirmPassword := r.FormValue("confirmPassword")
 
 	// Validate inputs
 	if email == "" || name == "" || password == "" {
