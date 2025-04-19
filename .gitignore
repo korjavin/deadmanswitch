@@ -1,7 +1,7 @@
 task.md
 data/db.sqlite
 deadmanswitch
-
+tests/frontend/*.png
 # Environment variables
 .env
 

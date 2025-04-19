@@ -20,17 +20,11 @@ test.describe('GitHub Integration End-to-End Test', () => {
     await page.fill('input[name="password"]', testPassword);
     await page.fill('input[name="confirmPassword"]', testPassword);
 
-    // Take screenshot before submitting registration
-    await page.screenshot({ path: 'before-registration-submit.png' });
-
     await page.click('button[type="submit"]');
 
     // Wait for navigation to complete
     await page.waitForLoadState('networkidle', { timeout: 60000 });
     console.log('Registration form submitted');
-
-    // Take screenshot after form submission
-    await page.screenshot({ path: 'after-registration-submit.png' });
 
     // Check if we're on the dashboard or login page
     const currentUrl = page.url();
@@ -56,23 +50,14 @@ test.describe('GitHub Integration End-to-End Test', () => {
       await page.waitForLoadState('networkidle', { timeout: 60000 });
     }
 
-    // Take screenshot after registration
-    await page.screenshot({ path: 'after-registration.png' });
-
     // Step 2: Navigate to profile page
     console.log('Navigating to profile page...');
     await page.goto('http://localhost:8082/profile');
     await page.waitForLoadState('networkidle');
     console.log('Profile page loaded');
 
-    // Take screenshot of profile page
-    await page.screenshot({ path: 'profile-page.png' });
-
     // Step 3: Connect GitHub account
     console.log('Connecting GitHub account...');
-
-    // Take screenshot of the profile page to see what's there
-    await page.screenshot({ path: 'profile-page-before-github.png' });
 
     // Check if the GitHub section is visible
     const githubSection = page.locator('.card:has-text("GitHub Integration")');
@@ -95,7 +80,6 @@ test.describe('GitHub Integration End-to-End Test', () => {
 
     // Fill in GitHub username and submit
     await githubUsernameInput.fill(githubUsername);
-    await page.screenshot({ path: 'github-form-filled.png' });
 
     // Click the Connect GitHub button
     await page.click('form[action="/profile"] button:has-text("Connect GitHub")');
@@ -103,9 +87,6 @@ test.describe('GitHub Integration End-to-End Test', () => {
     // Wait for the form submission to complete
     await page.waitForLoadState('networkidle');
     console.log('GitHub connection form submitted');
-
-    // Take screenshot after GitHub connection
-    await page.screenshot({ path: 'after-github-connect.png' });
 
     // Step 4: Verify GitHub connection
     console.log('Verifying GitHub connection...');
@@ -122,9 +103,6 @@ test.describe('GitHub Integration End-to-End Test', () => {
     await expect(usernameText).toContainText(githubUsername, { timeout: 10000 });
     console.log('GitHub connection verified');
 
-    // Take screenshot of GitHub section
-    await page.screenshot({ path: 'github-section-connected.png' });
-
     // Step 5: Disconnect GitHub account
     console.log('Disconnecting GitHub account...');
 
@@ -136,9 +114,6 @@ test.describe('GitHub Integration End-to-End Test', () => {
     await disconnectBtn.click();
     await page.waitForLoadState('networkidle');
     console.log('GitHub disconnected');
-
-    // Take screenshot after disconnection
-    await page.screenshot({ path: 'after-github-disconnect.png' });
 
     // Verify GitHub is disconnected
     await page.goto('http://localhost:8082/profile');
@@ -158,9 +133,6 @@ test.describe('GitHub Integration End-to-End Test', () => {
     await page.click('a[href="/logout"]');
     await page.waitForLoadState('networkidle');
     console.log('Logout successful');
-
-    // Take screenshot after logout
-    await page.screenshot({ path: 'after-logout.png' });
 
     console.log('GitHub integration end-to-end test completed');
   });

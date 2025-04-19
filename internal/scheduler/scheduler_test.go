@@ -296,12 +296,12 @@ func TestRegisterTasks(t *testing.T) {
 		t.Fatalf("registerTasks failed: %v", err)
 	}
 
-	if len(scheduler.tasks) != 3 {
-		t.Errorf("Expected 3 tasks, got %d", len(scheduler.tasks))
+	if len(scheduler.tasks) != 4 {
+		t.Errorf("Expected 4 tasks, got %d", len(scheduler.tasks))
 	}
 
 	// Check that the expected tasks are registered
-	var hasPingTask, hasDeadSwitchTask, hasCleanupTask bool
+	var hasPingTask, hasDeadSwitchTask, hasCleanupTask, hasExternalActivityTask bool
 	for _, task := range scheduler.tasks {
 		switch task.Name {
 		case "PingTask":
@@ -328,6 +328,14 @@ func TestRegisterTasks(t *testing.T) {
 			if task.RunOnStart {
 				t.Error("Expected CleanupTask.RunOnStart to be false")
 			}
+		case "ExternalActivityTask":
+			hasExternalActivityTask = true
+			if task.Duration != 1*time.Hour {
+				t.Errorf("Expected ExternalActivityTask duration to be 1 hour, got %v", task.Duration)
+			}
+			if !task.RunOnStart {
+				t.Error("Expected ExternalActivityTask.RunOnStart to be true")
+			}
 		}
 	}
 
@@ -339,6 +347,9 @@ func TestRegisterTasks(t *testing.T) {
 	}
 	if !hasCleanupTask {
 		t.Error("Expected CleanupTask to be registered")
+	}
+	if !hasExternalActivityTask {
+		t.Error("Expected ExternalActivityTask to be registered")
 	}
 }
 
