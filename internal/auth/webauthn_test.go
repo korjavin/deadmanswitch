@@ -212,6 +212,26 @@ func TestCredentialIDConversion(t *testing.T) {
 	}
 }
 
+func TestWebAuthnConfig(t *testing.T) {
+	// Test with valid config
+	config := WebAuthnConfig{
+		RPDisplayName: "Test RP",
+		RPID:          "localhost",
+		RPOrigin:      "http://localhost:8080",
+	}
+
+	// Validate the config
+	if config.RPDisplayName != "Test RP" {
+		t.Errorf("Expected RPDisplayName to be 'Test RP', got '%s'", config.RPDisplayName)
+	}
+	if config.RPID != "localhost" {
+		t.Errorf("Expected RPID to be 'localhost', got '%s'", config.RPID)
+	}
+	if config.RPOrigin != "http://localhost:8080" {
+		t.Errorf("Expected RPOrigin to be 'http://localhost:8080', got '%s'", config.RPOrigin)
+	}
+}
+
 func TestGetUserCredentials(t *testing.T) {
 	// Create a mock repository with some passkeys
 	repo := &MockRepository{

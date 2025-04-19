@@ -50,11 +50,12 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 - [ ] similar to github and activitypub, add ability to monitor telegram channel
 - [ ] understand how can we passover encrypted secrets to user since we have no way to know the master password. I think we have to create a key for every recipient, encode copy of the secret with this key, and provide key to user if switch is triggered. need to describe it well in diagram and security doc, brainstorm the idea and threats
 - [ ] Find a way to secure bind telegram handle to registered user, that somebody else couldn't do it, and by those prevent switch trigger. Expalin this threat in security doc, and explain the solution well
-- [ ] Add golangci-lint and fix all the warnings
+- [ ] Add golangci-lint and fix all the warnings, add it to github actions and if possible create badge for it
 - [ ] Add some security linters and fix the warnings
 - [ ] Add some frontend tests and fix the warnings
 - [x] Add unit tests for all components, targeting code coverage to 80%, and show coverage in github interface
 - [ ] Add integration tests for all components, targeting code coverage to 80%, and show coverage in github interface
+- [ ] User check-ins not shown in activity log
 
 ## Next Steps
 1. Complete the scheduler implementation:

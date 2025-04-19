@@ -13,7 +13,6 @@ import (
 	"github.com/korjavin/deadmanswitch/internal/email"
 	"github.com/korjavin/deadmanswitch/internal/models"
 	"github.com/korjavin/deadmanswitch/internal/storage"
-	"github.com/korjavin/deadmanswitch/internal/telegram"
 )
 
 // Task represents a scheduled task
@@ -29,12 +28,25 @@ type Task struct {
 // TaskHandler is a function that runs a task
 type TaskHandler func(ctx context.Context) error
 
+// EmailClient is an interface for email clients
+type EmailClient interface {
+	SendPingEmail(email, name, verificationCode string) error
+	SendSecretDeliveryEmail(recipientEmail, recipientName, message, accessCode string) error
+	SendEmail(options *email.MessageOptions) error
+	SendEmailSimple(to []string, subject, body string, isHTML bool) error
+}
+
+// TelegramBot is an interface for telegram bots
+type TelegramBot interface {
+	SendPingMessage(ctx context.Context, user *models.User, pingID string) error
+}
+
 // Scheduler handles periodic tasks
 type Scheduler struct {
 	tasks        map[string]*Task
 	repo         storage.Repository
-	emailClient  *email.Client
-	telegramBot  *telegram.Bot
+	emailClient  EmailClient
+	telegramBot  TelegramBot
 	config       *config.Config
 	mu           sync.RWMutex
 	stopChan     chan struct{}
@@ -44,8 +56,8 @@ type Scheduler struct {
 // NewScheduler creates a new scheduler
 func NewScheduler(
 	repo storage.Repository,
-	emailClient *email.Client,
-	telegramBot *telegram.Bot,
+	emailClient EmailClient,
+	telegramBot TelegramBot,
 	config *config.Config,
 ) *Scheduler {
 	return &Scheduler{

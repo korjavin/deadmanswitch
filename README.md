@@ -1,7 +1,7 @@
 # Dead Man's Switch
 
-[![Build Status](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/username/gist_id_placeholder/raw/build.json)](https://github.com/korjavin/deadmanswitch/actions/workflows/build.yml)
-[![Test Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/username/gist_id_placeholder/raw/coverage.json)](https://github.com/korjavin/deadmanswitch/actions/workflows/tests.yml)
+[![Run Tests](https://github.com/korjavin/deadmanswitch/actions/workflows/tests.yml/badge.svg)](https://github.com/korjavin/deadmanswitch/actions/workflows/tests.yml)
+[![Build Docker Container](https://github.com/korjavin/deadmanswitch/actions/workflows/docker-build.yml/badge.svg)](https://github.com/korjavin/deadmanswitch/actions/workflows/docker-build.yml)
 
 > ⚠️ **SECURITY WARNING**: This project is currently under active development with cryptography implementation still in progress. **DO NOT** use this application in production or for truly sensitive information until a stable release is available. The current implementation should only be used in trusted, isolated environments for testing purposes.
 
@@ -73,10 +73,13 @@ We maintain a comprehensive test suite with a target of 80% code coverage. To ru
 go test ./...
 
 # Run tests with coverage reporting
-./scripts/run-tests.sh
+go test -coverprofile=coverage.out ./...
+go tool cover -func=coverage.out
+
+# Generate HTML coverage report
+go tool cover -html=coverage.out -o coverage.html
 ```
 
-The `run-tests.sh` script will generate a coverage report and open it in your browser.
 
 ## License
 
