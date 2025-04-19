@@ -10,6 +10,11 @@ on:
   # Optionally enable manual workflow trigger
   workflow_dispatch:
 
+permissions:
+  contents: read
+  # Needed for GitHub API access to get commit count
+  actions: read
+
 jobs:
   backend-test:
     name: Run Backend Tests with Coverage
@@ -17,6 +22,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for git rev-list
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -45,8 +52,20 @@ jobs:
       - name: Calculate dynamic coverage threshold
         run: |
           # Get the number of commits
+          # Make sure we have the full history
+          git fetch --prune --unshallow || true
+
+          # Try to get the commit count
           COMMIT_COUNT=$(git rev-list --count HEAD)
-          echo "Total commits: $COMMIT_COUNT"
+
+          # If we still have a shallow clone or the count is 1, use a fallback
+          if [ "$COMMIT_COUNT" = "1" ]; then
+            # Fallback to a reasonable default
+            COMMIT_COUNT=50
+            echo "Could not determine accurate commit count, using default: $COMMIT_COUNT"
+          else
+            echo "Total commits: $COMMIT_COUNT"
+          fi
 
           # Calculate the dynamic threshold: 20% + 0.1% per commit, capped at 80%
           THRESHOLD=$(echo "20 + 0.1 * $COMMIT_COUNT" | bc)
@@ -73,6 +92,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1 
 
       - name: Set up Node.js
         uses: actions/setup-node@v4

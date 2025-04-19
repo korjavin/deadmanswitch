@@ -136,3 +136,57 @@ func TestDetermineContactMethod(t *testing.T) {
 		t.Errorf("Expected method to be 'email', got '%s'", method)
 	}
 }
+
+// TestPasswordHashingAndVerification tests the password hashing and verification functions
+func TestPasswordHashingAndVerification(t *testing.T) {
+	// Test with a simple password
+	password := "simple-password"
+	hashedPassword, err := HashPassword(password)
+	if err != nil {
+		t.Fatalf("Failed to hash password: %v", err)
+	}
+
+	// Verify the correct password
+	if !VerifyPassword(hashedPassword, password) {
+		t.Error("Expected password verification to succeed with correct password")
+	}
+
+	// Verify an incorrect password
+	if VerifyPassword(hashedPassword, "wrong-password") {
+		t.Error("Expected password verification to fail with incorrect password")
+	}
+
+	// Test with a complex password
+	complexPassword := "Complex!Password123"
+	hashedComplexPassword, err := HashPassword(complexPassword)
+	if err != nil {
+		t.Fatalf("Failed to hash complex password: %v", err)
+	}
+
+	// Verify the correct complex password
+	if !VerifyPassword(hashedComplexPassword, complexPassword) {
+		t.Error("Expected password verification to succeed with correct complex password")
+	}
+
+	// Verify an incorrect complex password
+	if VerifyPassword(hashedComplexPassword, "WrongComplex!Password123") {
+		t.Error("Expected password verification to fail with incorrect complex password")
+	}
+
+	// Test with an empty password
+	emptyPassword := ""
+	hashedEmptyPassword, err := HashPassword(emptyPassword)
+	if err != nil {
+		t.Fatalf("Failed to hash empty password: %v", err)
+	}
+
+	// Verify the correct empty password
+	if !VerifyPassword(hashedEmptyPassword, emptyPassword) {
+		t.Error("Expected password verification to succeed with correct empty password")
+	}
+
+	// Verify an incorrect empty password
+	if VerifyPassword(hashedEmptyPassword, "not-empty") {
+		t.Error("Expected password verification to fail with incorrect empty password")
+	}
+}

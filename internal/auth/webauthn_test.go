@@ -198,3 +198,41 @@ func TestGetUserCredentials(t *testing.T) {
 		t.Fatalf("Expected 0 credentials, got %d", len(credentials))
 	}
 }
+
+func TestWebAuthnUserInterface(t *testing.T) {
+	// Create a test user
+	user := &models.User{
+		ID:    "user1",
+		Email: "user1@example.com",
+	}
+
+	// Test WebAuthnID
+	id := user.WebAuthnID()
+	if string(id) != user.ID {
+		t.Errorf("Expected WebAuthnID to be %s, got %s", user.ID, string(id))
+	}
+
+	// Test WebAuthnName
+	name := user.WebAuthnName()
+	if name != user.Email {
+		t.Errorf("Expected WebAuthnName to be %s, got %s", user.Email, name)
+	}
+
+	// Test WebAuthnDisplayName
+	displayName := user.WebAuthnDisplayName()
+	if displayName != user.Email {
+		t.Errorf("Expected WebAuthnDisplayName to be %s, got %s", user.Email, displayName)
+	}
+
+	// Test WebAuthnIcon
+	icon := user.WebAuthnIcon()
+	if icon != "" {
+		t.Errorf("Expected WebAuthnIcon to be empty, got %s", icon)
+	}
+
+	// Test WebAuthnCredentials
+	credentials := user.WebAuthnCredentials()
+	if len(credentials) != 0 {
+		t.Errorf("Expected WebAuthnCredentials to be empty, got %d credentials", len(credentials))
+	}
+}

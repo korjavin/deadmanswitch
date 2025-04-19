@@ -447,7 +447,7 @@ func TestPingTask(t *testing.T) {
 	// }
 }
 
-func TestDeadSwitchTask(t *testing.T) {
+func TestDeadSwitchTaskSkipped(t *testing.T) {
 	// Skip this test as it requires more complex mocking
 	t.Skip("Skipping dead switch task test")
 
@@ -519,7 +519,7 @@ func TestDeadSwitchTask(t *testing.T) {
 	// }
 }
 
-func TestCleanupTask(t *testing.T) {
+func TestCleanupTaskSkipped(t *testing.T) {
 	// Skip this test as it's very simple and just calls DeleteExpiredSessions
 	t.Skip("Skipping cleanup task test")
 
@@ -568,4 +568,226 @@ func TestHelperFunctions(t *testing.T) {
 			t.Errorf("extractNameFromEmail(%s) = %s, expected %s", test.email, result, test.expected)
 		}
 	}
+}
+
+func TestPingTaskWithEmailMethod(t *testing.T) {
+	// Create a mock repository
+	repo := NewMockRepository()
+
+	// Create a mock email client
+	emailClient := &MockEmailClient{}
+
+	// Create a mock telegram bot
+	telegramBot := &MockTelegramBot{}
+
+	// Create a scheduler
+	scheduler := NewScheduler(repo, emailClient, telegramBot, &config.Config{})
+
+	// Add a user for pinging with email method
+	user := &models.User{
+		ID:             "user1",
+		Email:          "user1@example.com",
+		PingingEnabled: true,
+		PingMethod:     "email",
+		PingFrequency:  3,
+		PingDeadline:   7,
+	}
+
+	// Add the user to the mock repository's usersForPinging slice
+	repo.usersForPinging = []*models.User{user}
+
+	// Run the ping task
+	ctx := context.Background()
+	err := scheduler.pingTask(ctx)
+	if err != nil {
+		t.Fatalf("pingTask failed: %v", err)
+	}
+
+	// Check that a ping history was created
+	if len(repo.pingHistories) != 1 {
+		t.Fatalf("Expected 1 ping history, got %d", len(repo.pingHistories))
+	}
+
+	// Check that the ping history has the correct user ID and method
+	pingHistory := repo.pingHistories[0]
+	if pingHistory.UserID != user.ID {
+		t.Errorf("Expected ping history user ID to be %s, got %s", user.ID, pingHistory.UserID)
+	}
+	if pingHistory.Method != "email" {
+		t.Errorf("Expected ping history method to be 'email', got '%s'", pingHistory.Method)
+	}
+
+	// Check that a ping verification was created
+	if len(repo.pingVerifications) != 1 {
+		t.Fatalf("Expected 1 ping verification, got %d", len(repo.pingVerifications))
+	}
+
+	// Check that the ping verification has the correct user ID
+	pingVerification := repo.pingVerifications[0]
+	if pingVerification.UserID != user.ID {
+		t.Errorf("Expected ping verification user ID to be %s, got %s", user.ID, pingVerification.UserID)
+	}
+
+	// Check that an email was sent
+	if emailClient.sentEmails != 1 {
+		t.Errorf("Expected 1 email to be sent, got %d", emailClient.sentEmails)
+	}
+
+	// Check that the user's next scheduled ping was updated
+	if user.NextScheduledPing.IsZero() {
+		t.Error("Expected NextScheduledPing to be set")
+	}
+}
+
+func TestPingTaskWithTelegramMethod(t *testing.T) {
+	// Create a mock repository
+	repo := NewMockRepository()
+
+	// Create a mock email client
+	emailClient := &MockEmailClient{}
+
+	// Create a mock telegram bot
+	telegramBot := &MockTelegramBot{}
+
+	// Create a scheduler
+	scheduler := NewScheduler(repo, emailClient, telegramBot, &config.Config{})
+
+	// Add a user for pinging with telegram method
+	user := &models.User{
+		ID:             "user1",
+		Email:          "user1@example.com",
+		TelegramID:     "tg123",
+		PingingEnabled: true,
+		PingMethod:     "telegram",
+		PingFrequency:  3,
+		PingDeadline:   7,
+	}
+
+	// Add the user to the mock repository's usersForPinging slice
+	repo.usersForPinging = []*models.User{user}
+
+	// Run the ping task
+	ctx := context.Background()
+	err := scheduler.pingTask(ctx)
+	if err != nil {
+		t.Fatalf("pingTask failed: %v", err)
+	}
+
+	// Check that a ping history was created
+	if len(repo.pingHistories) != 1 {
+		t.Fatalf("Expected 1 ping history, got %d", len(repo.pingHistories))
+	}
+
+	// Check that the ping history has the correct user ID and method
+	pingHistory := repo.pingHistories[0]
+	if pingHistory.UserID != user.ID {
+		t.Errorf("Expected ping history user ID to be %s, got %s", user.ID, pingHistory.UserID)
+	}
+	if pingHistory.Method != "telegram" {
+		t.Errorf("Expected ping history method to be 'telegram', got '%s'", pingHistory.Method)
+	}
+
+	// Check that a telegram message was sent
+	if telegramBot.sentMessages != 1 {
+		t.Errorf("Expected 1 telegram message to be sent, got %d", telegramBot.sentMessages)
+	}
+
+	// Check that the user's next scheduled ping was updated
+	if user.NextScheduledPing.IsZero() {
+		t.Error("Expected NextScheduledPing to be set")
+	}
+}
+
+func TestDeadSwitchTask(t *testing.T) {
+	// Create a mock repository
+	repo := NewMockRepository()
+
+	// Create a mock email client
+	emailClient := &MockEmailClient{}
+
+	// Create a mock telegram bot
+	telegramBot := &MockTelegramBot{}
+
+	// Create a scheduler
+	scheduler := NewScheduler(repo, emailClient, telegramBot, &config.Config{})
+
+	// Add a user with expired pings
+	user := &models.User{
+		ID:             "user1",
+		Email:          "user1@example.com",
+		PingingEnabled: true,
+	}
+
+	// Add the user to the mock repository's usersWithExpiredPings slice
+	repo.usersWithExpiredPings = []*models.User{user}
+
+	// Add recipients for the user
+	recipient1 := &models.Recipient{
+		ID:     "recipient1",
+		UserID: "user1",
+		Email:  "recipient1@example.com",
+		Name:   "Recipient 1",
+	}
+	recipient2 := &models.Recipient{
+		ID:     "recipient2",
+		UserID: "user1",
+		Email:  "recipient2@example.com",
+		Name:   "Recipient 2",
+	}
+	repo.recipients = []*models.Recipient{recipient1, recipient2}
+
+	// Add secret assignments
+	assignment1 := &models.SecretAssignment{
+		ID:          "assignment1",
+		UserID:      "user1",
+		SecretID:    "secret1",
+		RecipientID: "recipient1",
+	}
+	assignment2 := &models.SecretAssignment{
+		ID:          "assignment2",
+		UserID:      "user1",
+		SecretID:    "secret2",
+		RecipientID: "recipient2",
+	}
+	repo.secretAssignments = []*models.SecretAssignment{assignment1, assignment2}
+
+	// Run the dead switch task
+	ctx := context.Background()
+	err := scheduler.deadSwitchTask(ctx)
+	if err != nil {
+		t.Fatalf("deadSwitchTask failed: %v", err)
+	}
+
+	// Check that delivery events were created
+	if len(repo.deliveryEvents) != 2 {
+		t.Errorf("Expected 2 delivery events, got %d", len(repo.deliveryEvents))
+	}
+
+	// Check that emails were sent
+	if emailClient.sentEmails != 2 {
+		t.Errorf("Expected 2 emails to be sent, got %d", emailClient.sentEmails)
+	}
+
+	// Check that pinging was disabled for the user
+	if user.PingingEnabled {
+		t.Error("Expected PingingEnabled to be false after delivery")
+	}
+}
+
+func TestCleanupTask(t *testing.T) {
+	// Create a mock repository
+	repo := NewMockRepository()
+
+	// Create a scheduler
+	scheduler := NewScheduler(repo, &MockEmailClient{}, &MockTelegramBot{}, &config.Config{})
+
+	// Run the cleanup task
+	ctx := context.Background()
+	err := scheduler.cleanupTask(ctx)
+	if err != nil {
+		t.Fatalf("cleanupTask failed: %v", err)
+	}
+
+	// Not much to assert here since we're just calling DeleteExpiredSessions
+	// which is mocked to do nothing
 }

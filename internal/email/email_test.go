@@ -223,6 +223,14 @@ func TestSendEmailSimple_Validation(t *testing.T) {
 	}
 }
 
+func TestSendEmailSimple_WithMockServer(t *testing.T) {
+	// Skip this test in CI environments
+	t.Skip("Skipping test that requires a mock SMTP server")
+
+	// This test is skipped because it requires a more complex mock SMTP server
+	// that can handle TLS connections. The current mock server is too simple.
+}
+
 func TestSendEmail(t *testing.T) {
 	// Create a client
 	cfg := &config.Config{

@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"time"
 
 	"github.com/korjavin/deadmanswitch/internal/models"
 )
@@ -442,7 +443,7 @@ func (m *MockRepository) DeleteExpiredSessions(ctx context.Context) error {
 func (m *MockRepository) UpdateSessionActivity(ctx context.Context, id string) error {
 	for i, s := range m.Sessions {
 		if s.ID == id {
-			s.LastActivity = s.LastActivity
+			s.LastActivity = time.Now()
 			m.Sessions[i] = s
 			return nil
 		}

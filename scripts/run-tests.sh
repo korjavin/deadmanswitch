@@ -29,8 +29,22 @@ esac
 
 # Calculate dynamic coverage threshold
 # Get the number of commits
+# First check if we have a shallow clone
+if [ -f ".git/shallow" ]; then
+    echo "Detected shallow clone, fetching complete history..."
+    git fetch --unshallow || true
+fi
+
 COMMIT_COUNT=$(git rev-list --count HEAD)
-echo "Total commits: $COMMIT_COUNT"
+
+# If we still have a shallow clone or the count is 1, use a fallback
+if [ "$COMMIT_COUNT" = "1" ]; then
+    # Fallback to a reasonable default
+    COMMIT_COUNT=50
+    echo "Could not determine accurate commit count, using default: $COMMIT_COUNT"
+else
+    echo "Total commits: $COMMIT_COUNT"
+fi
 
 # Calculate the dynamic threshold: 20% + 0.1% per commit, capped at 80%
 THRESHOLD=$(echo "20 + 0.1 * $COMMIT_COUNT" | bc)
