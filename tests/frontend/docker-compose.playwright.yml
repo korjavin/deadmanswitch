@@ -7,6 +7,6 @@ services:
     volumes:
       - ../../:/app
     network_mode: "host"
-    command: /bin/bash -c "cd /app/tests/frontend && npm install && npx playwright test --reporter=list,html"
+    command: /bin/bash -c "cd /app/tests/frontend && npm install && npx playwright test --reporter=list"
     environment:
       - CI=true

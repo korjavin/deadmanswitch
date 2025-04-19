@@ -4,8 +4,8 @@
 
 // Test data that can be reused across tests
 const TEST_USER = {
-  email: 'korjavin@gmail.com',
-  password: 'password',
+  email: 'test@example.com',
+  password: 'Password123!',
   name: 'Test User'
 };
 
@@ -42,10 +42,33 @@ async function login(page, email, password) {
   console.log(`Current URL after login: ${currentUrl}`);
 
   if (!currentUrl.includes('/dashboard')) {
-    console.log('Login failed. Checking for error messages...');
-    const errorText = await page.textContent('body');
-    console.log('Page content:', errorText.substring(0, 500) + '...');
-    throw new Error(`Login failed. Current URL: ${currentUrl}`);
+    console.log('Login failed. Attempting to register the test user...');
+
+    // Try to register the user
+    try {
+      await registerUser(page, email, TEST_USER.name, password);
+      console.log('User registration successful. Trying to login again...');
+
+      // Try to login again
+      await page.goto('http://localhost:8082/login');
+      await page.waitForLoadState('networkidle');
+      await page.fill('input[name="email"]', email);
+      await page.fill('input[name="password"]', password);
+      await page.click('button[type="submit"]');
+      await page.waitForLoadState('networkidle');
+
+      // Check if login was successful after registration
+      const newUrl = page.url();
+      if (!newUrl.includes('/dashboard')) {
+        console.log('Login failed even after registration. Checking for error messages...');
+        const errorText = await page.textContent('body');
+        console.log('Page content:', errorText.substring(0, 500) + '...');
+        throw new Error(`Login failed after registration. Current URL: ${newUrl}`);
+      }
+    } catch (error) {
+      console.log('Registration failed:', error.message);
+      throw new Error(`Login failed. Current URL: ${currentUrl}. Registration attempt also failed.`);
+    }
   }
 
   console.log('Login successful.');
