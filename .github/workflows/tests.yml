@@ -1,0 +1,63 @@
+name: Run Tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  # Optionally enable manual workflow trigger
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Tests with Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Run tests with coverage
+        run: |
+          go test -coverprofile=coverage.out -covermode=atomic ./...
+          go tool cover -func=coverage.out
+
+      - name: Generate coverage report
+        run: go tool cover -html=coverage.out -o coverage.html
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.html
+          retention-days: 7
+
+      - name: Check coverage threshold
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+          echo "Total coverage: $COVERAGE%"
+          echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+          if (( $(echo "$COVERAGE < 50" | bc -l) )); then
+            echo "Code coverage is below 50%"
+            exit 1
+          fi
+
+      - name: Generate coverage badge
+        uses: schneegans/dynamic-badges-action@v1.6.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: gist_id_placeholder
+          filename: coverage.json
+          label: Coverage
+          message: ${{ env.COVERAGE }}%
+          color: ${{ env.COVERAGE >= 80 && 'green' || env.COVERAGE >= 70 && 'yellow' || env.COVERAGE >= 60 && 'orange' || 'red' }}

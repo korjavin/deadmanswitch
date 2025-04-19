@@ -52,8 +52,8 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 - [ ] Find a way to secure bind telegram handle to registered user, that somebody else couldn't do it, and by those prevent switch trigger. Expalin this threat in security doc, and explain the solution well
 - [ ] Add golangci-lint and fix all the warnings
 - [ ] Add some security linters and fix the warnings
-
-- [ ] Add unit tests for all components, targeting code coverage to 80%, and show coverage in github interface
+- [ ] Add some frontend tests and fix the warnings
+- [x] Add unit tests for all components, targeting code coverage to 80%, and show coverage in github interface
 - [ ] Add integration tests for all components, targeting code coverage to 80%, and show coverage in github interface
 
 ## Next Steps

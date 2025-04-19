@@ -1,5 +1,8 @@
 # Dead Man's Switch
 
+[![Build Status](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/username/gist_id_placeholder/raw/build.json)](https://github.com/korjavin/deadmanswitch/actions/workflows/build.yml)
+[![Test Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/username/gist_id_placeholder/raw/coverage.json)](https://github.com/korjavin/deadmanswitch/actions/workflows/tests.yml)
+
 > ⚠️ **SECURITY WARNING**: This project is currently under active development with cryptography implementation still in progress. **DO NOT** use this application in production or for truly sensitive information until a stable release is available. The current implementation should only be used in trusted, isolated environments for testing purposes.
 
 A secure, self-hosted application that acts as a digital "dead man's switch" - ensuring your sensitive information is only shared with specified recipients if you're unable to respond to regular check-ins.
@@ -58,6 +61,22 @@ For more detailed instructions, see the [Installation Guide](./docs/installation
 > ⚠️ **IMPORTANT**: The cryptography implementation is still under development. The current version uses placeholder encryption keys and simplified methods that are NOT suitable for production use.
 
 Security is the highest priority for this application. See our [Security Documentation](./docs/security.md) for details on the encryption methods and threat model, and our [Authentication Guide](./docs/authentication.md) for information on secure login options including passkeys.
+
+## Development
+
+### Running Tests
+
+We maintain a comprehensive test suite with a target of 80% code coverage. To run the tests:
+
+```bash
+# Run tests for all packages
+go test ./...
+
+# Run tests with coverage reporting
+./scripts/run-tests.sh
+```
+
+The `run-tests.sh` script will generate a coverage report and open it in your browser.
 
 ## License
 
