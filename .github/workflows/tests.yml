@@ -93,13 +93,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1 
+          fetch-depth: 1
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
 
       - name: Install dependencies
         run: npm install
@@ -123,7 +124,7 @@ jobs:
           echo "Waiting for the application to start..."
           # Try to connect to the application for up to 30 seconds
           timeout=30
-          while ! curl -s http://localhost:8083 > /dev/null; do
+          while ! curl -s http://localhost:8082 > /dev/null; do
             timeout=$((timeout - 1))
             if [ $timeout -le 0 ]; then
               echo "Timed out waiting for application to start"

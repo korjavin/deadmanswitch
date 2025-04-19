@@ -17,7 +17,7 @@ module.exports = defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:8083', // Using port 8083 as mentioned by user
+    baseURL: 'http://localhost:8082', // Using port 8082 since 8081 is busy
     actionTimeout: 0,
     trace: 'on-first-retry',
     video: 'on-first-retry',
@@ -35,7 +35,7 @@ module.exports = defineConfig({
   ],
   webServer: {
     command: 'podman-compose -f docker-compose.yml -f docker-compose.override.yml up -d',
-    port: 8083,
+    port: 8082,
     reuseExistingServer: !process.env.CI,
     stdout: 'pipe',
     stderr: 'pipe',

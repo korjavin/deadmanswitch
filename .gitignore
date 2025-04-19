@@ -13,7 +13,8 @@ coverage.html
 
 # Node.js
 node_modules/
-package-lock.json
+# We need package-lock.json for GitHub Actions
+# package-lock.json
 
 # Playwright
 playwright-report/
