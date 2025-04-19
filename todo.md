@@ -22,7 +22,10 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 
 ## Features & Improvements
 - [ ] Remove settings functionality - remove 2FA and complex notification settings, just use defaults from environment variables
-- [ ] Show connected telegram bots in profile page
+- [x] Show connected telegram bots in profile page
+- [x] Telegram bot on login, should determine it's login from bot.Me and write this info to database, then it's name should be shown in profile page in istruction to connect
+- [ ] On succeful tg bot connect, we store tg user id and username in database, and show this connection on profile page
+- [ ] Implement profile update functionality, and allow user to disconect tg account from profile page, before disconecting message to tg user should be sent to warn user
 - [ ] After connecting telegram bot, schedule sending pings with tg bot also, make it configurable in profile page
 - [ ] When user logins send message to tg bot first if it's connected, then to email with explanation that someone just logged in and a link that can immediately invalidate all the sessions if user is not recognizing this activity.
 - [ ] If we add recipient to already created secret we need to re-encrypt secret with key for this recipient

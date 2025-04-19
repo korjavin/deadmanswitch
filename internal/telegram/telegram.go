@@ -40,6 +40,9 @@ func NewBot(cfg *config.Config, repo storage.Repository) (*Bot, error) {
 
 	log.Printf("Authorized on Telegram bot account %s", bot.Self.UserName)
 
+	// Store the bot username in the config
+	cfg.TelegramBotUsername = "@" + bot.Self.UserName
+
 	b := &Bot{
 		bot:      bot,
 		config:   cfg,

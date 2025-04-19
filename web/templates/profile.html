@@ -5,50 +5,50 @@
     <div class="header-actions">
         <h1>My Profile</h1>
     </div>
-    
+
     <div class="card">
         <div class="card-body">
             <form action="/profile" method="POST">
                 <div class="form-group">
                     <label for="name" class="form-label">Full Name</label>
-                    <input type="text" name="name" id="name" class="form-control" 
+                    <input type="text" name="name" id="name" class="form-control"
                            value="{{ .Data.User.Name }}" placeholder="Your full name">
                 </div>
-                
+
                 <div class="form-group">
                     <label for="email" class="form-label">Email Address</label>
-                    <input type="email" name="email" id="email" class="form-control" 
+                    <input type="email" name="email" id="email" class="form-control"
                            value="{{ .Data.User.Email }}" readonly>
                     <small class="form-help">Email address cannot be changed. This is your unique identifier.</small>
                 </div>
-                
+
                 <div class="form-group">
                     <h3>Change Password</h3>
                     <p>Leave blank if you don't want to change your password.</p>
-                    
+
                     <div class="form-group">
                         <label for="currentPassword" class="form-label">Current Password</label>
                         <input type="password" name="currentPassword" id="currentPassword" class="form-control">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="newPassword" class="form-label">New Password</label>
                         <input type="password" name="newPassword" id="newPassword" class="form-control">
                     </div>
-                    
+
                     <div class="form-group">
                         <label for="confirmPassword" class="form-label">Confirm New Password</label>
                         <input type="password" name="confirmPassword" id="confirmPassword" class="form-control">
                     </div>
                 </div>
-                
+
                 <div class="form-group">
                     <button type="submit" class="btn btn-primary">Save Changes</button>
                 </div>
             </form>
         </div>
     </div>
-    
+
     <div class="card" style="margin-top: 2rem;">
         <div class="card-header">
             <h3>Account Information</h3>
@@ -57,6 +57,36 @@
             <p><strong>Account Created:</strong> {{ .Data.User.CreatedAt }}</p>
             <p><strong>Last Login:</strong> {{ .Data.User.LastLogin }}</p>
             <p><strong>Account Status:</strong> <span class="badge badge-success">Active</span></p>
+        </div>
+    </div>
+
+    <div class="card" style="margin-top: 2rem;">
+        <div class="card-header">
+            <h3>Telegram Integration</h3>
+        </div>
+        <div class="card-body">
+            {{ if .Data.Telegram.Connected }}
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> Your account is connected to Telegram
+                </div>
+                <p><strong>Telegram Username:</strong> {{ .Data.Telegram.Username }}</p>
+                <p><strong>Telegram ID:</strong> {{ .Data.Telegram.ID }}</p>
+                <div class="mt-3">
+                    <a href="#" class="btn btn-outline-danger btn-sm">
+                        <i class="fas fa-unlink"></i> Disconnect Telegram
+                    </a>
+                </div>
+            {{ else }}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Connect your Telegram account to receive notifications and respond to check-ins via Telegram.
+                </div>
+                <p>To connect your Telegram account:</p>
+                <ol>
+                    <li>Open Telegram and search for <strong>{{ .Data.Telegram.BotUsername }}</strong></li>
+                    <li>Start a chat with the bot by clicking <strong>Start</strong></li>
+                    <li>Send the command <strong>/connect {{ .Data.User.Email }}</strong> to the bot</li>
+                </ol>
+            {{ end }}
         </div>
     </div>
 </div>
@@ -86,6 +116,30 @@
 .badge-success {
     color: #fff;
     background-color: var(--success-color);
+}
+
+.alert {
+    position: relative;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+}
+
+.alert-success {
+    color: #155724;
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+}
+
+.alert-info {
+    color: #0c5460;
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+}
+
+.mt-3 {
+    margin-top: 1rem;
 }
 </style>
 {{ end }}

@@ -71,7 +71,7 @@ func NewServer(
 	server.handlers.secrets = handlers.NewSecretsHandler(repo)
 	server.handlers.recipients = handlers.NewRecipientsHandler(repo, emailClient)
 	server.handlers.api = handlers.NewAPIHandler(repo)
-	server.handlers.profile = handlers.NewProfileHandler()
+	server.handlers.profile = handlers.NewProfileHandler(repo, cfg)
 	server.handlers.settings = handlers.NewSettingsHandler()
 	server.handlers.history = handlers.NewHistoryHandler(repo)
 

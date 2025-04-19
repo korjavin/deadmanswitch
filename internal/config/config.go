@@ -15,6 +15,9 @@ type Config struct {
 	// Telegram bot token
 	TelegramBotToken string
 
+	// Telegram bot username
+	TelegramBotUsername string
+
 	// Email configuration
 	SMTPHost     string
 	SMTPPort     int

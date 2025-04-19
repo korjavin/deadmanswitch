@@ -3,18 +3,25 @@ package handlers
 import (
 	"log"
 	"net/http"
-	"time"
 
+	"github.com/korjavin/deadmanswitch/internal/config"
+	"github.com/korjavin/deadmanswitch/internal/storage"
 	"github.com/korjavin/deadmanswitch/internal/web/middleware"
 	"github.com/korjavin/deadmanswitch/internal/web/templates"
 )
 
 // ProfileHandler handles profile-related requests
-type ProfileHandler struct{}
+type ProfileHandler struct {
+	repo   storage.Repository
+	config *config.Config
+}
 
 // NewProfileHandler creates a new ProfileHandler
-func NewProfileHandler() *ProfileHandler {
-	return &ProfileHandler{}
+func NewProfileHandler(repo storage.Repository, cfg *config.Config) *ProfileHandler {
+	return &ProfileHandler{
+		repo:   repo,
+		config: cfg,
+	}
 }
 
 // HandleProfile handles the profile page
@@ -26,12 +33,32 @@ func (h *ProfileHandler) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get the full user details from the database
+	fullUser, err := h.repo.GetUserByID(r.Context(), user.ID)
+	if err != nil {
+		http.Error(w, "Error fetching user details", http.StatusInternalServerError)
+		log.Printf("Error fetching user details: %v", err)
+		return
+	}
+
+	// Prepare Telegram connection data
+	telegramConnected := fullUser.TelegramID != ""
+	telegramData := map[string]interface{}{
+		"Connected":   telegramConnected,
+		"BotUsername": h.config.TelegramBotUsername,
+	}
+
+	if telegramConnected {
+		telegramData["Username"] = fullUser.TelegramUsername
+		telegramData["ID"] = fullUser.TelegramID
+	}
+
 	// Create user data for the template
 	userData := map[string]interface{}{
-		"Email":     user.Email,
-		"Name":      user.Email, // Use email as name since we don't have a separate name field
-		"CreatedAt": user.CreatedAt.Format("January 2, 2006"),
-		"LastLogin": time.Now().Add(-24 * time.Hour).Format("January 2, 2006 at 3:04 PM"), // Mock data
+		"Email":     fullUser.Email,
+		"Name":      fullUser.Email, // Use email as name since we don't have a separate name field
+		"CreatedAt": fullUser.CreatedAt.Format("January 2, 2006"),
+		"LastLogin": fullUser.LastActivity.Format("January 2, 2006 at 3:04 PM"),
 	}
 
 	data := templates.TemplateData{
@@ -39,7 +66,13 @@ func (h *ProfileHandler) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		ActivePage:      "profile",
 		IsAuthenticated: true,
 		Data: map[string]interface{}{
-			"User": userData,
+			"User":           userData,
+			"Telegram":       telegramData,
+			"PingFrequency":  fullUser.PingFrequency,
+			"PingDeadline":   fullUser.PingDeadline,
+			"PingingEnabled": fullUser.PingingEnabled,
+			"PingMethod":     fullUser.PingMethod,
+			"NextPingDate":   fullUser.NextScheduledPing.Format("January 2, 2006 at 3:04 PM"),
 		},
 	}
 
