@@ -22,7 +22,7 @@ async function globalSetup() {
   // Launch browser with slower navigation timeout
   const browser = await chromium.launch();
   const context = await browser.newContext({
-    baseURL: 'http://localhost:8083',
+    baseURL: 'http://localhost:8082',
     navigationTimeout: 60000, // 60 seconds timeout for navigation
   });
   const page = await context.newPage();
