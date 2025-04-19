@@ -19,6 +19,10 @@ type User struct {
 	PingingEnabled    bool      `json:"pinging_enabled"`
 	PingMethod        string    `json:"ping_method"` // "telegram", "email", or "both"
 	NextScheduledPing time.Time `json:"next_scheduled_ping"`
+	// 2FA fields
+	TOTPSecret   string `json:"totp_secret,omitempty"` // Secret for TOTP-based 2FA
+	TOTPEnabled  bool   `json:"totp_enabled"`          // Whether 2FA is enabled
+	TOTPVerified bool   `json:"totp_verified"`         // Whether 2FA has been verified
 }
 
 // Secret represents an encrypted secret note

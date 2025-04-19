@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/korjavin/deadmanswitch/internal/auth"
 	"github.com/korjavin/deadmanswitch/internal/email"
 	"github.com/korjavin/deadmanswitch/internal/models"
 	"github.com/korjavin/deadmanswitch/internal/storage"
@@ -50,6 +51,7 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 	email := r.FormValue("email")
 	password := r.FormValue("password")
+	totpCode := r.FormValue("totp_code") // 2FA code
 	rememberMe := r.FormValue("remember") == "on"
 
 	// Validate inputs
@@ -67,11 +69,59 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify the password
-	if !utils.VerifyPassword([]byte(user.PasswordHash), password) {
+	if !utils.VerifyPassword(user.PasswordHash, password) {
 		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
 		return
 	}
 
+	// Check if 2FA is enabled for the user
+	if user.TOTPEnabled {
+		// If 2FA is enabled, verify the TOTP code
+		if totpCode == "" {
+			// If no TOTP code was provided, show the 2FA verification form
+			data := templates.TemplateData{
+				Title:      "Two-Factor Authentication",
+				ActivePage: "login",
+				Data: map[string]interface{}{
+					"Email":       email,
+					"Password":    password, // We'll need to pass this back to complete login
+					"RememberMe":  rememberMe,
+					"TOTPEnabled": true,
+				},
+			}
+
+			if err := templates.RenderTemplate(w, "login-2fa.html", data); err != nil {
+				http.Error(w, "Template error", http.StatusInternalServerError)
+				log.Printf("Error rendering 2FA login template: %v", err)
+			}
+			return
+		}
+
+		// Verify the TOTP code
+		config := auth.DefaultTOTPConfig()
+		if !auth.ValidateTOTP(user.TOTPSecret, totpCode, config) {
+			// Invalid code, show the 2FA form again with an error
+			data := templates.TemplateData{
+				Title:      "Two-Factor Authentication",
+				ActivePage: "login",
+				Data: map[string]interface{}{
+					"Email":       email,
+					"Password":    password,
+					"RememberMe":  rememberMe,
+					"TOTPEnabled": true,
+					"Error":       "Invalid verification code. Please try again.",
+				},
+			}
+
+			if err := templates.RenderTemplate(w, "login-2fa.html", data); err != nil {
+				http.Error(w, "Template error", http.StatusInternalServerError)
+				log.Printf("Error rendering 2FA login template: %v", err)
+			}
+			return
+		}
+	}
+
+	// At this point, either 2FA is not enabled or the code was valid
 	// Generate a session token
 	sessionToken := utils.GenerateSecureToken()
 
@@ -203,6 +253,9 @@ func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		PingDeadline:      7, // Default to 7 days
 		PingingEnabled:    false,
 		NextScheduledPing: time.Time{},
+		TOTPEnabled:       false,
+		TOTPVerified:      false,
+		TOTPSecret:        "",
 	}
 
 	// Save the user to the database

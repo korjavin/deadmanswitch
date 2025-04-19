@@ -41,8 +41,12 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 - [x] Implement real email sending for test contact with recipients
 - [x] Add recipient confirmation functionality
 - [ ] Fix "in real implementation" TODOs in code
-- [ ] Implement 2FA with Google Authenticator or similar for login
+- [x] Implement 2FA with Google Authenticator or similar for login
+- [ ] Implement passkeys to login, user can create up to 5 passkeys to his account
 - [ ] implement key derivation for encrypting secrets from master password
+- [ ] Add ability to register github handle to user account, and then scheduler can check if user was active recently on github, and if yes reschedule pings on tg/email, as we know that user is okay. There we should think of some interface of ActivityProvider, as we are going to have many of them. Describe this well in userguide and in readme
+- [ ] Similar to github, add ability to subscribe to activitypub account and implement the same logic
+- [ ] similar to github and activitypub, add ability to monitor telegram channel
 - [ ] understand how can we passover encrypted secrets to user since we have no way to know the master password. I think we have to create a key for every recipient, encode copy of the secret with this key, and provide key to user if switch is triggered. need to describe it well in diagram and security doc, brainstorm the idea and threats
 - [ ] Find a way to secure bind telegram handle to registered user, that somebody else couldn't do it, and by those prevent switch trigger. Expalin this threat in security doc, and explain the solution well
 

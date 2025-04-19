@@ -61,6 +61,11 @@ func (h *ProfileHandler) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		"LastLogin": fullUser.LastActivity.Format("January 2, 2006 at 3:04 PM"),
 	}
 
+	// Prepare 2FA data
+	twoFAData := map[string]interface{}{
+		"Enabled": fullUser.TOTPEnabled,
+	}
+
 	data := templates.TemplateData{
 		Title:           "My Profile",
 		ActivePage:      "profile",
@@ -68,6 +73,7 @@ func (h *ProfileHandler) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		Data: map[string]interface{}{
 			"User":           userData,
 			"Telegram":       telegramData,
+			"TwoFA":          twoFAData,
 			"PingFrequency":  fullUser.PingFrequency,
 			"PingDeadline":   fullUser.PingDeadline,
 			"PingingEnabled": fullUser.PingingEnabled,

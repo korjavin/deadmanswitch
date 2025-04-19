@@ -44,6 +44,7 @@ type Server struct {
 		profile    *handlers.ProfileHandler
 		settings   *handlers.SettingsHandler
 		history    *handlers.HistoryHandler
+		twofa      *handlers.TwoFAHandler
 	}
 }
 
@@ -74,6 +75,7 @@ func NewServer(
 	server.handlers.profile = handlers.NewProfileHandler(repo, cfg)
 	server.handlers.settings = handlers.NewSettingsHandler()
 	server.handlers.history = handlers.NewHistoryHandler(repo)
+	server.handlers.twofa = handlers.NewTwoFAHandler(repo)
 
 	// Set up routes
 	server.setupRoutes()
@@ -211,6 +213,11 @@ func (s *Server) setupRoutes() {
 		r.Get("/settings", s.handlers.settings.HandleSettings)
 		r.Post("/settings/notifications", s.handlers.settings.HandleUpdateNotificationSettings)
 		r.Post("/settings/security", s.handlers.settings.HandleUpdateSecuritySettings)
+
+		// Two-factor authentication
+		r.Get("/2fa/setup", s.handlers.twofa.HandleSetup)
+		r.Post("/2fa/verify", s.handlers.twofa.HandleVerify)
+		r.Post("/2fa/disable", s.handlers.twofa.HandleDisable)
 
 		// History
 		r.Get("/history", s.handlers.history.HandleHistory)

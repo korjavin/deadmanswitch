@@ -73,7 +73,10 @@ func (r *SQLiteRepository) initialize() error {
 		ping_deadline INTEGER NOT NULL DEFAULT 14,
 		pinging_enabled BOOLEAN NOT NULL DEFAULT 0,
 		ping_method TEXT NOT NULL DEFAULT 'both',
-		next_scheduled_ping DATETIME DEFAULT NULL
+		next_scheduled_ping DATETIME DEFAULT NULL,
+		totp_secret TEXT DEFAULT NULL,
+		totp_enabled BOOLEAN NOT NULL DEFAULT 0,
+		totp_verified BOOLEAN NOT NULL DEFAULT 0
 	);
 
 	-- Secrets table
@@ -244,12 +247,14 @@ func (r *SQLiteRepository) CreateUser(ctx context.Context, user *models.User) er
 		INSERT INTO users (
 			id, email, password_hash, telegram_id, telegram_username,
 			last_activity, created_at, updated_at,
-			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping,
+			totp_secret, totp_enabled, totp_verified
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`,
 		user.ID, user.Email, user.PasswordHash, user.TelegramID, user.TelegramUsername,
 		user.LastActivity, user.CreatedAt, user.UpdatedAt,
 		user.PingFrequency, user.PingDeadline, user.PingingEnabled, user.PingMethod, user.NextScheduledPing,
+		user.TOTPSecret, user.TOTPEnabled, user.TOTPVerified,
 	)
 
 	if err != nil {
@@ -266,13 +271,15 @@ func (r *SQLiteRepository) GetUserByID(ctx context.Context, id string) (*models.
 		SELECT
 			id, email, password_hash, telegram_id, telegram_username,
 			last_activity, created_at, updated_at,
-			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping
+			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping,
+			totp_secret, totp_enabled, totp_verified
 		FROM users
 		WHERE id = ?
 	`, id).Scan(
 		&user.ID, &user.Email, &user.PasswordHash, &user.TelegramID, &user.TelegramUsername,
 		&user.LastActivity, &user.CreatedAt, &user.UpdatedAt,
 		&user.PingFrequency, &user.PingDeadline, &user.PingingEnabled, &user.PingMethod, &user.NextScheduledPing,
+		&user.TOTPSecret, &user.TOTPEnabled, &user.TOTPVerified,
 	)
 
 	if err != nil {
@@ -292,13 +299,15 @@ func (r *SQLiteRepository) GetUserByEmail(ctx context.Context, email string) (*m
 		SELECT
 			id, email, password_hash, telegram_id, telegram_username,
 			last_activity, created_at, updated_at,
-			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping
+			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping,
+			totp_secret, totp_enabled, totp_verified
 		FROM users
 		WHERE email = ?
 	`, email).Scan(
 		&user.ID, &user.Email, &user.PasswordHash, &user.TelegramID, &user.TelegramUsername,
 		&user.LastActivity, &user.CreatedAt, &user.UpdatedAt,
 		&user.PingFrequency, &user.PingDeadline, &user.PingingEnabled, &user.PingMethod, &user.NextScheduledPing,
+		&user.TOTPSecret, &user.TOTPEnabled, &user.TOTPVerified,
 	)
 
 	if err != nil {
@@ -318,13 +327,15 @@ func (r *SQLiteRepository) GetUserByTelegramID(ctx context.Context, telegramID s
 		SELECT
 			id, email, password_hash, telegram_id, telegram_username,
 			last_activity, created_at, updated_at,
-			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping
+			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping,
+			totp_secret, totp_enabled, totp_verified
 		FROM users
 		WHERE telegram_id = ?
 	`, telegramID).Scan(
 		&user.ID, &user.Email, &user.PasswordHash, &user.TelegramID, &user.TelegramUsername,
 		&user.LastActivity, &user.CreatedAt, &user.UpdatedAt,
 		&user.PingFrequency, &user.PingDeadline, &user.PingingEnabled, &user.PingMethod, &user.NextScheduledPing,
+		&user.TOTPSecret, &user.TOTPEnabled, &user.TOTPVerified,
 	)
 
 	if err != nil {
@@ -355,12 +366,16 @@ func (r *SQLiteRepository) UpdateUser(ctx context.Context, user *models.User) er
 			ping_deadline = ?,
 			pinging_enabled = ?,
 			ping_method = ?,
-			next_scheduled_ping = ?
+			next_scheduled_ping = ?,
+			totp_secret = ?,
+			totp_enabled = ?,
+			totp_verified = ?
 		WHERE id = ?
 	`,
 		user.Email, user.PasswordHash, user.TelegramID, user.TelegramUsername,
 		user.LastActivity, user.UpdatedAt,
 		user.PingFrequency, user.PingDeadline, user.PingingEnabled, user.PingMethod, user.NextScheduledPing,
+		user.TOTPSecret, user.TOTPEnabled, user.TOTPVerified,
 		user.ID,
 	)
 
@@ -386,7 +401,8 @@ func (r *SQLiteRepository) ListUsers(ctx context.Context) ([]*models.User, error
 		SELECT
 			id, email, password_hash, telegram_id, telegram_username,
 			last_activity, created_at, updated_at,
-			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping
+			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping,
+			totp_secret, totp_enabled, totp_verified
 		FROM users
 		ORDER BY created_at DESC
 	`)
@@ -402,6 +418,7 @@ func (r *SQLiteRepository) ListUsers(ctx context.Context) ([]*models.User, error
 			&user.ID, &user.Email, &user.PasswordHash, &user.TelegramID, &user.TelegramUsername,
 			&user.LastActivity, &user.CreatedAt, &user.UpdatedAt,
 			&user.PingFrequency, &user.PingDeadline, &user.PingingEnabled, &user.PingMethod, &user.NextScheduledPing,
+			&user.TOTPSecret, &user.TOTPEnabled, &user.TOTPVerified,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan user row: %w", err)
 		}
