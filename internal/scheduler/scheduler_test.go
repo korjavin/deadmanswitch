@@ -40,25 +40,25 @@ func NewMockRepository() *MockRepository {
 	}
 }
 
-func (m *MockRepository) GetUsersForPinging(ctx context.Context) ([]*models.User, error) {
+func (m *MockRepository) GetUsersForPinging(_ context.Context) ([]*models.User, error) {
 	return m.usersForPinging, nil
 }
 
-func (m *MockRepository) GetUsersWithExpiredPings(ctx context.Context) ([]*models.User, error) {
+func (m *MockRepository) GetUsersWithExpiredPings(_ context.Context) ([]*models.User, error) {
 	return m.usersWithExpiredPings, nil
 }
 
-func (m *MockRepository) CreatePingHistory(ctx context.Context, ping *models.PingHistory) error {
+func (m *MockRepository) CreatePingHistory(_ context.Context, ping *models.PingHistory) error {
 	m.pingHistories = append(m.pingHistories, ping)
 	return nil
 }
 
-func (m *MockRepository) CreatePingVerification(ctx context.Context, verification *models.PingVerification) error {
+func (m *MockRepository) CreatePingVerification(_ context.Context, verification *models.PingVerification) error {
 	m.pingVerifications = append(m.pingVerifications, verification)
 	return nil
 }
 
-func (m *MockRepository) UpdateUser(ctx context.Context, user *models.User) error {
+func (m *MockRepository) UpdateUser(_ context.Context, user *models.User) error {
 	for i, u := range m.users {
 		if u.ID == user.ID {
 			m.users[i] = user
@@ -69,7 +69,7 @@ func (m *MockRepository) UpdateUser(ctx context.Context, user *models.User) erro
 	return nil
 }
 
-func (m *MockRepository) ListRecipientsByUserID(ctx context.Context, userID string) ([]*models.Recipient, error) {
+func (m *MockRepository) ListRecipientsByUserID(_ context.Context, userID string) ([]*models.Recipient, error) {
 	var result []*models.Recipient
 	for _, r := range m.recipients {
 		if r.UserID == userID {
@@ -79,7 +79,7 @@ func (m *MockRepository) ListRecipientsByUserID(ctx context.Context, userID stri
 	return result, nil
 }
 
-func (m *MockRepository) ListSecretAssignmentsByRecipientID(ctx context.Context, recipientID string) ([]*models.SecretAssignment, error) {
+func (m *MockRepository) ListSecretAssignmentsByRecipientID(_ context.Context, recipientID string) ([]*models.SecretAssignment, error) {
 	var result []*models.SecretAssignment
 	for _, a := range m.secretAssignments {
 		if a.RecipientID == recipientID {
@@ -89,112 +89,112 @@ func (m *MockRepository) ListSecretAssignmentsByRecipientID(ctx context.Context,
 	return result, nil
 }
 
-func (m *MockRepository) CreateDeliveryEvent(ctx context.Context, event *models.DeliveryEvent) error {
+func (m *MockRepository) CreateDeliveryEvent(_ context.Context, event *models.DeliveryEvent) error {
 	m.deliveryEvents = append(m.deliveryEvents, event)
 	return nil
 }
 
-func (m *MockRepository) DeleteExpiredSessions(ctx context.Context) error {
+func (m *MockRepository) DeleteExpiredSessions(_ context.Context) error {
 	// Just simulate deleting expired sessions
 	return nil
 }
 
 // Implement other methods of the Repository interface with empty implementations
-func (m *MockRepository) CreateUser(ctx context.Context, user *models.User) error { return nil }
-func (m *MockRepository) GetUserByID(ctx context.Context, id string) (*models.User, error) {
+func (m *MockRepository) CreateUser(_ context.Context, user *models.User) error { return nil }
+func (m *MockRepository) GetUserByID(_ context.Context, id string) (*models.User, error) {
 	return nil, nil
 }
-func (m *MockRepository) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+func (m *MockRepository) GetUserByEmail(_ context.Context, email string) (*models.User, error) {
 	return nil, nil
 }
-func (m *MockRepository) GetUserByTelegramID(ctx context.Context, telegramID string) (*models.User, error) {
+func (m *MockRepository) GetUserByTelegramID(_ context.Context, telegramID string) (*models.User, error) {
 	return nil, nil
 }
-func (m *MockRepository) DeleteUser(ctx context.Context, id string) error               { return nil }
-func (m *MockRepository) ListUsers(ctx context.Context) ([]*models.User, error)         { return nil, nil }
-func (m *MockRepository) CreateSecret(ctx context.Context, secret *models.Secret) error { return nil }
-func (m *MockRepository) GetSecretByID(ctx context.Context, id string) (*models.Secret, error) {
+func (m *MockRepository) DeleteUser(_ context.Context, id string) error               { return nil }
+func (m *MockRepository) ListUsers(_ context.Context) ([]*models.User, error)         { return nil, nil }
+func (m *MockRepository) CreateSecret(_ context.Context, secret *models.Secret) error { return nil }
+func (m *MockRepository) GetSecretByID(_ context.Context, id string) (*models.Secret, error) {
 	return nil, nil
 }
-func (m *MockRepository) ListSecretsByUserID(ctx context.Context, userID string) ([]*models.Secret, error) {
+func (m *MockRepository) ListSecretsByUserID(_ context.Context, userID string) ([]*models.Secret, error) {
 	return nil, nil
 }
-func (m *MockRepository) UpdateSecret(ctx context.Context, secret *models.Secret) error { return nil }
-func (m *MockRepository) DeleteSecret(ctx context.Context, id string) error             { return nil }
-func (m *MockRepository) CreateRecipient(ctx context.Context, recipient *models.Recipient) error {
+func (m *MockRepository) UpdateSecret(_ context.Context, secret *models.Secret) error { return nil }
+func (m *MockRepository) DeleteSecret(_ context.Context, id string) error             { return nil }
+func (m *MockRepository) CreateRecipient(_ context.Context, recipient *models.Recipient) error {
 	return nil
 }
-func (m *MockRepository) GetRecipientByID(ctx context.Context, id string) (*models.Recipient, error) {
+func (m *MockRepository) GetRecipientByID(_ context.Context, id string) (*models.Recipient, error) {
 	return nil, nil
 }
-func (m *MockRepository) UpdateRecipient(ctx context.Context, recipient *models.Recipient) error {
+func (m *MockRepository) UpdateRecipient(_ context.Context, recipient *models.Recipient) error {
 	return nil
 }
-func (m *MockRepository) DeleteRecipient(ctx context.Context, id string) error { return nil }
-func (m *MockRepository) CreateSecretAssignment(ctx context.Context, assignment *models.SecretAssignment) error {
+func (m *MockRepository) DeleteRecipient(_ context.Context, id string) error { return nil }
+func (m *MockRepository) CreateSecretAssignment(_ context.Context, assignment *models.SecretAssignment) error {
 	return nil
 }
-func (m *MockRepository) GetSecretAssignmentByID(ctx context.Context, id string) (*models.SecretAssignment, error) {
+func (m *MockRepository) GetSecretAssignmentByID(_ context.Context, id string) (*models.SecretAssignment, error) {
 	return nil, nil
 }
-func (m *MockRepository) ListSecretAssignmentsBySecretID(ctx context.Context, secretID string) ([]*models.SecretAssignment, error) {
+func (m *MockRepository) ListSecretAssignmentsBySecretID(_ context.Context, secretID string) ([]*models.SecretAssignment, error) {
 	return nil, nil
 }
-func (m *MockRepository) ListSecretAssignmentsByUserID(ctx context.Context, userID string) ([]*models.SecretAssignment, error) {
+func (m *MockRepository) ListSecretAssignmentsByUserID(_ context.Context, userID string) ([]*models.SecretAssignment, error) {
 	return nil, nil
 }
-func (m *MockRepository) DeleteSecretAssignment(ctx context.Context, id string) error { return nil }
-func (m *MockRepository) UpdatePingHistory(ctx context.Context, ping *models.PingHistory) error {
+func (m *MockRepository) DeleteSecretAssignment(_ context.Context, id string) error { return nil }
+func (m *MockRepository) UpdatePingHistory(_ context.Context, ping *models.PingHistory) error {
 	return nil
 }
-func (m *MockRepository) GetLatestPingByUserID(ctx context.Context, userID string) (*models.PingHistory, error) {
+func (m *MockRepository) GetLatestPingByUserID(_ context.Context, userID string) (*models.PingHistory, error) {
 	return nil, nil
 }
-func (m *MockRepository) ListPingHistoryByUserID(ctx context.Context, userID string) ([]*models.PingHistory, error) {
+func (m *MockRepository) ListPingHistoryByUserID(_ context.Context, userID string) ([]*models.PingHistory, error) {
 	return nil, nil
 }
-func (m *MockRepository) GetPingVerificationByCode(ctx context.Context, code string) (*models.PingVerification, error) {
+func (m *MockRepository) GetPingVerificationByCode(_ context.Context, code string) (*models.PingVerification, error) {
 	return nil, nil
 }
-func (m *MockRepository) UpdatePingVerification(ctx context.Context, verification *models.PingVerification) error {
+func (m *MockRepository) UpdatePingVerification(_ context.Context, verification *models.PingVerification) error {
 	return nil
 }
-func (m *MockRepository) ListDeliveryEventsByUserID(ctx context.Context, userID string) ([]*models.DeliveryEvent, error) {
+func (m *MockRepository) ListDeliveryEventsByUserID(_ context.Context, userID string) ([]*models.DeliveryEvent, error) {
 	return nil, nil
 }
-func (m *MockRepository) CreateAuditLog(ctx context.Context, log *models.AuditLog) error { return nil }
-func (m *MockRepository) ListAuditLogsByUserID(ctx context.Context, userID string) ([]*models.AuditLog, error) {
+func (m *MockRepository) CreateAuditLog(_ context.Context, log *models.AuditLog) error { return nil }
+func (m *MockRepository) ListAuditLogsByUserID(_ context.Context, userID string) ([]*models.AuditLog, error) {
 	return nil, nil
 }
-func (m *MockRepository) CreateSession(ctx context.Context, session *models.Session) error {
+func (m *MockRepository) CreateSession(_ context.Context, session *models.Session) error {
 	return nil
 }
-func (m *MockRepository) GetSessionByToken(ctx context.Context, token string) (*models.Session, error) {
+func (m *MockRepository) GetSessionByToken(_ context.Context, token string) (*models.Session, error) {
 	return nil, nil
 }
-func (m *MockRepository) DeleteSession(ctx context.Context, id string) error         { return nil }
-func (m *MockRepository) UpdateSessionActivity(ctx context.Context, id string) error { return nil }
-func (m *MockRepository) BeginTx(ctx context.Context) (storage.Transaction, error)   { return nil, nil }
-func (m *MockRepository) ListPasskeysByUserID(ctx context.Context, userID string) ([]*models.Passkey, error) {
+func (m *MockRepository) DeleteSession(_ context.Context, id string) error         { return nil }
+func (m *MockRepository) UpdateSessionActivity(_ context.Context, id string) error { return nil }
+func (m *MockRepository) BeginTx(_ context.Context) (storage.Transaction, error)   { return nil, nil }
+func (m *MockRepository) ListPasskeysByUserID(_ context.Context, userID string) ([]*models.Passkey, error) {
 	return nil, nil
 }
-func (m *MockRepository) ListPasskeys(ctx context.Context) ([]*models.Passkey, error) {
+func (m *MockRepository) ListPasskeys(_ context.Context) ([]*models.Passkey, error) {
 	return nil, nil
 }
-func (m *MockRepository) GetPasskeyByCredentialID(ctx context.Context, credentialID []byte) (*models.Passkey, error) {
+func (m *MockRepository) GetPasskeyByCredentialID(_ context.Context, credentialID []byte) (*models.Passkey, error) {
 	return nil, nil
 }
-func (m *MockRepository) CreatePasskey(ctx context.Context, passkey *models.Passkey) error {
+func (m *MockRepository) CreatePasskey(_ context.Context, passkey *models.Passkey) error {
 	return nil
 }
-func (m *MockRepository) UpdatePasskey(ctx context.Context, passkey *models.Passkey) error {
+func (m *MockRepository) UpdatePasskey(_ context.Context, passkey *models.Passkey) error {
 	return nil
 }
-func (m *MockRepository) GetPasskeyByID(ctx context.Context, id string) (*models.Passkey, error) {
+func (m *MockRepository) GetPasskeyByID(_ context.Context, id string) (*models.Passkey, error) {
 	return nil, nil
 }
-func (m *MockRepository) DeletePasskey(ctx context.Context, id string) error              { return nil }
-func (m *MockRepository) DeletePasskeysByUserID(ctx context.Context, userID string) error { return nil }
+func (m *MockRepository) DeletePasskey(_ context.Context, id string) error              { return nil }
+func (m *MockRepository) DeletePasskeysByUserID(_ context.Context, userID string) error { return nil }
 
 // MockEmailClient is a mock implementation of the email client
 type MockEmailClient struct {
@@ -226,7 +226,7 @@ type MockTelegramBot struct {
 	sentMessages int
 }
 
-func (m *MockTelegramBot) SendPingMessage(ctx context.Context, user *models.User, pingID string) error {
+func (m *MockTelegramBot) SendPingMessage(_ context.Context, user *models.User, pingID string) error {
 	m.sentMessages++
 	return nil
 }
@@ -270,7 +270,7 @@ func TestAddTask(t *testing.T) {
 		Name:       "Test Task",
 		Duration:   5 * time.Minute,
 		RunOnStart: true,
-		Handler:    func(ctx context.Context) error { return nil },
+		Handler:    func(_ context.Context) error { return nil },
 	}
 
 	scheduler.AddTask(task)

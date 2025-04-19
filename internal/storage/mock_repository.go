@@ -1,3 +1,6 @@
+// Package storage provides data persistence functionality for the application.
+// This file contains a mock implementation of the Repository interface
+// primarily intended for testing purposes.
 package storage
 
 import (

@@ -1,3 +1,6 @@
+// Package email provides functionality for sending emails through SMTP servers.
+// It handles connection to SMTP servers, composing email messages,
+// and sending notifications to users and contacts.
 package email
 
 import (
@@ -84,10 +87,12 @@ func (c *Client) SendEmailSimple(to []string, subject, body string, isHTML bool)
 	defer smtpClient.Close()
 
 	// Enable TLS if the server supports it
-	if err := smtpClient.StartTLS(&tls.Config{ServerName: c.config.SMTPHost}); err != nil {
-		// Some servers might not support TLS, continue without it
-		// but log a warning
-		fmt.Printf("Warning: TLS not supported by SMTP server: %s\n", err)
+	if err := smtpClient.StartTLS(&tls.Config{
+		ServerName:         c.config.SMTPHost,
+		MinVersion:         tls.VersionTLS12, // Set minimum TLS version to 1.2
+		InsecureSkipVerify: false,
+	}); err != nil {
+		return fmt.Errorf("failed to start TLS: %w", err)
 	}
 
 	// Authenticate

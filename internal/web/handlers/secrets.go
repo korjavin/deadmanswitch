@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -281,64 +282,21 @@ func (h *SecretsHandler) HandleUpdateSecretRecipients(w http.ResponseWriter, r *
 	// Get the selected recipient IDs
 	selectedRecipientIDs := r.Form["recipients"]
 
-	// Fetch all current assignments for the secret
-	currentAssignments, err := h.repo.ListSecretAssignmentsBySecretID(context.Background(), secretID)
+	// Use the shared helper function to update assignments
+	err = updateEntityAssignments(
+		context.Background(),
+		h.repo,
+		user.ID,
+		secretID,
+		"secret", // We're updating a secret's recipients
+		secret.Name,
+		selectedRecipientIDs,
+	)
+
 	if err != nil {
-		http.Error(w, "Error fetching secret assignments", http.StatusInternalServerError)
-		log.Printf("Error fetching secret assignments: %v", err)
+		http.Error(w, "Error updating secret recipients", http.StatusInternalServerError)
+		log.Printf("Error updating secret recipients: %v", err)
 		return
-	}
-
-	// Create a map of current assignments for quick lookup
-	currentAssignmentMap := make(map[string]*models.SecretAssignment)
-	for _, a := range currentAssignments {
-		currentAssignmentMap[a.RecipientID] = a
-	}
-
-	// Create a map of selected recipient IDs for quick lookup
-	selectedRecipientMap := make(map[string]bool)
-	for _, id := range selectedRecipientIDs {
-		selectedRecipientMap[id] = true
-	}
-
-	// Remove assignments that are no longer selected
-	for recipientID, assignment := range currentAssignmentMap {
-		if !selectedRecipientMap[recipientID] {
-			if err := h.repo.DeleteSecretAssignment(context.Background(), assignment.ID); err != nil {
-				log.Printf("Error deleting secret assignment: %v", err)
-				// Continue anyway, don't fail the whole request
-			}
-		}
-	}
-
-	// Add new assignments for newly selected recipients
-	for _, recipientID := range selectedRecipientIDs {
-		if _, exists := currentAssignmentMap[recipientID]; !exists {
-			// Create a new assignment
-			assignment := &models.SecretAssignment{
-				SecretID:    secretID,
-				RecipientID: recipientID,
-				UserID:      user.ID,
-			}
-
-			if err := h.repo.CreateSecretAssignment(context.Background(), assignment); err != nil {
-				log.Printf("Error creating secret assignment: %v", err)
-				// Continue anyway, don't fail the whole request
-			}
-		}
-	}
-
-	// Create an audit log entry
-	auditLog := &models.AuditLog{
-		UserID:    user.ID,
-		Action:    "update_secret_recipients",
-		Timestamp: time.Now(),
-		Details:   "Updated recipients for secret: " + secret.Name,
-	}
-
-	if err := h.repo.CreateAuditLog(context.Background(), auditLog); err != nil {
-		log.Printf("Error creating audit log: %v", err)
-		// Continue anyway, don't fail the whole request
 	}
 
 	// Redirect to the secrets list page
@@ -534,8 +492,113 @@ func (h *SecretsHandler) HandleViewSecretForm(w http.ResponseWriter, r *http.Req
 	}
 }
 
+// Helper function to validate user ownership of a secret
+func (h *SecretsHandler) validateSecretOwnership(ctx context.Context, secretID string, userID string) (*models.Secret, error) {
+	// Fetch the secret from the database
+	secret, err := h.repo.GetSecretByID(ctx, secretID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch secret: %w", err)
+	}
+
+	// Verify that the secret belongs to the user
+	if secret.UserID != userID {
+		return nil, fmt.Errorf("user does not own this secret")
+	}
+
+	return secret, nil
+}
+
+// Helper function to update secret content with encryption
+func updateSecretContent(secret *models.Secret, title string, content string, masterKey []byte) error {
+	// Update the title
+	secret.Name = title
+
+	// Only re-encrypt if content was provided
+	if content != "" {
+		// Encrypt the secret content
+		encryptedData, err := crypto.EncryptSecret([]byte(content), masterKey)
+		if err != nil {
+			return fmt.Errorf("failed to encrypt secret: %w", err)
+		}
+		secret.EncryptedData = encryptedData
+	}
+
+	// Update timestamp
+	secret.UpdatedAt = time.Now().UTC()
+
+	return nil
+}
+
+// Helper function to update secret recipient assignments
+func (h *SecretsHandler) updateSecretRecipientAssignments(ctx context.Context,
+	secretID string, userID string, recipientIDs []string) error {
+	// Fetch all current assignments for the secret
+	currentAssignments, err := h.repo.ListSecretAssignmentsBySecretID(ctx, secretID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch secret assignments: %w", err)
+	}
+
+	// Create maps for quick lookups
+	currentAssignmentMap := make(map[string]*models.SecretAssignment)
+	for _, a := range currentAssignments {
+		currentAssignmentMap[a.RecipientID] = a
+	}
+
+	selectedRecipientMap := make(map[string]bool)
+	for _, id := range recipientIDs {
+		selectedRecipientMap[id] = true
+	}
+
+	// Remove assignments that are no longer selected
+	for recipientID, assignment := range currentAssignmentMap {
+		if !selectedRecipientMap[recipientID] {
+			if err := h.repo.DeleteSecretAssignment(ctx, assignment.ID); err != nil {
+				log.Printf("Error deleting secret assignment: %v", err)
+				// Continue anyway, don't fail the whole request
+			}
+		}
+	}
+
+	// Add new assignments for newly selected recipients
+	for _, recipientID := range recipientIDs {
+		if _, exists := currentAssignmentMap[recipientID]; !exists {
+			// Create a new assignment
+			assignment := &models.SecretAssignment{
+				SecretID:    secretID,
+				RecipientID: recipientID,
+				UserID:      userID,
+			}
+
+			if err := h.repo.CreateSecretAssignment(ctx, assignment); err != nil {
+				log.Printf("Error creating secret assignment: %v", err)
+				// Continue anyway, don't fail the whole request
+			}
+		}
+	}
+
+	return nil
+}
+
+// Helper function to create an audit log entry
+func (h *SecretsHandler) createAuditLogEntry(ctx context.Context,
+	userID string, action string, details string) {
+	auditLog := &models.AuditLog{
+		UserID:    userID,
+		Action:    action,
+		Timestamp: time.Now(),
+		Details:   details,
+	}
+
+	if err := h.repo.CreateAuditLog(ctx, auditLog); err != nil {
+		log.Printf("Error creating audit log: %v", err)
+		// Continue anyway, don't fail the whole request
+	}
+}
+
 // HandleUpdateSecret handles the update of a secret
 func (h *SecretsHandler) HandleUpdateSecret(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	// Get the authenticated user from context
 	user, ok := middleware.GetUserFromContext(r)
 	if !ok || user == nil {
@@ -550,17 +613,15 @@ func (h *SecretsHandler) HandleUpdateSecret(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Fetch the secret from the database
-	secret, err := h.repo.GetSecretByID(context.Background(), secretID)
+	// Validate secret ownership
+	secret, err := h.validateSecretOwnership(ctx, secretID, user.ID)
 	if err != nil {
-		http.Error(w, "Error fetching secret", http.StatusInternalServerError)
-		log.Printf("Error fetching secret: %v", err)
-		return
-	}
-
-	// Verify that the secret belongs to the user
-	if secret.UserID != user.ID {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		if err.Error() == "user does not own this secret" {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		} else {
+			http.Error(w, "Error fetching secret", http.StatusInternalServerError)
+			log.Printf("Error fetching secret: %v", err)
+		}
 		return
 	}
 
@@ -583,23 +644,15 @@ func (h *SecretsHandler) HandleUpdateSecret(w http.ResponseWriter, r *http.Reque
 	// For now, we'll use a dummy master key for demonstration
 	masterKey := []byte("this-is-a-dummy-master-key-for-demo-only")
 
-	// Only re-encrypt if content was provided
-	if content != "" {
-		// Encrypt the secret content
-		encryptedData, err := crypto.EncryptSecret([]byte(content), masterKey)
-		if err != nil {
-			http.Error(w, "Error encrypting secret", http.StatusInternalServerError)
-			log.Printf("Error encrypting secret: %v", err)
-			return
-		}
-		secret.EncryptedData = encryptedData
+	// Update the secret content with encryption if needed
+	if err := updateSecretContent(secret, title, content, masterKey); err != nil {
+		http.Error(w, "Error updating secret content", http.StatusInternalServerError)
+		log.Printf("Error updating secret content: %v", err)
+		return
 	}
 
-	// Update the secret in the database
-	secret.Name = title
-	secret.UpdatedAt = time.Now().UTC()
-
-	if err := h.repo.UpdateSecret(context.Background(), secret); err != nil {
+	// Save the updated secret to the database
+	if err := h.repo.UpdateSecret(ctx, secret); err != nil {
 		http.Error(w, "Error updating secret", http.StatusInternalServerError)
 		log.Printf("Error updating secret: %v", err)
 		return
@@ -607,66 +660,13 @@ func (h *SecretsHandler) HandleUpdateSecret(w http.ResponseWriter, r *http.Reque
 
 	// Process recipient assignments
 	recipientIDs := r.Form["recipients"]
-
-	// Fetch all current assignments for the secret
-	currentAssignments, err := h.repo.ListSecretAssignmentsBySecretID(context.Background(), secretID)
-	if err != nil {
-		http.Error(w, "Error fetching secret assignments", http.StatusInternalServerError)
-		log.Printf("Error fetching secret assignments: %v", err)
-		return
-	}
-
-	// Create a map of current assignments for quick lookup
-	currentAssignmentMap := make(map[string]*models.SecretAssignment)
-	for _, a := range currentAssignments {
-		currentAssignmentMap[a.RecipientID] = a
-	}
-
-	// Create a map of selected recipient IDs for quick lookup
-	selectedRecipientMap := make(map[string]bool)
-	for _, id := range recipientIDs {
-		selectedRecipientMap[id] = true
-	}
-
-	// Remove assignments that are no longer selected
-	for recipientID, assignment := range currentAssignmentMap {
-		if !selectedRecipientMap[recipientID] {
-			if err := h.repo.DeleteSecretAssignment(context.Background(), assignment.ID); err != nil {
-				log.Printf("Error deleting secret assignment: %v", err)
-				// Continue anyway, don't fail the whole request
-			}
-		}
-	}
-
-	// Add new assignments for newly selected recipients
-	for _, recipientID := range recipientIDs {
-		if _, exists := currentAssignmentMap[recipientID]; !exists {
-			// Create a new assignment
-			assignment := &models.SecretAssignment{
-				SecretID:    secretID,
-				RecipientID: recipientID,
-				UserID:      user.ID,
-			}
-
-			if err := h.repo.CreateSecretAssignment(context.Background(), assignment); err != nil {
-				log.Printf("Error creating secret assignment: %v", err)
-				// Continue anyway, don't fail the whole request
-			}
-		}
+	if err := h.updateSecretRecipientAssignments(ctx, secretID, user.ID, recipientIDs); err != nil {
+		log.Printf("Error updating recipient assignments: %v", err)
+		// Continue anyway, don't fail the whole request
 	}
 
 	// Create an audit log entry
-	auditLog := &models.AuditLog{
-		UserID:    user.ID,
-		Action:    "update_secret",
-		Timestamp: time.Now(),
-		Details:   "Updated secret: " + secret.Name,
-	}
-
-	if err := h.repo.CreateAuditLog(context.Background(), auditLog); err != nil {
-		log.Printf("Error creating audit log: %v", err)
-		// Continue anyway, don't fail the whole request
-	}
+	h.createAuditLogEntry(ctx, user.ID, "update_secret", "Updated secret: "+secret.Name)
 
 	// Redirect to the secrets list page
 	http.Redirect(w, r, "/secrets", http.StatusSeeOther)

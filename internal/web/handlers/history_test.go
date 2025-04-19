@@ -14,21 +14,27 @@ import (
 )
 
 // Setup a test environment directory to help template loading
-func setupTestEnv() {
+func setupTestEnv(t *testing.T) {
 	// Ensure test templates directory exists
-	os.MkdirAll("./web/templates", 0755)
+	if err := os.MkdirAll("./web/templates", 0755); err != nil {
+		t.Fatalf("Error creating templates directory: %v", err)
+	}
 
 	// Create minimal layout and history template files for testing
 	layoutContent := `{{ define "layout" }}{{ template "content" . }}{{ end }}`
-	os.WriteFile("./web/templates/layout.html", []byte(layoutContent), 0644)
+	if err := os.WriteFile("./web/templates/layout.html", []byte(layoutContent), 0644); err != nil {
+		t.Fatalf("Error writing layout template: %v", err)
+	}
 
 	historyContent := `{{ define "content" }}History Page{{ end }}`
-	os.WriteFile("./web/templates/history.html", []byte(historyContent), 0644)
+	if err := os.WriteFile("./web/templates/history.html", []byte(historyContent), 0644); err != nil {
+		t.Fatalf("Error writing history template: %v", err)
+	}
 }
 
 func TestMain(m *testing.M) {
 	// Setup test environment
-	setupTestEnv()
+	setupTestEnv(&testing.T{})
 
 	// Run tests
 	code := m.Run()

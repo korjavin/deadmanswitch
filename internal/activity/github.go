@@ -1,3 +1,5 @@
+// Package activity provides integration with external activity providers
+// for monitoring user activity and determining liveness status.
 package activity
 
 import (

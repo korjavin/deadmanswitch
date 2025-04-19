@@ -25,7 +25,9 @@ func GenerateSecureToken() string {
 	if _, err := rand.Read(tokenBytes); err != nil {
 		panic(err)
 	}
-	return base64.URLEncoding.EncodeToString(tokenBytes)
+	// Use strict base64 URL encoding without padding
+	encoder := base64.URLEncoding.WithPadding(base64.NoPadding)
+	return encoder.EncodeToString(tokenBytes)
 }
 
 // VerifyPassword verifies a password against a bcrypt hashed password
@@ -40,10 +42,11 @@ func HashPassword(password string) ([]byte, error) {
 	return bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 }
 
-// DetermineContactMethod determines the contact method based on recipient data
-func DetermineContactMethod(telegramUsername, email string) string {
+// DetermineContactMethod determines the contact method for a recipient
+// based on available information
+func DetermineContactMethod(telegramUsername, _ string) string {
 	if telegramUsername != "" {
 		return "telegram"
 	}
-	return "email" // Default contact method
+	return "email"
 }

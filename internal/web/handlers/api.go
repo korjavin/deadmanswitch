@@ -1,3 +1,6 @@
+// Package handlers provides HTTP request handlers for the web interface
+// of the Dead Man's Switch application. It implements controllers for
+// all routes and endpoints exposed by the web server.
 package handlers
 
 import (
@@ -84,9 +87,11 @@ func (h *APIHandler) HandleCheckIn(w http.ResponseWriter, r *http.Request) {
 
 	// Return success response
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"success":       true,
 		"message":       "Check-in successful",
 		"next_check_in": user.NextScheduledPing.Format(time.RFC3339),
-	})
+	}); err != nil {
+		log.Printf("Error encoding JSON response: %v", err)
+	}
 }

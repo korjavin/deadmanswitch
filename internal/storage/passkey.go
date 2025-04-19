@@ -10,6 +10,48 @@ import (
 	"github.com/korjavin/deadmanswitch/internal/models"
 )
 
+// Helper function to scan a passkey row
+func scanPasskeyRow(scanner interface {
+	Scan(dest ...interface{}) error
+}) (*models.Passkey, error) {
+	passkey := &models.Passkey{}
+	var transportsJSON string
+
+	err := scanner.Scan(
+		&passkey.ID, &passkey.UserID, &passkey.CredentialID, &passkey.PublicKey,
+		&passkey.AAGUID, &passkey.SignCount, &passkey.Name, &passkey.CreatedAt,
+		&passkey.LastUsedAt, &transportsJSON, &passkey.AttestationType,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to scan passkey row: %w", err)
+	}
+
+	// Parse transports JSON
+	if transportsJSON != "" {
+		if err := json.Unmarshal([]byte(transportsJSON), &passkey.Transports); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal transports: %w", err)
+		}
+	}
+
+	return passkey, nil
+}
+
+// passkey query and column constants
+const (
+	passkeyColumnsSelect = `
+		id, user_id, credential_id, public_key, aaguid, sign_count,
+		name, created_at, last_used_at, transports, attestation_type
+	`
+	passkeyBaseQuery = `
+		SELECT ` + passkeyColumnsSelect + `
+		FROM passkeys
+	`
+)
+
 // CreatePasskey creates a new passkey
 func (r *SQLiteRepository) CreatePasskey(ctx context.Context, passkey *models.Passkey) error {
 	if passkey.ID == "" {
@@ -46,82 +88,19 @@ func (r *SQLiteRepository) CreatePasskey(ctx context.Context, passkey *models.Pa
 
 // GetPasskeyByID retrieves a passkey by ID
 func (r *SQLiteRepository) GetPasskeyByID(ctx context.Context, id string) (*models.Passkey, error) {
-	passkey := &models.Passkey{}
-	var transportsJSON string
-
-	err := r.db.QueryRowContext(ctx, `
-		SELECT
-			id, user_id, credential_id, public_key, aaguid, sign_count,
-			name, created_at, last_used_at, transports, attestation_type
-		FROM passkeys
-		WHERE id = ?
-	`, id).Scan(
-		&passkey.ID, &passkey.UserID, &passkey.CredentialID, &passkey.PublicKey,
-		&passkey.AAGUID, &passkey.SignCount, &passkey.Name, &passkey.CreatedAt,
-		&passkey.LastUsedAt, &transportsJSON, &passkey.AttestationType,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("failed to get passkey: %w", err)
-	}
-
-	// Parse transports JSON
-	if transportsJSON != "" {
-		if err := json.Unmarshal([]byte(transportsJSON), &passkey.Transports); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal transports: %w", err)
-		}
-	}
-
-	return passkey, nil
+	row := r.db.QueryRowContext(ctx, passkeyBaseQuery+` WHERE id = ?`, id)
+	return scanPasskeyRow(row)
 }
 
 // GetPasskeyByCredentialID retrieves a passkey by credential ID
 func (r *SQLiteRepository) GetPasskeyByCredentialID(ctx context.Context, credentialID []byte) (*models.Passkey, error) {
-	passkey := &models.Passkey{}
-	var transportsJSON string
-
-	err := r.db.QueryRowContext(ctx, `
-		SELECT
-			id, user_id, credential_id, public_key, aaguid, sign_count,
-			name, created_at, last_used_at, transports, attestation_type
-		FROM passkeys
-		WHERE credential_id = ?
-	`, credentialID).Scan(
-		&passkey.ID, &passkey.UserID, &passkey.CredentialID, &passkey.PublicKey,
-		&passkey.AAGUID, &passkey.SignCount, &passkey.Name, &passkey.CreatedAt,
-		&passkey.LastUsedAt, &transportsJSON, &passkey.AttestationType,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("failed to get passkey by credential ID: %w", err)
-	}
-
-	// Parse transports JSON
-	if transportsJSON != "" {
-		if err := json.Unmarshal([]byte(transportsJSON), &passkey.Transports); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal transports: %w", err)
-		}
-	}
-
-	return passkey, nil
+	row := r.db.QueryRowContext(ctx, passkeyBaseQuery+` WHERE credential_id = ?`, credentialID)
+	return scanPasskeyRow(row)
 }
 
 // ListPasskeysByUserID lists all passkeys for a user
 func (r *SQLiteRepository) ListPasskeysByUserID(ctx context.Context, userID string) ([]*models.Passkey, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT
-			id, user_id, credential_id, public_key, aaguid, sign_count,
-			name, created_at, last_used_at, transports, attestation_type
-		FROM passkeys
-		WHERE user_id = ?
-		ORDER BY created_at DESC
-	`, userID)
+	rows, err := r.db.QueryContext(ctx, passkeyBaseQuery+` WHERE user_id = ? ORDER BY created_at DESC`, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list passkeys: %w", err)
 	}
@@ -129,24 +108,10 @@ func (r *SQLiteRepository) ListPasskeysByUserID(ctx context.Context, userID stri
 
 	var passkeys []*models.Passkey
 	for rows.Next() {
-		passkey := &models.Passkey{}
-		var transportsJSON string
-
-		if err := rows.Scan(
-			&passkey.ID, &passkey.UserID, &passkey.CredentialID, &passkey.PublicKey,
-			&passkey.AAGUID, &passkey.SignCount, &passkey.Name, &passkey.CreatedAt,
-			&passkey.LastUsedAt, &transportsJSON, &passkey.AttestationType,
-		); err != nil {
-			return nil, fmt.Errorf("failed to scan passkey row: %w", err)
+		passkey, err := scanPasskeyRow(rows)
+		if err != nil {
+			return nil, err
 		}
-
-		// Parse transports JSON
-		if transportsJSON != "" {
-			if err := json.Unmarshal([]byte(transportsJSON), &passkey.Transports); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal transports: %w", err)
-			}
-		}
-
 		passkeys = append(passkeys, passkey)
 	}
 
@@ -208,13 +173,7 @@ func (r *SQLiteRepository) DeletePasskeysByUserID(ctx context.Context, userID st
 
 // ListPasskeys lists all passkeys in the database
 func (r *SQLiteRepository) ListPasskeys(ctx context.Context) ([]*models.Passkey, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT
-			id, user_id, credential_id, public_key, aaguid, sign_count,
-			name, created_at, last_used_at, transports, attestation_type
-		FROM passkeys
-		ORDER BY created_at DESC
-	`)
+	rows, err := r.db.QueryContext(ctx, passkeyBaseQuery+` ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list all passkeys: %w", err)
 	}
@@ -222,24 +181,10 @@ func (r *SQLiteRepository) ListPasskeys(ctx context.Context) ([]*models.Passkey,
 
 	var passkeys []*models.Passkey
 	for rows.Next() {
-		passkey := &models.Passkey{}
-		var transportsJSON string
-
-		if err := rows.Scan(
-			&passkey.ID, &passkey.UserID, &passkey.CredentialID, &passkey.PublicKey,
-			&passkey.AAGUID, &passkey.SignCount, &passkey.Name, &passkey.CreatedAt,
-			&passkey.LastUsedAt, &transportsJSON, &passkey.AttestationType,
-		); err != nil {
-			return nil, fmt.Errorf("failed to scan passkey row: %w", err)
+		passkey, err := scanPasskeyRow(rows)
+		if err != nil {
+			return nil, err
 		}
-
-		// Parse transports JSON
-		if transportsJSON != "" {
-			if err := json.Unmarshal([]byte(transportsJSON), &passkey.Transports); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal transports: %w", err)
-			}
-		}
-
 		passkeys = append(passkeys, passkey)
 	}
 

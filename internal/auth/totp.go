@@ -1,21 +1,25 @@
+// Package auth provides authentication related functionality,
+// including two-factor authentication with TOTP and WebAuthn passkeys.
 package auth
 
 import (
 	"bytes"
+	"encoding/base32"
 	"encoding/base64"
 	"fmt"
 	"image/png"
 	"time"
 
+	"github.com/dgryski/dgoogauth"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
 )
 
 // TOTPConfig holds configuration for TOTP
 type TOTPConfig struct {
-	Issuer  string // The issuer name (usually the app name)
-	Period  uint   // The period in seconds (default: 30)
-	Digits  otp.Digits // The number of digits (default: 6)
+	Issuer    string        // The issuer name (usually the app name)
+	Period    uint          // The period in seconds (default: 30)
+	Digits    otp.Digits    // The number of digits (default: 6)
 	Algorithm otp.Algorithm // The algorithm (default: SHA1)
 }
 
@@ -43,7 +47,16 @@ func GenerateTOTPSecret(email string, config TOTPConfig) (string, string, error)
 	}
 
 	// Get the secret in base32 format
-	secret := key.Secret()
+	// Get the secret in base32 format
+	// Explicitly encode to base32 to ensure correct format
+	// Get raw bytes and encode to base32 without padding
+	secretBytes := []byte(key.Secret())
+	secret := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(secretBytes)
+
+	// Validate the secret contains only valid base32 characters
+	if _, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(secret); err != nil {
+		return "", "", fmt.Errorf("generated invalid TOTP secret: %w", err)
+	}
 
 	// Generate QR code
 	var buf bytes.Buffer
@@ -61,11 +74,28 @@ func GenerateTOTPSecret(email string, config TOTPConfig) (string, string, error)
 }
 
 // ValidateTOTP validates a TOTP code against a secret
-func ValidateTOTP(secret, code string, config TOTPConfig) bool {
-	return totp.Validate(code, secret)
+func ValidateTOTP(secret, code string, _ TOTPConfig) bool {
+	// Create a new OTP config
+	otpConfig := dgoogauth.OTPConfig{
+		Secret:      secret,
+		WindowSize:  3,
+		HotpCounter: 0,
+	}
+
+	// Validate the code
+	ok, err := otpConfig.Authenticate(code)
+	if err != nil {
+		return false
+	}
+	return ok
 }
 
-// GenerateTOTPCode generates a TOTP code for a given secret (useful for testing)
-func GenerateTOTPCode(secret string, config TOTPConfig) (string, error) {
-	return totp.GenerateCode(secret, time.Now())
+// GenerateTOTPCode generates a TOTP code for a secret
+func GenerateTOTPCode(secret string, _ TOTPConfig) (string, error) {
+	// Create a new TOTP
+	otp, err := totp.GenerateCode(secret, time.Now())
+	if err != nil {
+		return "", err
+	}
+	return otp, nil
 }

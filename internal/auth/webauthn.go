@@ -135,7 +135,10 @@ func (s *WebAuthnService) FinishRegistration(ctx context.Context, user *models.U
 
 	// Dump the request body for debugging
 	if response.Body != nil {
-		bodyBytes, _ := io.ReadAll(response.Body)
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read response body: %w", err)
+		}
 		// Restore the body for further processing
 		response.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 		log.Printf("Request body: %s", string(bodyBytes))

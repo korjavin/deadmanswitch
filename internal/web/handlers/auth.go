@@ -28,16 +28,16 @@ func NewAuthHandler(repo storage.Repository, emailClient *email.Client) *AuthHan
 }
 
 // HandleLoginForm handles the login form page
-func (h *AuthHandler) HandleLoginForm(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) HandleLoginForm(w http.ResponseWriter, _ *http.Request) {
+	// Render the login form
 	data := templates.TemplateData{
-		Title:      "Login",
-		ActivePage: "login",
-		Data:       make(map[string]interface{}),
+		Title:           "Login",
+		ActivePage:      "login",
+		IsAuthenticated: false,
 	}
 
 	if err := templates.RenderTemplate(w, "login.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
-		log.Printf("Error rendering login template: %v", err)
 	}
 }
 
@@ -189,7 +189,7 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleRegisterForm handles the registration form page
-func (h *AuthHandler) HandleRegisterForm(w http.ResponseWriter, r *http.Request) {
+func (h *AuthHandler) HandleRegisterForm(w http.ResponseWriter, _ *http.Request) {
 	data := templates.TemplateData{
 		Title:      "Register",
 		ActivePage: "register",

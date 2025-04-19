@@ -67,6 +67,7 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 - [ ] User check-ins not shown in activity log, also log all the detected activities like github activity
 - [ ] If user has a passkey attached, we should use this passkey as second factor (?), atleast let's give this option to user
 - [x] Let's switch from sqlite to  modernc.org/sqlite and avoid CGO and long builds
+- [ ] Add precommit conf to check go-test and 
 
 ## Next Steps
 1. Complete the scheduler implementation:

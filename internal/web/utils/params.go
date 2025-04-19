@@ -1,3 +1,6 @@
+// Package utils provides utility functions for the web interface
+// of the Dead Man's Switch application, including parameter parsing,
+// validation, and helper functions for common operations.
 package utils
 
 import (

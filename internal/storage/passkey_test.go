@@ -127,7 +127,7 @@ func TestPasskeyOperations(t *testing.T) {
 	t.Run("ListPasskeys", func(t *testing.T) {
 		passkeys, err := repo.ListPasskeys(context.Background())
 		if err != nil {
-			t.Fatalf("ListPasskeys failed: %v", err)
+			t.Fatalf("Error listing passkeys: %v", err)
 		}
 		if len(passkeys) != 2 {
 			t.Errorf("Expected 2 passkeys, got %d", len(passkeys))
@@ -195,18 +195,24 @@ func TestPasskeyOperations(t *testing.T) {
 	// Test DeletePasskeysByUserID
 	t.Run("DeletePasskeysByUserID", func(t *testing.T) {
 		// Verify we still have one passkey left
-		passkeys, _ := repo.ListPasskeys(context.Background())
+		passkeys, err := repo.ListPasskeys(context.Background())
+		if err != nil {
+			t.Fatalf("Error listing passkeys: %v", err)
+		}
 		if len(passkeys) != 1 {
 			t.Errorf("Expected 1 passkey before DeletePasskeysByUserID, got %d", len(passkeys))
 		}
 
-		err := repo.DeletePasskeysByUserID(context.Background(), userID)
+		err = repo.DeletePasskeysByUserID(context.Background(), userID)
 		if err != nil {
 			t.Fatalf("DeletePasskeysByUserID failed: %v", err)
 		}
 
 		// Verify all passkeys for the user were deleted
-		passkeys, _ = repo.ListPasskeysByUserID(context.Background(), userID)
+		passkeys, err = repo.ListPasskeysByUserID(context.Background(), userID)
+		if err != nil {
+			t.Fatalf("Error listing passkeys by user ID: %v", err)
+		}
 		if len(passkeys) != 0 {
 			t.Errorf("Expected 0 passkeys after DeletePasskeysByUserID, got %d", len(passkeys))
 		}

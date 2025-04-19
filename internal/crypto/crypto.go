@@ -1,3 +1,6 @@
+// Package crypto provides encryption and decryption functionality
+// for sensitive data stored in the Dead Man's Switch application.
+// It implements AES-256-GCM encryption for securing user secrets.
 package crypto
 
 import (

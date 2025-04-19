@@ -124,43 +124,46 @@ func determineActivityType(action string) string {
 	}
 }
 
+// Define a mapping of keyword patterns to activity titles
+var activityTitleMappings = []struct {
+	pattern []string
+	title   string
+}{
+	{[]string{"login"}, "Login"},
+	{[]string{"logout"}, "Logout"},
+	{[]string{"password"}, "Password Changed"},
+	{[]string{"create secret", "add secret"}, "Secret Added"},
+	{[]string{"update secret", "edit secret"}, "Secret Updated"},
+	{[]string{"delete secret", "remove secret"}, "Secret Deleted"},
+	{[]string{"create recipient", "add recipient"}, "Recipient Added"},
+	{[]string{"update recipient", "edit recipient"}, "Recipient Updated"},
+	{[]string{"delete recipient", "remove recipient"}, "Recipient Deleted"},
+	{[]string{"setting", "config"}, "Settings Updated"},
+	{[]string{"check_in"}, "Manual Check-in"},
+	{[]string{"external_activity", "activity_detected"}, "Activity Detected"},
+	{[]string{"github"}, "GitHub Activity"},
+}
+
 // formatActivityTitle formats the activity title based on the action
 func formatActivityTitle(action string) string {
 	if action == "" {
 		return "Unknown Activity"
 	}
 
-	// Format common actions
-	switch {
-	case contains(action, "login"):
-		return "Login"
-	case contains(action, "logout"):
-		return "Logout"
-	case contains(action, "password"):
-		return "Password Changed"
-	case contains(action, "create", "add") && contains(action, "secret"):
-		return "Secret Added"
-	case contains(action, "update", "edit") && contains(action, "secret"):
-		return "Secret Updated"
-	case contains(action, "delete", "remove") && contains(action, "secret"):
-		return "Secret Deleted"
-	case contains(action, "create", "add") && contains(action, "recipient"):
-		return "Recipient Added"
-	case contains(action, "update", "edit") && contains(action, "recipient"):
-		return "Recipient Updated"
-	case contains(action, "delete", "remove") && contains(action, "recipient"):
-		return "Recipient Deleted"
-	case contains(action, "setting", "config"):
-		return "Settings Updated"
-	case contains(action, "check_in"):
-		return "Manual Check-in"
-	case contains(action, "external_activity", "activity_detected"):
-		return "Activity Detected"
-	case contains(action, "github"):
-		return "GitHub Activity"
-	default:
-		return action
+	// Convert action to lowercase for case-insensitive matching
+	lowercaseAction := strings.ToLower(action)
+
+	// Check each mapping pattern
+	for _, mapping := range activityTitleMappings {
+		for _, pattern := range mapping.pattern {
+			if strings.Contains(lowercaseAction, pattern) {
+				return mapping.title
+			}
+		}
 	}
+
+	// If no match is found, return the original action
+	return action
 }
 
 // contains checks if any of the substrings are in the string

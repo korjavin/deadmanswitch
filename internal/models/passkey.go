@@ -8,16 +8,16 @@ import (
 
 // Passkey represents a WebAuthn credential for a user
 type Passkey struct {
-	ID             string    `json:"id"`
-	UserID         string    `json:"user_id"`
-	CredentialID   []byte    `json:"credential_id"`
-	PublicKey      []byte    `json:"public_key"`
-	AAGUID         []byte    `json:"aaguid"`
-	SignCount      uint32    `json:"sign_count"`
-	Name           string    `json:"name"`
-	CreatedAt      time.Time `json:"created_at"`
-	LastUsedAt     time.Time `json:"last_used_at"`
-	Transports     []string  `json:"transports,omitempty"`
+	ID              string    `json:"id"`
+	UserID          string    `json:"user_id"`
+	CredentialID    []byte    `json:"credential_id"`
+	PublicKey       []byte    `json:"public_key"`
+	AAGUID          []byte    `json:"aaguid"`
+	SignCount       uint32    `json:"sign_count"`
+	Name            string    `json:"name"`
+	CreatedAt       time.Time `json:"created_at"`
+	LastUsedAt      time.Time `json:"last_used_at"`
+	Transports      []string  `json:"transports,omitempty"`
 	AttestationType string    `json:"attestation_type"`
 }
 

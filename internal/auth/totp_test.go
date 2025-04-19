@@ -42,8 +42,9 @@ func TestGenerateTOTPSecret(t *testing.T) {
 	// Base32 characters are A-Z, 2-7, and may end with = padding
 	validBase32 := true
 	for _, c := range strings.ToUpper(secret) {
-		if !((c >= 'A' && c <= 'Z') || (c >= '2' && c <= '7') || c == '=') {
+		if c < 'A' || c > 'Z' && c < '2' || c > '7' && c != '=' {
 			validBase32 = false
+			t.Errorf("Generated invalid character in TOTP secret: %c", c)
 			break
 		}
 	}
@@ -108,9 +109,9 @@ func TestValidateTOTP(t *testing.T) {
 	}
 
 	// Generate a valid code
-	validCode, err := totp.GenerateCode(secret, time.Now())
+	validCode, err := GenerateTOTPCode(secret, config)
 	if err != nil {
-		t.Fatalf("Failed to generate TOTP code: %v", err)
+		t.Fatalf("Error generating TOTP code: %v", err)
 	}
 
 	// Test with valid code
@@ -153,7 +154,10 @@ func TestValidateTOTPEdgeCases(t *testing.T) {
 	}
 
 	// Test with empty secret
-	validCode, _ := GenerateTOTPCode(secret, config)
+	validCode, err := GenerateTOTPCode(secret, config)
+	if err != nil {
+		t.Fatalf("Error generating TOTP code: %v", err)
+	}
 	if ValidateTOTP("", validCode, config) {
 		t.Error("ValidateTOTP succeeded with empty secret")
 	}

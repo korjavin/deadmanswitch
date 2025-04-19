@@ -3,6 +3,7 @@ module github.com/korjavin/deadmanswitch
 go 1.24.1
 
 require (
+	github.com/dgryski/dgoogauth v0.0.0-20190221195224-5a805980a5f3
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/go-webauthn/webauthn v0.12.3
 	github.com/google/uuid v1.6.0
