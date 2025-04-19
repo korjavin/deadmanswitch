@@ -27,10 +27,24 @@ case "$(uname -s)" in
         ;;
 esac
 
-# Check if coverage is below threshold
+# Calculate dynamic coverage threshold
+# Get the number of commits
+COMMIT_COUNT=$(git rev-list --count HEAD)
+echo "Total commits: $COMMIT_COUNT"
+
+# Calculate the dynamic threshold: 20% + 0.1% per commit, capped at 80%
+THRESHOLD=$(echo "20 + 0.1 * $COMMIT_COUNT" | bc)
+if (( $(echo "$THRESHOLD > 80" | bc -l) )); then
+    THRESHOLD=80
+fi
+echo "Dynamic coverage threshold: $THRESHOLD%"
+
+# Get the current coverage
 COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
 echo "Total coverage: $COVERAGE%"
-if (( $(echo "$COVERAGE < 20" | bc -l) )); then
-    echo "Warning: Code coverage is below 20%"
+
+# Check if coverage is below the threshold
+if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
+    echo "Warning: Code coverage is below the dynamic threshold of $THRESHOLD%"
     exit 1
 fi
