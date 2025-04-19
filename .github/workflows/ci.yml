@@ -217,8 +217,8 @@ jobs:
                 - SMTP_USERNAME=
                 - SMTP_PASSWORD=
                 - SMTP_FROM=test@example.com
-                # Explicitly set the port to avoid conflicts
-                - PORT=8082
+                # Use the default port inside the container
+                - PORT=8080
                 - BASE_DOMAIN=localhost:8082
                 # Mock Telegram bot token for testing
                 - TG_BOT_TOKEN=mock_token_for_testing_123456789
@@ -238,12 +238,12 @@ jobs:
             deadmanswitch:
               image: ghcr.io/${{ github.repository_owner }}/deadmanswitch:test
               ports:
-                - "8082:8082"
+                - "8082:8080"
               volumes:
                 - ./data:/app/data
               environment:
-                # Explicitly set the port to avoid conflicts
-                - PORT=8082
+                # Use the default port inside the container
+                - PORT=8080
                 # Required environment variables
                 - BASE_DOMAIN=localhost:8082
                 - TG_BOT_TOKEN=mock_token_for_testing_123456789
@@ -279,16 +279,15 @@ jobs:
             echo "No container found with name containing 'deadmanswitch'"
           fi
 
-          # Check if the application is listening on port 8082
-          echo "\nChecking if port 8082 is open:"
-          # Install netstat if needed
-          docker exec $CONTAINER_ID sh -c "command -v netstat || (apt-get update && apt-get install -y net-tools)" || true
-          docker exec $CONTAINER_ID sh -c "netstat -tulpn | grep 8082" || echo "Port 8082 not found in container"
+          # Check if the application is listening on port 8080 inside the container
+          echo "\nChecking if port 8080 is open inside the container:"
+          # Alpine uses busybox, so we need to use different commands
+          docker exec $CONTAINER_ID sh -c "netstat -tulpn 2>/dev/null | grep 8080 || (apk add --no-cache net-tools && netstat -tulpn | grep 8080)" || echo "Port 8080 not found in container"
 
           # Check if the application is accessible from inside the container
           echo "\nChecking if application is accessible from inside the container:"
-          docker exec $CONTAINER_ID sh -c "command -v curl || (apt-get update && apt-get install -y curl)" || true
-          docker exec $CONTAINER_ID sh -c "curl -v http://localhost:8082/login" || echo "Failed to access application from inside container"
+          docker exec $CONTAINER_ID sh -c "command -v curl || apk add --no-cache curl" || true
+          docker exec $CONTAINER_ID sh -c "curl -v http://localhost:8080/login" || echo "Failed to access application from inside container"
 
           # Check network connectivity from host to container
           echo "\nChecking network connectivity to container:"
@@ -376,7 +375,7 @@ jobs:
 
           # First check if the application is ready using Playwright
           echo "Checking application readiness with Playwright..."
-          docker run --rm --network host -v $(pwd):/app -w /app mcr.microsoft.com/playwright:v1.42.0-jammy /bin/bash -c "cd /app/tests/frontend && npm install && node -e \"const { chromium } = require('@playwright/test'); (async () => { try { const browser = await chromium.launch(); const page = await browser.newPage(); console.log('Trying to access http://localhost:8082/login...'); await page.goto('http://localhost:8082/login', { timeout: 30000 }); console.log('Page loaded successfully!'); console.log('Page title:', await page.title()); await page.screenshot({ path: '/app/app-ready.png' }); await browser.close(); process.exit(0); } catch (e) { console.error('Error:', e); process.exit(1); } })()\"" || true
+          docker run --rm --network host -v $(pwd):/app -w /app mcr.microsoft.com/playwright:v1.42.0-jammy /bin/bash -c "cd /app/tests/frontend && npm install && node -e \"const { chromium } = require('@playwright/test'); (async () => { try { const browser = await chromium.launch(); const page = await browser.newPage(); console.log('Trying to access http://localhost:8082/login...'); await page.goto('http://localhost:8082/login', { timeout: 60000 }); console.log('Page loaded successfully!'); console.log('Page title:', await page.title()); console.log('Page content:', await page.content()); await page.screenshot({ path: '/app/app-ready.png' }); await browser.close(); process.exit(0); } catch (e) { console.error('Error:', e); process.exit(1); } })()\"" || true
 
           # Run the tests using the Playwright Docker image
           docker run --rm --network host -v $(pwd):/app -w /app mcr.microsoft.com/playwright:v1.42.0-jammy /bin/bash -c "cd /app/tests/frontend && npm install && npx playwright test"
