@@ -95,6 +95,28 @@ go tool cover -html=coverage.out -o coverage.html
 ```
 
 
+## Contributing
+
+We welcome contributions to Dead Man's Switch! Whether you're fixing bugs, adding features, improving documentation, or writing tests, your help is appreciated.
+
+### Key Contribution Areas
+
+- **Backend Development**: Go-based API and business logic
+- **Frontend Development**: HTML templates and JavaScript enhancements
+- **Testing**: Unit tests, integration tests, and end-to-end tests
+- **Documentation**: User guides, API documentation, and examples
+- **Security Improvements**: Identifying and fixing security issues
+
+### Testing Philosophy
+
+We believe in a robust testing strategy:
+
+- **Backend Tests**: Go unit and integration tests with dynamic coverage requirements
+- **Frontend Tests**: End-to-end tests using Playwright
+- **Continuous Improvement**: Our coverage threshold increases with each commit
+
+For detailed guidelines, see our [Contributing Guide](CONTRIBUTING.md).
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
