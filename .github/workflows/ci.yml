@@ -102,6 +102,18 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Install Docker Compose
+        run: |
+          # Install Docker Compose v2
+          DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
+          mkdir -p $DOCKER_CONFIG/cli-plugins
+          curl -SL https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-linux-x86_64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
+          chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
+          # Create docker-compose symlink for backward compatibility
+          sudo ln -sf $DOCKER_CONFIG/cli-plugins/docker-compose /usr/local/bin/docker-compose
+          # Verify installation
+          docker compose version
+
       - name: Create image metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -142,9 +154,30 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build application for testing
+      - name: Install Docker Compose
         run: |
-          docker build -t deadmanswitch_deadmanswitch:test .
+          # Install Docker Compose v2
+          DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
+          mkdir -p $DOCKER_CONFIG/cli-plugins
+          curl -SL https://github.com/docker/compose/releases/download/v2.23.3/docker-compose-linux-x86_64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
+          chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
+          # Create docker-compose symlink for backward compatibility
+          sudo ln -sf $DOCKER_CONFIG/cli-plugins/docker-compose /usr/local/bin/docker-compose
+          # Verify installation
+          docker compose version
+          docker-compose version
+
+      - name: Pull image from GitHub Container Registry
+        run: |
+          # For pull requests, we can't push to GHCR, so we need to build locally
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "Building image locally for pull request..."
+            docker build -t ghcr.io/${{ github.repository_owner }}/deadmanswitch:test .
+          else
+            echo "Pulling image from GitHub Container Registry..."
+            docker pull ghcr.io/${{ github.repository_owner }}/deadmanswitch:sha-$(echo ${{ github.sha }} | cut -c1-7)
+            docker tag ghcr.io/${{ github.repository_owner }}/deadmanswitch:sha-$(echo ${{ github.sha }} | cut -c1-7) ghcr.io/${{ github.repository_owner }}/deadmanswitch:test
+          fi
 
       - name: Run frontend tests
         run: |
@@ -154,9 +187,30 @@ jobs:
           # Create a network for the containers
           docker network create deadmanswitch_default || true
 
-          # Start the application with the test database
+          # Create a custom docker-compose override file for testing
           export TEST_RUN_ID=$(date +%s)
-          docker-compose -f docker-compose.yml -f tests/frontend/docker-compose.test.yml up -d
+          cat > docker-compose.test-ci.yml << 'EOL'
+          version: '3'
+
+          services:
+            deadmanswitch:
+              image: ghcr.io/${{ github.repository_owner }}/deadmanswitch:test
+              environment:
+                # Use a temporary database for testing
+                - DBPath=/app/data/test_${TEST_RUN_ID}.db
+                # Enable debug mode for testing
+                - DEBUG=true
+                - LOG_LEVEL=debug
+                # For testing, we'll use a simple configuration without email verification
+                - SMTP_HOST=
+                - SMTP_PORT=
+                - SMTP_USERNAME=
+                - SMTP_PASSWORD=
+                - SMTP_FROM=test@example.com
+          EOL
+
+          # Start the application with the test database using the image we just pulled
+          docker compose -f docker-compose.yml -f docker-compose.test-ci.yml up -d
 
           # Wait for the application to start
           echo "Waiting for application to start..."
@@ -165,11 +219,11 @@ jobs:
 
           while [ $COUNTER -lt $MAX_WAIT ]; do
             # Check if container is running
-            if ! docker ps | grep -q deadmanswitch_deadmanswitch; then
+            if ! docker ps | grep -q deadmanswitch; then
               echo "Container is not running! Checking logs..."
-              docker logs deadmanswitch_deadmanswitch_1 || true
+              docker logs $(docker ps -q --filter name=deadmanswitch) || true
               echo "Trying to restart container..."
-              docker-compose up -d
+              docker compose -f docker-compose.yml -f docker-compose.test-ci.yml up -d
               sleep 5
             fi
 
@@ -188,7 +242,7 @@ jobs:
               echo "Current container status:"
               docker ps
               echo "Checking container logs (last 10 lines):"
-              docker logs --tail=10 deadmanswitch_deadmanswitch_1 || true
+              docker logs --tail=10 $(docker ps -q --filter name=deadmanswitch) || true
             fi
 
             sleep 1
@@ -197,7 +251,7 @@ jobs:
           # Check if we timed out
           if [ $COUNTER -eq $MAX_WAIT ]; then
             echo "Timed out waiting for application to start"
-            docker logs deadmanswitch_deadmanswitch_1 || true
+            docker logs $(docker ps -q --filter name=deadmanswitch) || true
             docker ps
             exit 1
           fi
@@ -207,7 +261,7 @@ jobs:
           TEST_EXIT_CODE=$?
 
           # Stop the containers
-          docker-compose down
+          docker compose down
 
           exit $TEST_EXIT_CODE
 
