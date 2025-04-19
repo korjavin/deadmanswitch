@@ -220,6 +220,8 @@ jobs:
                 # Explicitly set the port to avoid conflicts
                 - PORT=8082
                 - BASE_DOMAIN=localhost:8082
+                # Mock Telegram bot token for testing
+                - TG_BOT_TOKEN=mock_token_for_testing_123456789
               networks:
                 - deadmanswitch_default
 
@@ -244,7 +246,7 @@ jobs:
                 - PORT=8082
                 # Required environment variables
                 - BASE_DOMAIN=localhost:8082
-                - TG_BOT_TOKEN=
+                - TG_BOT_TOKEN=mock_token_for_testing_123456789
                 - ADMIN_EMAIL=admin@example.com
               networks:
                 - deadmanswitch_default
@@ -267,6 +269,15 @@ jobs:
           # List running containers
           echo "\nRunning containers:"
           docker ps -a
+
+          # Check container logs to verify it started correctly
+          echo "\nChecking container logs:"
+          CONTAINER_ID=$(docker ps -a --filter name=deadmanswitch --format "{{.ID}}" | head -n 1)
+          if [ -n "$CONTAINER_ID" ]; then
+            docker logs $CONTAINER_ID
+          else
+            echo "No container found with name containing 'deadmanswitch'"
+          fi
 
           # Wait for the application to start
           echo "Waiting for application to start..."
