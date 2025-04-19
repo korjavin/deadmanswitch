@@ -1,128 +1,230 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  # Optionally enable manual workflow trigger
+  workflow_dispatch:
+
+# Add permissions needed for GitHub container registry
+permissions:
+  contents: read
+  packages: write
+  actions: read
 
 jobs:
-  build:
+  backend-test:
+    name: Run Backend Tests with Coverage
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for git rev-list
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.21'
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
 
-    - name: Build
-      run: go build -v ./...
+      - name: Install dependencies
+        run: go mod download
 
-    - name: Test with coverage
-      run: |
-        go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
-        go tool cover -func=coverage.txt
+      - name: Run tests with coverage
+        run: |
+          go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+          go tool cover -func=coverage.txt
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.txt
-        fail_ci_if_error: false
+      - name: Generate coverage report
+        run: go tool cover -html=coverage.txt -o coverage.html
 
-    - name: Build Docker image
-      run: |
-        docker build -t ghcr.io/korjavin/deadmanswitch:${{ github.sha }} .
-        docker tag ghcr.io/korjavin/deadmanswitch:${{ github.sha }} ghcr.io/korjavin/deadmanswitch:latest
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.html
+          retention-days: 7
 
-    - name: Login to GitHub Container Registry
-      if: github.event_name != 'pull_request'
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.txt
+          fail_ci_if_error: false
 
-    - name: Push Docker image
-      if: github.event_name != 'pull_request'
-      run: |
-        docker push ghcr.io/korjavin/deadmanswitch:${{ github.sha }}
-        docker push ghcr.io/korjavin/deadmanswitch:latest
+      - name: Calculate dynamic coverage threshold
+        run: |
+          # Get the number of commits
+          # Make sure we have the full history
+          git fetch --prune --unshallow || true
 
-  frontend-tests:
+          # Try to get the commit count
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+
+          # If we still have a shallow clone or the count is 1, use a fallback
+          if [ "$COMMIT_COUNT" = "1" ]; then
+            # Fallback to a reasonable default
+            COMMIT_COUNT=50
+            echo "Could not determine accurate commit count, using default: $COMMIT_COUNT"
+          else
+            echo "Total commits: $COMMIT_COUNT"
+          fi
+
+          # Calculate the dynamic threshold: 20% + 0.1% per commit, capped at 80%
+          THRESHOLD=$(echo "20 + 0.1 * $COMMIT_COUNT" | bc)
+          if (( $(echo "$THRESHOLD > 80" | bc -l) )); then
+            THRESHOLD=80
+          fi
+          echo "Dynamic coverage threshold: $THRESHOLD%"
+          echo "THRESHOLD=$THRESHOLD" >> $GITHUB_ENV
+
+          # Get the current coverage
+          COVERAGE=$(go tool cover -func=coverage.txt | grep total | awk '{print $3}' | sed 's/%//')
+          echo "Total coverage: $COVERAGE%"
+          echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+
+          # Check if coverage is below the threshold
+          if (( $(echo "$COVERAGE < $THRESHOLD" | bc -l) )); then
+            echo "Code coverage is below the dynamic threshold of $THRESHOLD%"
+            exit 1
+          fi
+
+  build-and-push:
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    needs: backend-test
     steps:
-    - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Build application for testing
-      run: |
-        docker build -t deadmanswitch_deadmanswitch:test .
+      - name: Create image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/deadmanswitch
+          tags: |
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
+            type=sha,format=short
+            type=ref,event=tag
 
-    - name: Run frontend tests
-      run: |
-        # Set CI environment variable
-        export CI=true
+      - name: Login to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-        # Create a network for the containers
-        docker network create deadmanswitch_default || true
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Use buildx's built-in cache
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-        # Start the application with the test database
-        export TEST_RUN_ID=$(date +%s)
-        docker-compose -f docker-compose.yml -f tests/frontend/docker-compose.test.yml up -d
+  frontend-test:
+    name: Run Frontend Tests
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        # Wait for the application to start
-        echo "Waiting for application to start..."
-        MAX_WAIT=120
-        COUNTER=0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-        while [ $COUNTER -lt $MAX_WAIT ]; do
-          # Check if container is running
-          if ! docker ps | grep -q deadmanswitch_deadmanswitch; then
-            echo "Container is not running! Checking logs..."
+      - name: Build application for testing
+        run: |
+          docker build -t deadmanswitch_deadmanswitch:test .
+
+      - name: Run frontend tests
+        run: |
+          # Set CI environment variable
+          export CI=true
+
+          # Create a network for the containers
+          docker network create deadmanswitch_default || true
+
+          # Start the application with the test database
+          export TEST_RUN_ID=$(date +%s)
+          docker-compose -f docker-compose.yml -f tests/frontend/docker-compose.test.yml up -d
+
+          # Wait for the application to start
+          echo "Waiting for application to start..."
+          MAX_WAIT=120
+          COUNTER=0
+
+          while [ $COUNTER -lt $MAX_WAIT ]; do
+            # Check if container is running
+            if ! docker ps | grep -q deadmanswitch_deadmanswitch; then
+              echo "Container is not running! Checking logs..."
+              docker logs deadmanswitch_deadmanswitch_1 || true
+              echo "Trying to restart container..."
+              docker-compose up -d
+              sleep 5
+            fi
+
+            # Try to connect to the application
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8082/login || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "Application is ready!"
+              break
+            fi
+
+            COUNTER=$((COUNTER+1))
+            echo "Waiting for application to start... ($((MAX_WAIT-COUNTER)) seconds left)"
+
+            # Print more detailed status every 10 seconds
+            if [ $((COUNTER % 10)) -eq 0 ]; then
+              echo "Current container status:"
+              docker ps
+              echo "Checking container logs (last 10 lines):"
+              docker logs --tail=10 deadmanswitch_deadmanswitch_1 || true
+            fi
+
+            sleep 1
+          done
+
+          # Check if we timed out
+          if [ $COUNTER -eq $MAX_WAIT ]; then
+            echo "Timed out waiting for application to start"
             docker logs deadmanswitch_deadmanswitch_1 || true
-            echo "Trying to restart container..."
-            docker-compose up -d
-            sleep 5
-          fi
-
-          # Try to connect to the application
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8082/login || echo "000")
-          if [ "$STATUS" = "200" ]; then
-            echo "Application is ready!"
-            break
-          fi
-
-          COUNTER=$((COUNTER+1))
-          echo "Waiting for application to start... ($((MAX_WAIT-COUNTER)) seconds left)"
-
-          # Print more detailed status every 10 seconds
-          if [ $((COUNTER % 10)) -eq 0 ]; then
-            echo "Current container status:"
             docker ps
-            echo "Checking container logs (last 10 lines):"
-            docker logs --tail=10 deadmanswitch_deadmanswitch_1 || true
+            exit 1
           fi
 
-          sleep 1
-        done
+          # Run the tests using the Playwright Docker image
+          docker run --rm --network host -v $(pwd):/app -w /app mcr.microsoft.com/playwright:v1.42.0-jammy /bin/bash -c "cd /app/tests/frontend && npm install && npx playwright test"
+          TEST_EXIT_CODE=$?
 
-        # Check if we timed out
-        if [ $COUNTER -eq $MAX_WAIT ]; then
-          echo "Timed out waiting for application to start"
-          docker logs deadmanswitch_deadmanswitch_1 || true
-          docker ps
-          exit 1
-        fi
+          # Stop the containers
+          docker-compose down
 
-        # Run the tests using the Playwright Docker image
-        docker run --rm --network host -v $(pwd):/app -w /app mcr.microsoft.com/playwright:v1.42.0-jammy /bin/bash -c "cd /app/tests/frontend && npm install && npx playwright test"
-        TEST_EXIT_CODE=$?
+          exit $TEST_EXIT_CODE
 
-        # Stop the containers
-        docker-compose down
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
 
-        exit $TEST_EXIT_CODE
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: |-
+            *.png
+            test-results/
+          retention-days: 7

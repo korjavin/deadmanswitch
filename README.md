@@ -1,7 +1,6 @@
 # Dead Man's Switch
 
-[![Run Tests](https://github.com/korjavin/deadmanswitch/actions/workflows/tests.yml/badge.svg)](https://github.com/korjavin/deadmanswitch/actions/workflows/tests.yml)
-[![Build Docker Container](https://github.com/korjavin/deadmanswitch/actions/workflows/docker-build.yml/badge.svg)](https://github.com/korjavin/deadmanswitch/actions/workflows/docker-build.yml)
+[![CI/CD Pipeline](https://github.com/korjavin/deadmanswitch/actions/workflows/ci.yml/badge.svg)](https://github.com/korjavin/deadmanswitch/actions/workflows/ci.yml)
 
 > ⚠️ **SECURITY WARNING**: This project is currently under active development with cryptography implementation still in progress. **DO NOT** use this application in production or for truly sensitive information until a stable release is available. The current implementation should only be used in trusted, isolated environments for testing purposes.
 

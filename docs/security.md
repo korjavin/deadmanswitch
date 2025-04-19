@@ -86,6 +86,31 @@ The Dead Man's Switch application uses a layered encryption approach to protect 
    - Keep the application and its dependencies up to date
    - Monitor security advisories
 
+## External Activity Monitoring
+
+### GitHub Activity Monitoring
+
+The application can monitor your public GitHub activity to automatically postpone check-ins:
+
+1. **Privacy Considerations**
+   - Only public GitHub API data is accessed
+   - No GitHub authentication or personal access tokens are required
+   - Only your GitHub username is stored in the database
+   - No GitHub data is stored other than the timestamp of your latest activity
+
+2. **Security Implications**
+   - Reduces the frequency of manual check-ins, improving usability
+   - Provides an additional signal of user activity beyond explicit check-ins
+   - All activity checks are logged for transparency and auditability
+   - Users can disconnect GitHub integration at any time
+
+3. **Potential Risks**
+   - If an attacker gains access to your GitHub account, they could potentially prevent the dead man's switch from triggering
+   - This risk is mitigated by the fact that the switch will still trigger if no manual check-ins are performed within the configured deadline
+   - Users should maintain strong security on their GitHub accounts if using this feature
+
+For more details, see the [GitHub Activity Monitoring Guide](./github-activity.md).
+
 ## Authentication Security
 
 ### Password Authentication
