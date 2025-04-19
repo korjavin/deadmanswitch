@@ -1,6 +1,8 @@
 run:
   timeout: 5m
   tests: true
+  skip-dirs:
+    - vendor
 
 linters:
   disable-all: true
@@ -12,15 +14,34 @@ linters:
     - staticcheck
     - typecheck
     - unused
+    - bodyclose
+    - dogsled
+    - dupl
+    - gocyclo
     - gofmt
     - goimports
+    - gosec
     - misspell
+    - nolintlint
     - revive
+    - unconvert
+    - unparam
+    - whitespace
 
 linters-settings:
   errcheck:
     check-type-assertions: true
     check-blank: true
+  gocyclo:
+    min-complexity: 15
+  dupl:
+    threshold: 100
+  govet:
+    check-shadowing: true
 
 issues:
   exclude-use-default: true
+  max-same-issues: 0
+
+output:
+  format: colored-line-number
