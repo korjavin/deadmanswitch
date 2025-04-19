@@ -1,0 +1,12 @@
+{
+  "name": "deadmanswitch-frontend-tests",
+  "version": "1.0.0",
+  "description": "Frontend tests for Dead Man's Switch",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.42.1"
+  }
+}
