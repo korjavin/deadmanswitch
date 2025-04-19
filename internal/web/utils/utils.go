@@ -25,7 +25,9 @@ func GenerateSecureToken() string {
 	if _, err := rand.Read(tokenBytes); err != nil {
 		panic(err)
 	}
-	return base64.URLEncoding.EncodeToString(tokenBytes)
+	// Use strict base64 URL encoding without padding
+	encoder := base64.URLEncoding.WithPadding(base64.NoPadding)
+	return encoder.EncodeToString(tokenBytes)
 }
 
 // VerifyPassword verifies a password against a bcrypt hashed password

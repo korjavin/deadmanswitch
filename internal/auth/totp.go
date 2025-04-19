@@ -4,6 +4,7 @@ package auth
 
 import (
 	"bytes"
+	"encoding/base32"
 	"encoding/base64"
 	"fmt"
 	"image/png"
@@ -46,7 +47,16 @@ func GenerateTOTPSecret(email string, config TOTPConfig) (string, string, error)
 	}
 
 	// Get the secret in base32 format
-	secret := key.Secret()
+	// Get the secret in base32 format
+	// Explicitly encode to base32 to ensure correct format
+	// Get raw bytes and encode to base32 without padding
+	secretBytes := []byte(key.Secret())
+	secret := base32.StdEncoding.WithPadding(base32.NoPadding).EncodeToString(secretBytes)
+
+	// Validate the secret contains only valid base32 characters
+	if _, err := base32.StdEncoding.WithPadding(base32.NoPadding).DecodeString(secret); err != nil {
+		return "", "", fmt.Errorf("generated invalid TOTP secret: %w", err)
+	}
 
 	// Generate QR code
 	var buf bytes.Buffer

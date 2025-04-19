@@ -39,9 +39,9 @@ func Auth(repo storage.Repository) func(http.HandlerFunc) http.HandlerFunc {
 			// Get the session from the database
 			ctx := r.Context()
 			session, err := repo.GetSessionByToken(ctx, sessionToken)
-			if err != nil {
-				// Invalid session, redirect to login
-				log.Printf("Invalid session: %v", err)
+			if err != nil || session == nil {
+				// Invalid or missing session, redirect to login
+				log.Printf("Invalid or missing session: %v", err)
 				http.Redirect(w, r, "/login", http.StatusSeeOther)
 				return
 			}
@@ -56,7 +56,7 @@ func Auth(repo storage.Repository) func(http.HandlerFunc) http.HandlerFunc {
 
 			// Get the user from the session
 			user, err := repo.GetUserByID(ctx, session.UserID)
-			if err != nil {
+			if err != nil || user == nil {
 				// User not found, redirect to login
 				log.Printf("User not found: %v", err)
 				http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -77,10 +77,12 @@ func Auth(repo storage.Repository) func(http.HandlerFunc) http.HandlerFunc {
 			}
 
 			// Add the user and session to the request context
+			log.Printf("Setting context for user ID: %d, session ID: %s", user.ID, session.ID)
 			ctx = context.WithValue(ctx, userContextKey, user)
 			ctx = context.WithValue(ctx, sessionContextKey, session)
 
 			// Call the next handler with the updated context
+			log.Printf("Passing request to next handler with updated context")
 			next(w, r.WithContext(ctx))
 		}
 	}
