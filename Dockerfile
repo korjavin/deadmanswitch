@@ -1,8 +1,5 @@
 FROM golang:1.24-alpine AS builder
 
-# Install build dependencies
-RUN apk add --no-cache git gcc musl-dev
-
 # Set working directory
 WORKDIR /app
 
@@ -15,14 +12,14 @@ RUN go mod download
 # Copy the source code
 COPY . .
 
-# Build the application
-RUN CGO_ENABLED=1 GOOS=linux go build -a -ldflags '-linkmode external -extldflags "-static"' -o deadmanswitch ./cmd/server
+# Build the application with CGO disabled
+RUN CGO_ENABLED=0 GOOS=linux go build -a -o deadmanswitch ./cmd/server
 
 # Create runtime image
 FROM alpine:latest
 
-# Install runtime dependencies
-RUN apk --no-cache add ca-certificates tzdata sqlite
+# Install ca-certificates and timezone data
+RUN apk --no-cache add ca-certificates tzdata
 
 # Create app directory
 WORKDIR /app

@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/korjavin/deadmanswitch/internal/models"
 	"github.com/korjavin/deadmanswitch/internal/storage/migrations"
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite" // Using pure Go SQLite implementation
 )
 
 // SQLiteRepository implements the Repository interface using SQLite
@@ -34,8 +34,8 @@ func NewSQLiteRepository(dbPath string) (*SQLiteRepository, error) {
 		return nil, fmt.Errorf("failed to create database directory: %w", err)
 	}
 
-	// Connect to SQLite
-	db, err := sql.Open("sqlite3", dbPath+"?_foreign_keys=on")
+	// Connect to SQLite - modernc.org/sqlite uses the driver name 'sqlite' instead of 'sqlite3'
+	db, err := sql.Open("sqlite", dbPath+"?_pragma=foreign_keys(1)")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
