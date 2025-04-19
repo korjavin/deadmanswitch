@@ -186,6 +186,14 @@ jobs:
 
           # Remove any existing network with the same name
           docker network rm deadmanswitch_default || true
+          # Check if port 8082 is already in use
+          if netstat -tuln | grep -q ':8082 '; then
+            echo "Port 8082 is already in use. Checking what's using it:"
+            lsof -i :8082 || true
+            echo "Attempting to kill processes using port 8082..."
+            fuser -k 8082/tcp || true
+          fi
+
           # Create a fresh network for the containers
           docker network create deadmanswitch_default
 
@@ -209,6 +217,9 @@ jobs:
                 - SMTP_USERNAME=
                 - SMTP_PASSWORD=
                 - SMTP_FROM=test@example.com
+                # Explicitly set the port to avoid conflicts
+                - PORT=8082
+                - BASE_DOMAIN=localhost:8082
               networks:
                 - deadmanswitch_default
 
@@ -229,6 +240,8 @@ jobs:
               volumes:
                 - ./data:/app/data
               environment:
+                # Explicitly set the port to avoid conflicts
+                - PORT=8082
                 # Required environment variables
                 - BASE_DOMAIN=localhost:8082
                 - TG_BOT_TOKEN=
@@ -241,8 +254,19 @@ jobs:
               external: true
           EOL
 
+          # Print the content of the compose files for debugging
+          echo "\nContents of docker-compose.ci.yml:"
+          cat docker-compose.ci.yml
+          echo "\nContents of docker-compose.test-ci.yml:"
+          cat docker-compose.test-ci.yml
+
           # Start the application with the test database using the image we just pulled
+          echo "\nStarting containers..."
           docker compose -f docker-compose.ci.yml -f docker-compose.test-ci.yml up -d
+
+          # List running containers
+          echo "\nRunning containers:"
+          docker ps -a
 
           # Wait for the application to start
           echo "Waiting for application to start..."
@@ -253,7 +277,15 @@ jobs:
             # Check if container is running
             if ! docker ps | grep -q deadmanswitch; then
               echo "Container is not running! Checking logs..."
-              docker logs $(docker ps -q --filter name=deadmanswitch) || true
+              # Get the container ID more reliably
+              CONTAINER_ID=$(docker ps -a --filter name=deadmanswitch --format "{{.ID}}" | head -n 1)
+              if [ -n "$CONTAINER_ID" ]; then
+                echo "Found container ID: $CONTAINER_ID"
+                docker logs $CONTAINER_ID || true
+              else
+                echo "No container found with name containing 'deadmanswitch'"
+                docker ps -a
+              fi
               echo "Trying to restart container..."
               docker compose -f docker-compose.ci.yml -f docker-compose.test-ci.yml up -d
               sleep 5
@@ -274,7 +306,13 @@ jobs:
               echo "Current container status:"
               docker ps
               echo "Checking container logs (last 10 lines):"
-              docker logs --tail=10 $(docker ps -q --filter name=deadmanswitch) || true
+              # Get the container ID more reliably
+              CONTAINER_ID=$(docker ps -a --filter name=deadmanswitch --format "{{.ID}}" | head -n 1)
+              if [ -n "$CONTAINER_ID" ]; then
+                docker logs --tail=10 $CONTAINER_ID || true
+              else
+                echo "No container found with name containing 'deadmanswitch'"
+              fi
             fi
 
             sleep 1
@@ -283,7 +321,14 @@ jobs:
           # Check if we timed out
           if [ $COUNTER -eq $MAX_WAIT ]; then
             echo "Timed out waiting for application to start"
-            docker logs $(docker ps -q --filter name=deadmanswitch) || true
+            # Get the container ID more reliably
+            CONTAINER_ID=$(docker ps -a --filter name=deadmanswitch --format "{{.ID}}" | head -n 1)
+            if [ -n "$CONTAINER_ID" ]; then
+              docker logs $CONTAINER_ID || true
+            else
+              echo "No container found with name containing 'deadmanswitch'"
+              docker ps -a
+            fi
             docker ps
             exit 1
           fi
