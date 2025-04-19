@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+  deadmanswitch:
+    environment:
+      # Use a temporary database for testing
+      - DBPath=/app/data/test_${TEST_RUN_ID:-default}.db
+      # Enable debug mode for testing
+      - DEBUG=true
+      - LOG_LEVEL=debug
+      # For testing, we'll use a simple configuration without email verification
+      - SMTP_HOST=
+      - SMTP_PORT=
+      - SMTP_USERNAME=
+      - SMTP_PASSWORD=
+      - SMTP_FROM=test@example.com

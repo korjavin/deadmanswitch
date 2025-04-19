@@ -4,8 +4,8 @@
 
 // Test data that can be reused across tests
 const TEST_USER = {
-  email: 'test@example.com',
-  password: 'Password123!',
+  email: 'korjavin@gmail.com',
+  password: 'password',
   name: 'Test User'
 };
 
@@ -17,7 +17,7 @@ const TEST_USER = {
  */
 async function login(page, email, password) {
   console.log(`Navigating to login page...`);
-  await page.goto('/login');
+  await page.goto('http://localhost:8082/login');
   await page.waitForLoadState('networkidle');
 
   console.log(`Filling login form with email: ${email}...`);
@@ -59,7 +59,7 @@ async function login(page, email, password) {
  * @param {string} password - User password
  */
 async function registerUser(page, email, name, password) {
-  await page.goto('/register');
+  await page.goto('http://localhost:8082/register');
   await page.fill('input[name="email"]', email);
   await page.fill('input[name="name"]', name);
   await page.fill('input[name="password"]', password);
