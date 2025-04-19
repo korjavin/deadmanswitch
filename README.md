@@ -1,6 +1,8 @@
 # Dead Man's Switch
 
 [![CI/CD Pipeline](https://github.com/korjavin/deadmanswitch/actions/workflows/ci.yml/badge.svg)](https://github.com/korjavin/deadmanswitch/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/korjavin/deadmanswitch)](https://goreportcard.com/report/github.com/korjavin/deadmanswitch)
+[![golangci-lint](https://github.com/korjavin/deadmanswitch/actions/workflows/ci.yml/badge.svg?event=push&label=golangci-lint)](https://github.com/korjavin/deadmanswitch/actions/workflows/ci.yml)
 
 > ⚠️ **SECURITY WARNING**: This project is currently under active development with cryptography implementation still in progress. **DO NOT** use this application in production or for truly sensitive information until a stable release is available. The current implementation should only be used in trusted, isolated environments for testing purposes.
 
@@ -94,6 +96,19 @@ go tool cover -func=coverage.out
 go tool cover -html=coverage.out -o coverage.html
 ```
 
+### Running Linters
+
+We use golangci-lint to ensure code quality. Run the linter locally before submitting pull requests:
+
+```bash
+# Run the linter using the provided script
+./scripts/run-golangci-lint.sh
+
+# Or directly if you have golangci-lint installed
+golangci-lint run
+```
+
+The script will automatically install golangci-lint if it's not already available on your system.
 
 ## Contributing
 

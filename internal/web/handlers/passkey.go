@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/korjavin/deadmanswitch/internal/auth"
 	"github.com/korjavin/deadmanswitch/internal/models"
 	"github.com/korjavin/deadmanswitch/internal/storage"
@@ -218,17 +217,17 @@ func (h *PasskeyHandler) HandleFinishRegistration(w http.ResponseWriter, r *http
 
 // HandleDeletePasskey handles the deletion of a passkey
 func (h *PasskeyHandler) HandleDeletePasskey(w http.ResponseWriter, r *http.Request) {
+	// Get the passkey ID from the URL parameter
+	passkeyID := utils.GetLastURLSegment(r)
+	if passkeyID == "" {
+		http.Error(w, "Missing passkey ID", http.StatusBadRequest)
+		return
+	}
+
 	// Get the authenticated user from context
 	user, ok := middleware.GetUserFromContext(r)
 	if !ok || user == nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	// Get the passkey ID from the URL
-	passkeyID := chi.URLParam(r, "id")
-	if passkeyID == "" {
-		http.Error(w, "Passkey ID is required", http.StatusBadRequest)
 		return
 	}
 

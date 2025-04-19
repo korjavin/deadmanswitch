@@ -11,9 +11,9 @@ import (
 )
 
 // Auth is a middleware that checks if the user is authenticated
-func Auth(repo storage.Repository) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func Auth(repo storage.Repository) func(http.HandlerFunc) http.HandlerFunc {
+	return func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
 			// Get the session cookie
 			cookie, err := r.Cookie("session_token")
 			if err != nil {
@@ -70,8 +70,8 @@ func Auth(repo storage.Repository) func(http.Handler) http.Handler {
 			ctx = context.WithValue(ctx, "session", session)
 
 			// Call the next handler with the updated context
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
+			next(w, r.WithContext(ctx))
+		}
 	}
 }
 
