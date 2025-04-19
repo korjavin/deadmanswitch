@@ -2,9 +2,6 @@ package web
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"net/http"
@@ -201,8 +198,14 @@ func (s *Server) handleMethodRouter(methods ...interface{}) http.HandlerFunc {
 	handlers := make(map[string]http.HandlerFunc)
 	for i := 0; i < len(methods); i += 2 {
 		method := methods[i].(string)
-		handler := methods[i+1].(http.HandlerFunc)
-		handlers[method] = handler
+		switch h := methods[i+1].(type) {
+		case http.HandlerFunc:
+			handlers[method] = h
+		case func(http.ResponseWriter, *http.Request):
+			handlers[method] = http.HandlerFunc(h)
+		default:
+			panic(fmt.Sprintf("unsupported handler type: %T", methods[i+1]))
+		}
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -319,26 +322,6 @@ func (s *Server) setupFileServer() http.Handler {
 	}
 
 	return fileServer
-}
-
-// Helper functions
-
-func generateSecureToken() string {
-	// Generate a random 32-byte token
-	tokenBytes := make([]byte, 32)
-	if _, err := rand.Read(tokenBytes); err != nil {
-		panic(err)
-	}
-	return base64.StdEncoding.EncodeToString(tokenBytes)
-}
-
-func generateID() string {
-	// Generate a UUID-like ID
-	idBytes := make([]byte, 16)
-	if _, err := rand.Read(idBytes); err != nil {
-		panic(err)
-	}
-	return hex.EncodeToString(idBytes)
 }
 
 // Adapter functions to convert between models and UI types
