@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/korjavin/deadmanswitch/internal/activity"
 	"github.com/korjavin/deadmanswitch/internal/config"
 	"github.com/korjavin/deadmanswitch/internal/email"
 	"github.com/korjavin/deadmanswitch/internal/models"
@@ -43,14 +44,15 @@ type TelegramBot interface {
 
 // Scheduler handles periodic tasks
 type Scheduler struct {
-	tasks        map[string]*Task
-	repo         storage.Repository
-	emailClient  EmailClient
-	telegramBot  TelegramBot
-	config       *config.Config
-	mu           sync.RWMutex
-	stopChan     chan struct{}
-	deliveryLock sync.Mutex
+	tasks            map[string]*Task
+	repo             storage.Repository
+	emailClient      EmailClient
+	telegramBot      TelegramBot
+	config           *config.Config
+	activityRegistry *activity.Registry
+	mu               sync.RWMutex
+	stopChan         chan struct{}
+	deliveryLock     sync.Mutex
 }
 
 // NewScheduler creates a new scheduler
@@ -60,13 +62,18 @@ func NewScheduler(
 	telegramBot TelegramBot,
 	config *config.Config,
 ) *Scheduler {
+	// Create activity registry and register providers
+	activityRegistry := activity.NewRegistry()
+	activityRegistry.Register(activity.NewGitHubProvider())
+
 	return &Scheduler{
-		tasks:       make(map[string]*Task),
-		repo:        repo,
-		emailClient: emailClient,
-		telegramBot: telegramBot,
-		config:      config,
-		stopChan:    make(chan struct{}),
+		tasks:            make(map[string]*Task),
+		repo:             repo,
+		emailClient:      emailClient,
+		telegramBot:      telegramBot,
+		config:           config,
+		activityRegistry: activityRegistry,
+		stopChan:         make(chan struct{}),
 	}
 }
 
@@ -119,6 +126,15 @@ func (s *Scheduler) registerTasks() error {
 		Duration:   15 * time.Minute, // Check for expired switches every 15 minutes
 		RunOnStart: true,
 		Handler:    s.deadSwitchTask,
+	})
+
+	// Task for checking external activity (GitHub, etc.)
+	s.AddTask(&Task{
+		ID:         uuid.New().String(),
+		Name:       "ExternalActivityTask",
+		Duration:   1 * time.Hour, // Check external activity hourly
+		RunOnStart: true,
+		Handler:    s.externalActivityTask,
 	})
 
 	// Task for cleaning expired sessions
@@ -407,6 +423,72 @@ func (s *Scheduler) deliverSecrets(ctx context.Context, user *models.User) error
 
 	// Log the delivery
 	log.Printf("Delivered all secrets for user %s", user.ID)
+
+	return nil
+}
+
+// externalActivityTask checks for user activity on external platforms
+func (s *Scheduler) externalActivityTask(ctx context.Context) error {
+	log.Println("Running externalActivityTask")
+
+	// Get all users with pinging enabled
+	users, err := s.repo.ListUsers(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to list users: %w", err)
+	}
+
+	log.Printf("Checking external activity for %d users", len(users))
+
+	for _, user := range users {
+		// Skip users that don't have pinging enabled
+		if !user.PingingEnabled {
+			continue
+		}
+
+		// Get configured activity providers for this user
+		configuredProviders := s.activityRegistry.GetConfiguredProviders(user)
+		if len(configuredProviders) == 0 {
+			// No external activity providers configured for this user
+			continue
+		}
+
+		// Check if the user has been active on any platform since their last activity
+		active, err := s.activityRegistry.CheckAnyActivity(ctx, user, user.LastActivity)
+		if err != nil {
+			log.Printf("Error checking activity for user %s: %v", user.ID, err)
+			continue
+		}
+
+		if active {
+			// User has been active on an external platform, update their last activity time
+			latestActivity := s.activityRegistry.GetLatestActivityTime(ctx, user)
+			log.Printf("User %s has been active on external platform at %s", user.ID, latestActivity.Format(time.RFC3339))
+
+			// Update the user's last activity time
+			user.LastActivity = latestActivity
+
+			// Reschedule the next ping based on the updated activity time
+			user.NextScheduledPing = latestActivity.Add(time.Duration(user.PingFrequency) * 24 * time.Hour)
+
+			if err := s.repo.UpdateUser(ctx, user); err != nil {
+				log.Printf("Failed to update user after external activity: %v", err)
+				continue
+			}
+
+			// Create an audit log entry for the external activity
+			auditLog := &models.AuditLog{
+				ID:        uuid.New().String(),
+				UserID:    user.ID,
+				Action:    "external_activity_detected",
+				Timestamp: time.Now().UTC(),
+				Details:   "Activity detected on external platform",
+			}
+
+			if err := s.repo.CreateAuditLog(ctx, auditLog); err != nil {
+				log.Printf("Failed to create audit log for external activity: %v", err)
+			}
+		}
+	}
 
 	return nil
 }

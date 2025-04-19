@@ -45,14 +45,23 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 - [x] Implement passkeys to login, user can create up to 5 passkeys to his account (using go-webauthn/webauthn library)
 - [ ] Research how can we let user login with passkey without make him to enter his email, and implement it if possilbe
 - [ ] implement key derivation for encrypting secrets from master password
-- [ ] Add ability to register github handle to user account, and then scheduler can check if user was active recently on github, and if yes reschedule pings on tg/email, as we know that user is okay. There we should think of some interface of ActivityProvider, as we are going to have many of them. Describe this well in userguide and in readme
+- [ ] Implement GitHub activity monitoring:
+  - Add `GitHubUsername` field to User model
+  - Create an `ActivityProvider` interface that different activity sources can implement
+  - Implement a `GitHubActivityProvider` that checks user's public activity via GitHub API
+  - Update scheduler to check GitHub activity before sending pings
+  - If recent GitHub activity is detected, automatically reschedule pings
+  - Add UI for users to connect/disconnect their GitHub account
+  - Log GitHub activity checks in the audit log
+  - Document the feature in user guide and README, including privacy considerations
 - [ ] Similar to github, add ability to subscribe to activitypub account and implement the same logic
 - [ ] similar to github and activitypub, add ability to monitor telegram channel
 - [ ] understand how can we passover encrypted secrets to user since we have no way to know the master password. I think we have to create a key for every recipient, encode copy of the secret with this key, and provide key to user if switch is triggered. need to describe it well in diagram and security doc, brainstorm the idea and threats
 - [ ] Find a way to secure bind telegram handle to registered user, that somebody else couldn't do it, and by those prevent switch trigger. Expalin this threat in security doc, and explain the solution well
 - [ ] Add golangci-lint and fix all the warnings, add it to github actions and if possible create badge for it
 - [ ] Add some security linters and fix the warnings
-- [ ] Add some frontend tests and fix the warnings
+- [x] Add some frontend tests and fix the warnings
+- [ ] In frontend testing, in github action, let's not build docker images, but instead, let's rely on those that already build in ghcr.io , and let's start this step after docker build step
 - [x] Add unit tests for all components, targeting code coverage to 80%, and show coverage in github interface
 - [ ] Add integration tests for all components, targeting code coverage to 80%, and show coverage in github interface
 - [ ] User check-ins not shown in activity log, also log all the detected activities like github activity

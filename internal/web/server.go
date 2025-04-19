@@ -248,6 +248,7 @@ func (s *Server) setupRoutes() {
 		// Profile and settings
 		r.Get("/profile", s.handlers.profile.HandleProfile)
 		r.Post("/profile", s.handlers.profile.HandleUpdateProfile)
+		r.Post("/profile/github/disconnect", s.handlers.profile.HandleDisconnectGitHub)
 		r.Get("/settings", s.handlers.settings.HandleSettings)
 		r.Post("/settings/notifications", s.handlers.settings.HandleUpdateNotificationSettings)
 		r.Post("/settings/security", s.handlers.settings.HandleUpdateSecuritySettings)

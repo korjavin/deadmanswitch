@@ -11,6 +11,7 @@ type User struct {
 	PasswordHash      []byte    `json:"-"`
 	TelegramID        string    `json:"telegram_id,omitempty"`
 	TelegramUsername  string    `json:"telegram_username,omitempty"`
+	GitHubUsername    string    `json:"github_username,omitempty"`
 	LastActivity      time.Time `json:"last_activity"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`

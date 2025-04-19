@@ -117,6 +117,45 @@
 
     <div class="card" style="margin-top: 2rem;">
         <div class="card-header">
+            <h3>GitHub Integration</h3>
+        </div>
+        <div class="card-body">
+            {{ if .Data.GitHub.Connected }}
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> Your account is connected to GitHub
+                </div>
+                <p><strong>GitHub Username:</strong> {{ .Data.GitHub.Username }}</p>
+                <p>Your GitHub activity will be monitored to automatically reschedule pings when you're active.</p>
+                <div class="mt-3">
+                    <form action="/profile/github/disconnect" method="POST">
+                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                            <i class="fas fa-unlink"></i> Disconnect GitHub
+                        </button>
+                    </form>
+                </div>
+            {{ else }}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Connect your GitHub account to automatically detect your activity and postpone deadlines.
+                </div>
+                <p>When you connect your GitHub account, we'll monitor your public activity to know you're still active.</p>
+                <form action="/profile" method="POST" class="mt-3">
+                    <div class="form-group">
+                        <label for="github_username" class="form-label">GitHub Username</label>
+                        <div class="input-group">
+                            <input type="text" name="github_username" id="github_username" class="form-control"
+                                   placeholder="Enter your GitHub username" required>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fab fa-github"></i> Connect GitHub
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            {{ end }}
+        </div>
+    </div>
+
+    <div class="card" style="margin-top: 2rem;">
+        <div class="card-header">
             <h3>Telegram Integration</h3>
         </div>
         <div class="card-body">
@@ -193,8 +232,30 @@
     border-color: #bee5eb;
 }
 
+.alert-warning {
+    color: #856404;
+    background-color: #fff3cd;
+    border-color: #ffeeba;
+}
+
 .mt-3 {
     margin-top: 1rem;
+}
+
+.input-group {
+    display: flex;
+    width: 100%;
+}
+
+.input-group .form-control {
+    flex: 1;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.input-group .btn {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
 }
 </style>
 {{ end }}
