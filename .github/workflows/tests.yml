@@ -81,19 +81,40 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
+      - name: Install Podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y podman
+
+      - name: Install podman-compose
+        run: |
+          sudo pip3 install podman-compose
+
       - name: Build and start application
         run: |
-          docker-compose up -d
+          podman-compose -f docker-compose.yml -f docker-compose.override.yml up -d
           # Wait for the application to start
-          sleep 10
+          echo "Waiting for the application to start..."
+          # Try to connect to the application for up to 30 seconds
+          timeout=30
+          while ! curl -s http://localhost:8083 > /dev/null; do
+            timeout=$((timeout - 1))
+            if [ $timeout -le 0 ]; then
+              echo "Timed out waiting for application to start"
+              exit 1
+            fi
+            echo "Waiting for application to start... ($timeout seconds left)"
+            sleep 1
+          done
+          echo "Application is up and running!"
 
       - name: Run Playwright tests
-        run: npx playwright test
+        run: npx playwright test --debug
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
@@ -101,4 +122,14 @@ jobs:
         with:
           name: playwright-report
           path: playwright-report/
+          retention-days: 7
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: |-
+            *.png
+            test-results/
           retention-days: 7

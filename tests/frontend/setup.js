@@ -4,43 +4,107 @@
  */
 
 const { chromium } = require('@playwright/test');
-const { login, registerUser } = require('./utils');
+const { TEST_USER } = require('./utils');
+
+/**
+ * Sleep for a specified number of milliseconds
+ * @param {number} ms - Milliseconds to sleep
+ */
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Global setup function
  * Creates a test user if it doesn't exist
  */
 async function globalSetup() {
-  // Test data
-  const TEST_EMAIL = 'test@example.com';
-  const TEST_PASSWORD = 'Password123!';
+  console.log('Starting test setup...');
 
-  // Launch browser
+  // Launch browser with slower navigation timeout
   const browser = await chromium.launch();
-  const page = await browser.newPage();
+  const context = await browser.newContext({
+    baseURL: 'http://localhost:8083',
+    navigationTimeout: 60000, // 60 seconds timeout for navigation
+  });
+  const page = await context.newPage();
 
   try {
-    // Try to login with test credentials
+    console.log('Setting up test user...');
+
+    // Wait for the server to be ready
+    let serverReady = false;
+    for (let i = 0; i < 10; i++) {
+      try {
+        console.log('Checking if server is ready...');
+        await page.goto('/');
+        serverReady = true;
+        break;
+      } catch (e) {
+        console.log(`Server not ready yet, retrying in 3 seconds... (${i+1}/10)`);
+        await sleep(3000);
+      }
+    }
+
+    if (!serverReady) {
+      throw new Error('Server did not become ready in time');
+    }
+
+    // First try to login with test credentials
+    console.log('Attempting to login with test credentials...');
     await page.goto('/login');
-    await page.fill('input[name="email"]', TEST_EMAIL);
-    await page.fill('input[name="password"]', TEST_PASSWORD);
+    await page.fill('input[name="email"]', TEST_USER.email);
+    await page.fill('input[name="password"]', TEST_USER.password);
     await page.click('button[type="submit"]');
 
-    // Check if login was successful
+    // Wait for navigation to complete
+    await page.waitForLoadState('networkidle');
+
+    // Check if login was successful by looking for dashboard URL or error message
     const url = page.url();
-    if (!url.includes('/dashboard')) {
-      // If login failed, register a new user
-      console.log('Test user does not exist. Creating a new test user...');
-      await registerUser(page, TEST_EMAIL, TEST_PASSWORD);
-      console.log('Test user created successfully.');
+    if (url.includes('/dashboard')) {
+      console.log('Test user already exists and login successful.');
     } else {
-      console.log('Test user already exists.');
+      console.log('Login failed. Attempting to register a new test user...');
+
+      // Go to registration page
+      await page.goto('/register');
+
+      // Fill out registration form
+      await page.fill('input[name="email"]', TEST_USER.email);
+      await page.fill('input[name="name"]', TEST_USER.name);
+      await page.fill('input[name="password"]', TEST_USER.password);
+      await page.fill('input[name="confirmPassword"]', TEST_USER.password);
+
+      // Take a screenshot before submitting
+      await page.screenshot({ path: 'registration-form.png' });
+
+      // Submit the form
+      await page.click('button[type="submit"]');
+
+      // Wait for navigation to complete
+      await page.waitForLoadState('networkidle');
+
+      // Take a screenshot after submitting
+      await page.screenshot({ path: 'after-registration.png' });
+
+      // Check if registration was successful
+      const newUrl = page.url();
+      if (newUrl.includes('/dashboard') || newUrl.includes('/login')) {
+        console.log('Test user created successfully.');
+      } else {
+        console.log('Failed to create test user. Current URL:', newUrl);
+        // Try to get any error messages
+        const errorText = await page.textContent('body');
+        console.log('Page content:', errorText.substring(0, 500) + '...');
+      }
     }
   } catch (error) {
     console.error('Error during setup:', error);
+    // Take a screenshot of the error state
+    await page.screenshot({ path: 'setup-error.png' });
   } finally {
     // Close browser
     await browser.close();
+    console.log('Setup completed.');
   }
 }
 

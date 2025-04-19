@@ -7,20 +7,9 @@ services:
     environment:
       - BASE_DOMAIN=localhost:8083
       - DEBUG=true
-      # Test SMTP settings (using a mock SMTP server for testing)
-      - SMTP_HOST=smtp4dev
-      - SMTP_PORT=25
+      # For testing, we'll use a simple configuration without email verification
+      - SMTP_HOST=
+      - SMTP_PORT=
       - SMTP_USERNAME=
       - SMTP_PASSWORD=
       - SMTP_FROM=test@example.com
-    depends_on:
-      - smtp4dev
-
-  # Mock SMTP server for testing
-  smtp4dev:
-    image: rnwood/smtp4dev:v3
-    ports:
-      - "5000:80"  # Web interface
-      - "25:25"    # SMTP port
-    environment:
-      - ServerOptions__HostName=smtp4dev

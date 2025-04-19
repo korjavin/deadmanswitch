@@ -34,7 +34,7 @@ module.exports = defineConfig({
     },
   ],
   webServer: {
-    command: 'podman-compose up',
+    command: 'podman-compose -f docker-compose.yml -f docker-compose.override.yml up -d',
     port: 8083,
     reuseExistingServer: !process.env.CI,
     stdout: 'pipe',
