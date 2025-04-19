@@ -184,12 +184,14 @@ jobs:
           # Set CI environment variable
           export CI=true
 
-          # Create a network for the containers
-          docker network create deadmanswitch_default || true
+          # Remove any existing network with the same name
+          docker network rm deadmanswitch_default || true
+          # Create a fresh network for the containers
+          docker network create deadmanswitch_default
 
           # Create a custom docker-compose override file for testing
           export TEST_RUN_ID=$(date +%s)
-          cat > docker-compose.test-ci.yml << 'EOL'
+          cat > docker-compose.test-ci.yml << EOL
           version: '3'
 
           services:
@@ -207,10 +209,40 @@ jobs:
                 - SMTP_USERNAME=
                 - SMTP_PASSWORD=
                 - SMTP_FROM=test@example.com
+              networks:
+                - deadmanswitch_default
+
+          networks:
+            deadmanswitch_default:
+              external: true
+          EOL
+
+          # Create a custom docker-compose.yml file with explicit network configuration
+          cat > docker-compose.ci.yml << EOL
+          version: '3'
+
+          services:
+            deadmanswitch:
+              image: ghcr.io/${{ github.repository_owner }}/deadmanswitch:test
+              ports:
+                - "8082:8080"
+              volumes:
+                - ./data:/app/data
+              environment:
+                # Required environment variables
+                - BASE_DOMAIN=localhost:8082
+                - TG_BOT_TOKEN=
+                - ADMIN_EMAIL=admin@example.com
+              networks:
+                - deadmanswitch_default
+
+          networks:
+            deadmanswitch_default:
+              external: true
           EOL
 
           # Start the application with the test database using the image we just pulled
-          docker compose -f docker-compose.yml -f docker-compose.test-ci.yml up -d
+          docker compose -f docker-compose.ci.yml -f docker-compose.test-ci.yml up -d
 
           # Wait for the application to start
           echo "Waiting for application to start..."
@@ -223,7 +255,7 @@ jobs:
               echo "Container is not running! Checking logs..."
               docker logs $(docker ps -q --filter name=deadmanswitch) || true
               echo "Trying to restart container..."
-              docker compose -f docker-compose.yml -f docker-compose.test-ci.yml up -d
+              docker compose -f docker-compose.ci.yml -f docker-compose.test-ci.yml up -d
               sleep 5
             fi
 
@@ -261,7 +293,9 @@ jobs:
           TEST_EXIT_CODE=$?
 
           # Stop the containers
-          docker compose down
+          docker compose -f docker-compose.ci.yml -f docker-compose.test-ci.yml down
+          # Clean up the network
+          docker network rm deadmanswitch_default || true
 
           exit $TEST_EXIT_CODE
 
