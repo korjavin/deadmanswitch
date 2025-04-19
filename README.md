@@ -42,6 +42,7 @@ This project will always remain free and open source. If you find it valuable, p
 - **Dual verification methods** - Choose between Telegram and email for check-ins
 - **Customizable schedules** - Configure ping frequency and response deadlines
 - **Modern authentication** - Support for passwords, 2FA, and WebAuthn passkeys
+- **GitHub activity monitoring** - Automatically detect your GitHub activity to postpone check-ins
 - **Simple web interface** - Easily manage your secrets and recipients
 - **Self-contained Docker image** - Simple deployment with automatic HTTPS
 - **Complete audit logs** - Track all system activities
@@ -55,6 +56,20 @@ This project will always remain free and open source. If you find it valuable, p
 3. Run `docker-compose up -d`
 
 For more detailed instructions, see the [Installation Guide](./docs/installation.md).
+
+## GitHub Activity Monitoring
+
+The application can monitor your GitHub activity to automatically postpone check-ins when you're active. This provides an additional layer of convenience and security:
+
+1. **Connect your GitHub account** - Simply add your GitHub username in your profile settings
+2. **Automatic activity detection** - The system checks your public GitHub activity hourly
+3. **Smart rescheduling** - When activity is detected, your check-in deadlines are automatically extended
+4. **Privacy-focused** - Only uses public GitHub API data, no GitHub authentication required
+5. **Transparent logging** - All activity checks are recorded in your audit log
+
+This feature is particularly useful for developers who are regularly active on GitHub, as it reduces the need for manual check-ins while maintaining the security of the dead man's switch functionality.
+
+For more details, see the [GitHub Activity Monitoring Guide](./docs/github-activity.md).
 
 ## Security
 

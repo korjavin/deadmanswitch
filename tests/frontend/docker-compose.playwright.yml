@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.42.0-jammy
+    working_dir: /app
+    volumes:
+      - ../../:/app
+    network_mode: "host"
+    command: /bin/bash -c "cd /app/tests/frontend && npm install && npx playwright test"
+    environment:
+      - CI=true
