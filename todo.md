@@ -55,9 +55,8 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 - [ ] Add some frontend tests and fix the warnings
 - [x] Add unit tests for all components, targeting code coverage to 80%, and show coverage in github interface
 - [ ] Add integration tests for all components, targeting code coverage to 80%, and show coverage in github interface
-- [ ] User check-ins not shown in activity log
+- [ ] User check-ins not shown in activity log, also log all the detected activities like github activity
 - [ ] If user has a passkey attached, we should use this passkey as second factor (?), atleast let's give this option to user
-- [ ] Seems like git rev-list --count HEAD is not working in github actions, fix it, it's always 1 
 
 ## Next Steps
 1. Complete the scheduler implementation:
