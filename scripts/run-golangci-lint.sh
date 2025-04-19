@@ -3,10 +3,10 @@ set -e
 
 # Function to check if golangci-lint is installed
 check_golangci_lint() {
-  GOLANGCI_LINT_PATH=$(go env GOPATH)/bin/golangci-lint
+  GOLANGCI_LINT_PATH=$(which golangci-lint)
   
   if [ ! -f "$GOLANGCI_LINT_PATH" ]; then
-    echo "golangci-lint is not installed at $GOLANGCI_LINT_PATH. Installing..."
+    echo "golangci-lint is not installed at $GOLANGCI_LINT_PATH. Installing..."    
     
     if [[ "$OSTYPE" == "darwin"* ]]; then
       # macOS - use the official installation script
@@ -17,15 +17,13 @@ check_golangci_lint() {
     fi
   fi
   
-  # Export the GOPATH/bin to PATH to ensure we can use golangci-lint
-  export PATH=$(go env GOPATH)/bin:$PATH
 }
 
 # Check if golangci-lint is installed, install if not
 check_golangci_lint
 
 # Print golangci-lint version
-echo "Running golangci-lint $($(go env GOPATH)/bin/golangci-lint --version | head -n 1)"
+echo "Running golangci-lint $(golangci-lint --version | head -n 1)"
 
-# Run golangci-lint
-$(go env GOPATH)/bin/golangci-lint run
+# Run golangci-lint with configuration file
+golangci-lint run -c .golangci.yml

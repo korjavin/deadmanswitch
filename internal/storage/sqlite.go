@@ -26,11 +26,276 @@ type SQLiteTx struct {
 	*SQLiteRepository
 }
 
+// Constants for user columns and queries
+const (
+	userColumnsSelect = `
+		id, email, password_hash, telegram_id, telegram_username, github_username,
+		last_activity, created_at, updated_at,
+		ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping,
+		totp_secret, totp_enabled, totp_verified
+	`
+	userBaseQuery = `
+		SELECT ` + userColumnsSelect + `
+		FROM users
+	`
+)
+
+// scanUserRow scans a single user row from a database query
+func (r *SQLiteRepository) scanUserRow(scanner interface {
+	Scan(dest ...interface{}) error
+}) (*models.User, error) {
+	user := &models.User{}
+	err := scanner.Scan(
+		&user.ID, &user.Email, &user.PasswordHash, &user.TelegramID, &user.TelegramUsername, &user.GitHubUsername,
+		&user.LastActivity, &user.CreatedAt, &user.UpdatedAt,
+		&user.PingFrequency, &user.PingDeadline, &user.PingingEnabled, &user.PingMethod, &user.NextScheduledPing,
+		&user.TOTPSecret, &user.TOTPEnabled, &user.TOTPVerified,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to scan user row: %w", err)
+	}
+
+	return user, nil
+}
+
+// Constants for secret assignments
+const (
+	secretAssignmentColumnsSelect = `
+		id, secret_id, recipient_id, user_id, created_at, updated_at
+	`
+	secretAssignmentBaseQuery = `
+		SELECT ` + secretAssignmentColumnsSelect + `
+		FROM secret_assignments
+	`
+)
+
+// scanSecretAssignmentRow scans a single secret assignment row from a database query
+func (r *SQLiteRepository) scanSecretAssignmentRow(scanner interface {
+	Scan(dest ...interface{}) error
+}) (*models.SecretAssignment, error) {
+	assignment := &models.SecretAssignment{}
+	err := scanner.Scan(
+		&assignment.ID, &assignment.SecretID, &assignment.RecipientID,
+		&assignment.UserID, &assignment.CreatedAt, &assignment.UpdatedAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to scan secret assignment row: %w", err)
+	}
+
+	return assignment, nil
+}
+
+// listSecretAssignmentsHelper is a generic helper function for listing secret assignments
+// with a given where clause and argument
+func (r *SQLiteRepository) listSecretAssignmentsHelper(ctx context.Context, whereClause string, arg string) ([]*models.SecretAssignment, error) {
+	rows, err := r.db.QueryContext(ctx, secretAssignmentBaseQuery+" WHERE "+whereClause+" = ?", arg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list secret assignments: %w", err)
+	}
+	defer rows.Close()
+
+	var assignments []*models.SecretAssignment
+	for rows.Next() {
+		assignment, err := r.scanSecretAssignmentRow(rows)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan secret assignment row: %w", err)
+		}
+		assignments = append(assignments, assignment)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating secret assignment rows: %w", err)
+	}
+
+	return assignments, nil
+}
+
+// ListSecretAssignmentsBySecretID lists all assignments for a secret
+func (r *SQLiteRepository) ListSecretAssignmentsBySecretID(ctx context.Context, secretID string) ([]*models.SecretAssignment, error) {
+	return r.listSecretAssignmentsHelper(ctx, "secret_id", secretID)
+}
+
+// ListSecretAssignmentsByRecipientID lists all assignments for a recipient
+func (r *SQLiteRepository) ListSecretAssignmentsByRecipientID(ctx context.Context, recipientID string) ([]*models.SecretAssignment, error) {
+	return r.listSecretAssignmentsHelper(ctx, "recipient_id", recipientID)
+}
+
+// ListSecretAssignmentsByUserID lists all assignments for a user
+func (r *SQLiteRepository) ListSecretAssignmentsByUserID(ctx context.Context, userID string) ([]*models.SecretAssignment, error) {
+	return r.listSecretAssignmentsHelper(ctx, "user_id", userID)
+}
+
+// Constants for secret columns and queries
+const (
+	secretColumnsSelect = `
+		id, user_id, name, encrypted_data, created_at, updated_at, encryption_type
+	`
+	secretBaseQuery = `
+		SELECT ` + secretColumnsSelect + `
+		FROM secrets
+	`
+)
+
+// scanSecretRow scans a single secret row from a database query
+func (r *SQLiteRepository) scanSecretRow(scanner interface {
+	Scan(dest ...interface{}) error
+}) (*models.Secret, error) {
+	secret := &models.Secret{}
+	err := scanner.Scan(
+		&secret.ID, &secret.UserID, &secret.Name, &secret.EncryptedData,
+		&secret.CreatedAt, &secret.UpdatedAt, &secret.EncryptionType,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to scan secret row: %w", err)
+	}
+
+	return secret, nil
+}
+
+// Constants for recipient columns and queries
+const (
+	recipientColumnsSelect = `
+		id, user_id, email, name, message, created_at, updated_at, phone_number,
+		is_confirmed, confirmed_at, confirmation_code, confirmation_sent_at
+	`
+	recipientBaseQuery = `
+		SELECT ` + recipientColumnsSelect + `
+		FROM recipients
+	`
+)
+
+// scanRecipientRow scans a single recipient row from a database query
+func (r *SQLiteRepository) scanRecipientRow(scanner interface {
+	Scan(dest ...interface{}) error
+}) (*models.Recipient, error) {
+	recipient := &models.Recipient{}
+	err := scanner.Scan(
+		&recipient.ID, &recipient.UserID, &recipient.Email, &recipient.Name,
+		&recipient.Message, &recipient.CreatedAt, &recipient.UpdatedAt, &recipient.PhoneNumber,
+		&recipient.IsConfirmed, &recipient.ConfirmedAt, &recipient.ConfirmationCode, &recipient.ConfirmationSentAt,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to scan recipient row: %w", err)
+	}
+
+	return recipient, nil
+}
+
+// Constants for session columns and queries
+const (
+	sessionColumnsSelect = `
+		id, user_id, token, created_at, expires_at, last_activity, ip_address, user_agent
+	`
+	sessionBaseQuery = `
+		SELECT ` + sessionColumnsSelect + `
+		FROM sessions
+	`
+)
+
+// scanSessionRow scans a single session row from a database query
+func (r *SQLiteRepository) scanSessionRow(scanner interface {
+	Scan(dest ...interface{}) error
+}) (*models.Session, error) {
+	session := &models.Session{}
+	err := scanner.Scan(
+		&session.ID, &session.UserID, &session.Token,
+		&session.CreatedAt, &session.ExpiresAt, &session.LastActivity,
+		&session.IPAddress, &session.UserAgent,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to scan session row: %w", err)
+	}
+
+	return session, nil
+}
+
+// Constants for delivery event columns and queries
+const (
+	deliveryEventColumnsSelect = `
+		id, user_id, recipient_id, sent_at, status, error_message
+	`
+	deliveryEventBaseQuery = `
+		SELECT ` + deliveryEventColumnsSelect + `
+		FROM delivery_events
+	`
+)
+
+// scanDeliveryEventRow scans a single delivery event row from a database query
+func (r *SQLiteRepository) scanDeliveryEventRow(scanner interface {
+	Scan(dest ...interface{}) error
+}) (*models.DeliveryEvent, error) {
+	event := &models.DeliveryEvent{}
+	err := scanner.Scan(
+		&event.ID, &event.UserID, &event.RecipientID,
+		&event.SentAt, &event.Status, &event.ErrorMessage,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to scan delivery event row: %w", err)
+	}
+
+	return event, nil
+}
+
+// Constants for audit log columns and queries
+const (
+	auditLogColumnsSelect = `
+		id, user_id, action, timestamp, ip_address, user_agent, details
+	`
+	auditLogBaseQuery = `
+		SELECT ` + auditLogColumnsSelect + `
+		FROM audit_log
+	`
+)
+
+// scanAuditLogRow scans a single audit log row from a database query
+func (r *SQLiteRepository) scanAuditLogRow(scanner interface {
+	Scan(dest ...interface{}) error
+}) (*models.AuditLog, error) {
+	log := &models.AuditLog{}
+	err := scanner.Scan(
+		&log.ID, &log.UserID, &log.Action, &log.Timestamp,
+		&log.IPAddress, &log.UserAgent, &log.Details,
+	)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("failed to scan audit log row: %w", err)
+	}
+
+	return log, nil
+}
+
 // NewSQLiteRepository creates a new SQLite repository
 func NewSQLiteRepository(dbPath string) (*SQLiteRepository, error) {
 	// Ensure the directory exists
 	dir := filepath.Dir(dbPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return nil, fmt.Errorf("failed to create database directory: %w", err)
 	}
 
@@ -50,7 +315,10 @@ func NewSQLiteRepository(dbPath string) (*SQLiteRepository, error) {
 
 	// Initialize database
 	if err := repo.initialize(); err != nil {
-		db.Close()
+		// Handle the Close() error properly
+		if closeErr := db.Close(); closeErr != nil {
+			log.Printf("Error closing database: %v", closeErr)
+		}
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
 
@@ -298,86 +566,20 @@ func (r *SQLiteRepository) CreateUser(ctx context.Context, user *models.User) er
 
 // GetUserByID retrieves a user by ID
 func (r *SQLiteRepository) GetUserByID(ctx context.Context, id string) (*models.User, error) {
-	user := &models.User{}
-	err := r.db.QueryRowContext(ctx, `
-		SELECT
-			id, email, password_hash, telegram_id, telegram_username, github_username,
-			last_activity, created_at, updated_at,
-			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping,
-			totp_secret, totp_enabled, totp_verified
-		FROM users
-		WHERE id = ?
-	`, id).Scan(
-		&user.ID, &user.Email, &user.PasswordHash, &user.TelegramID, &user.TelegramUsername, &user.GitHubUsername,
-		&user.LastActivity, &user.CreatedAt, &user.UpdatedAt,
-		&user.PingFrequency, &user.PingDeadline, &user.PingingEnabled, &user.PingMethod, &user.NextScheduledPing,
-		&user.TOTPSecret, &user.TOTPEnabled, &user.TOTPVerified,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("failed to get user: %w", err)
-	}
-
-	return user, nil
+	row := r.db.QueryRowContext(ctx, userBaseQuery+" WHERE id = ?", id)
+	return r.scanUserRow(row)
 }
 
 // GetUserByEmail retrieves a user by email
 func (r *SQLiteRepository) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
-	user := &models.User{}
-	err := r.db.QueryRowContext(ctx, `
-		SELECT
-			id, email, password_hash, telegram_id, telegram_username, github_username,
-			last_activity, created_at, updated_at,
-			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping,
-			totp_secret, totp_enabled, totp_verified
-		FROM users
-		WHERE email = ?
-	`, email).Scan(
-		&user.ID, &user.Email, &user.PasswordHash, &user.TelegramID, &user.TelegramUsername, &user.GitHubUsername,
-		&user.LastActivity, &user.CreatedAt, &user.UpdatedAt,
-		&user.PingFrequency, &user.PingDeadline, &user.PingingEnabled, &user.PingMethod, &user.NextScheduledPing,
-		&user.TOTPSecret, &user.TOTPEnabled, &user.TOTPVerified,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("failed to get user by email: %w", err)
-	}
-
-	return user, nil
+	row := r.db.QueryRowContext(ctx, userBaseQuery+" WHERE email = ?", email)
+	return r.scanUserRow(row)
 }
 
 // GetUserByTelegramID retrieves a user by Telegram ID
 func (r *SQLiteRepository) GetUserByTelegramID(ctx context.Context, telegramID string) (*models.User, error) {
-	user := &models.User{}
-	err := r.db.QueryRowContext(ctx, `
-		SELECT
-			id, email, password_hash, telegram_id, telegram_username, github_username,
-			last_activity, created_at, updated_at,
-			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping,
-			totp_secret, totp_enabled, totp_verified
-		FROM users
-		WHERE telegram_id = ?
-	`, telegramID).Scan(
-		&user.ID, &user.Email, &user.PasswordHash, &user.TelegramID, &user.TelegramUsername, &user.GitHubUsername,
-		&user.LastActivity, &user.CreatedAt, &user.UpdatedAt,
-		&user.PingFrequency, &user.PingDeadline, &user.PingingEnabled, &user.PingMethod, &user.NextScheduledPing,
-		&user.TOTPSecret, &user.TOTPEnabled, &user.TOTPVerified,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("failed to get user by telegram ID: %w", err)
-	}
-
-	return user, nil
+	row := r.db.QueryRowContext(ctx, userBaseQuery+" WHERE telegram_id = ?", telegramID)
+	return r.scanUserRow(row)
 }
 
 // UpdateUser updates an existing user
@@ -433,15 +635,7 @@ func (r *SQLiteRepository) DeleteUser(ctx context.Context, id string) error {
 
 // ListUsers returns all users
 func (r *SQLiteRepository) ListUsers(ctx context.Context) ([]*models.User, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT
-			id, email, password_hash, telegram_id, telegram_username, github_username,
-			last_activity, created_at, updated_at,
-			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping,
-			totp_secret, totp_enabled, totp_verified
-		FROM users
-		ORDER BY created_at DESC
-	`)
+	rows, err := r.db.QueryContext(ctx, userBaseQuery+" ORDER BY created_at DESC")
 	if err != nil {
 		return nil, fmt.Errorf("failed to list users: %w", err)
 	}
@@ -449,14 +643,9 @@ func (r *SQLiteRepository) ListUsers(ctx context.Context) ([]*models.User, error
 
 	var users []*models.User
 	for rows.Next() {
-		user := &models.User{}
-		if err := rows.Scan(
-			&user.ID, &user.Email, &user.PasswordHash, &user.TelegramID, &user.TelegramUsername, &user.GitHubUsername,
-			&user.LastActivity, &user.CreatedAt, &user.UpdatedAt,
-			&user.PingFrequency, &user.PingDeadline, &user.PingingEnabled, &user.PingMethod, &user.NextScheduledPing,
-			&user.TOTPSecret, &user.TOTPEnabled, &user.TOTPVerified,
-		); err != nil {
-			return nil, fmt.Errorf("failed to scan user row: %w", err)
+		user, err := r.scanUserRow(rows)
+		if err != nil {
+			return nil, err
 		}
 		users = append(users, user)
 	}
@@ -498,34 +687,13 @@ func (r *SQLiteRepository) CreateSecret(ctx context.Context, secret *models.Secr
 
 // GetSecretByID retrieves a secret by ID
 func (r *SQLiteRepository) GetSecretByID(ctx context.Context, id string) (*models.Secret, error) {
-	secret := &models.Secret{}
-	err := r.db.QueryRowContext(ctx, `
-		SELECT id, user_id, name, encrypted_data, created_at, updated_at, encryption_type
-		FROM secrets
-		WHERE id = ?
-	`, id).Scan(
-		&secret.ID, &secret.UserID, &secret.Name, &secret.EncryptedData,
-		&secret.CreatedAt, &secret.UpdatedAt, &secret.EncryptionType,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("failed to get secret: %w", err)
-	}
-
-	return secret, nil
+	row := r.db.QueryRowContext(ctx, secretBaseQuery+" WHERE id = ?", id)
+	return r.scanSecretRow(row)
 }
 
 // ListSecretsByUserID lists all secrets for a user
 func (r *SQLiteRepository) ListSecretsByUserID(ctx context.Context, userID string) ([]*models.Secret, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, user_id, name, encrypted_data, created_at, updated_at, encryption_type
-		FROM secrets
-		WHERE user_id = ?
-		ORDER BY created_at DESC
-	`, userID)
+	rows, err := r.db.QueryContext(ctx, secretBaseQuery+" WHERE user_id = ? ORDER BY created_at DESC", userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list secrets: %w", err)
 	}
@@ -533,11 +701,8 @@ func (r *SQLiteRepository) ListSecretsByUserID(ctx context.Context, userID strin
 
 	var secrets []*models.Secret
 	for rows.Next() {
-		secret := &models.Secret{}
-		if err := rows.Scan(
-			&secret.ID, &secret.UserID, &secret.Name, &secret.EncryptedData,
-			&secret.CreatedAt, &secret.UpdatedAt, &secret.EncryptionType,
-		); err != nil {
+		secret, err := r.scanSecretRow(rows)
+		if err != nil {
 			return nil, fmt.Errorf("failed to scan secret row: %w", err)
 		}
 		secrets = append(secrets, secret)
@@ -620,37 +785,13 @@ func (r *SQLiteRepository) CreateRecipient(ctx context.Context, recipient *model
 
 // GetRecipientByID retrieves a recipient by ID
 func (r *SQLiteRepository) GetRecipientByID(ctx context.Context, id string) (*models.Recipient, error) {
-	recipient := &models.Recipient{}
-	err := r.db.QueryRowContext(ctx, `
-		SELECT id, user_id, email, name, message, created_at, updated_at, phone_number,
-		       is_confirmed, confirmed_at, confirmation_code, confirmation_sent_at
-		FROM recipients
-		WHERE id = ?
-	`, id).Scan(
-		&recipient.ID, &recipient.UserID, &recipient.Email, &recipient.Name,
-		&recipient.Message, &recipient.CreatedAt, &recipient.UpdatedAt, &recipient.PhoneNumber,
-		&recipient.IsConfirmed, &recipient.ConfirmedAt, &recipient.ConfirmationCode, &recipient.ConfirmationSentAt,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("failed to get recipient: %w", err)
-	}
-
-	return recipient, nil
+	row := r.db.QueryRowContext(ctx, recipientBaseQuery+" WHERE id = ?", id)
+	return r.scanRecipientRow(row)
 }
 
 // ListRecipientsByUserID lists all recipients for a user
 func (r *SQLiteRepository) ListRecipientsByUserID(ctx context.Context, userID string) ([]*models.Recipient, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, user_id, email, name, message, created_at, updated_at, phone_number,
-		       is_confirmed, confirmed_at, confirmation_code, confirmation_sent_at
-		FROM recipients
-		WHERE user_id = ?
-		ORDER BY name ASC
-	`, userID)
+	rows, err := r.db.QueryContext(ctx, recipientBaseQuery+" WHERE user_id = ? ORDER BY name ASC", userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list recipients: %w", err)
 	}
@@ -658,12 +799,8 @@ func (r *SQLiteRepository) ListRecipientsByUserID(ctx context.Context, userID st
 
 	var recipients []*models.Recipient
 	for rows.Next() {
-		recipient := &models.Recipient{}
-		if err := rows.Scan(
-			&recipient.ID, &recipient.UserID, &recipient.Email, &recipient.Name,
-			&recipient.Message, &recipient.CreatedAt, &recipient.UpdatedAt, &recipient.PhoneNumber,
-			&recipient.IsConfirmed, &recipient.ConfirmedAt, &recipient.ConfirmationCode, &recipient.ConfirmationSentAt,
-		); err != nil {
+		recipient, err := r.scanRecipientRow(rows)
+		if err != nil {
 			return nil, fmt.Errorf("failed to scan recipient row: %w", err)
 		}
 		recipients = append(recipients, recipient)
@@ -745,105 +882,8 @@ func (r *SQLiteRepository) CreateSecretAssignment(ctx context.Context, assignmen
 
 // GetSecretAssignmentByID retrieves a secret assignment by ID
 func (r *SQLiteRepository) GetSecretAssignmentByID(ctx context.Context, id string) (*models.SecretAssignment, error) {
-	assignment := &models.SecretAssignment{}
-	err := r.db.QueryRowContext(ctx, `
-		SELECT id, secret_id, recipient_id, user_id, created_at, updated_at
-		FROM secret_assignments
-		WHERE id = ?
-	`, id).Scan(
-		&assignment.ID, &assignment.SecretID, &assignment.RecipientID,
-		&assignment.UserID, &assignment.CreatedAt, &assignment.UpdatedAt,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("failed to get secret assignment: %w", err)
-	}
-
-	return assignment, nil
-}
-
-// ListSecretAssignmentsBySecretID lists all assignments for a secret
-func (r *SQLiteRepository) ListSecretAssignmentsBySecretID(ctx context.Context, secretID string) ([]*models.SecretAssignment, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, secret_id, recipient_id, user_id, created_at, updated_at
-		FROM secret_assignments
-		WHERE secret_id = ?
-	`, secretID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list secret assignments: %w", err)
-	}
-	defer rows.Close()
-
-	var assignments []*models.SecretAssignment
-	for rows.Next() {
-		assignment := &models.SecretAssignment{}
-		if err := rows.Scan(
-			&assignment.ID, &assignment.SecretID, &assignment.RecipientID,
-			&assignment.UserID, &assignment.CreatedAt, &assignment.UpdatedAt,
-		); err != nil {
-			return nil, fmt.Errorf("failed to scan secret assignment row: %w", err)
-		}
-		assignments = append(assignments, assignment)
-	}
-
-	return assignments, nil
-}
-
-// ListSecretAssignmentsByRecipientID lists all assignments for a recipient
-func (r *SQLiteRepository) ListSecretAssignmentsByRecipientID(ctx context.Context, recipientID string) ([]*models.SecretAssignment, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, secret_id, recipient_id, user_id, created_at, updated_at
-		FROM secret_assignments
-		WHERE recipient_id = ?
-	`, recipientID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list secret assignments: %w", err)
-	}
-	defer rows.Close()
-
-	var assignments []*models.SecretAssignment
-	for rows.Next() {
-		assignment := &models.SecretAssignment{}
-		if err := rows.Scan(
-			&assignment.ID, &assignment.SecretID, &assignment.RecipientID,
-			&assignment.UserID, &assignment.CreatedAt, &assignment.UpdatedAt,
-		); err != nil {
-			return nil, fmt.Errorf("failed to scan secret assignment row: %w", err)
-		}
-		assignments = append(assignments, assignment)
-	}
-
-	return assignments, nil
-}
-
-// ListSecretAssignmentsByUserID lists all assignments for a user
-func (r *SQLiteRepository) ListSecretAssignmentsByUserID(ctx context.Context, userID string) ([]*models.SecretAssignment, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, secret_id, recipient_id, user_id, created_at, updated_at
-		FROM secret_assignments
-		WHERE user_id = ?
-	`, userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list secret assignments: %w", err)
-	}
-	defer rows.Close()
-
-	var assignments []*models.SecretAssignment
-	for rows.Next() {
-		assignment := &models.SecretAssignment{}
-		if err := rows.Scan(
-			&assignment.ID, &assignment.SecretID, &assignment.RecipientID,
-			&assignment.UserID, &assignment.CreatedAt, &assignment.UpdatedAt,
-		); err != nil {
-			return nil, fmt.Errorf("failed to scan secret assignment row: %w", err)
-		}
-		assignments = append(assignments, assignment)
-	}
-
-	return assignments, nil
+	row := r.db.QueryRowContext(ctx, secretAssignmentBaseQuery+" WHERE id = ?", id)
+	return r.scanSecretAssignmentRow(row)
 }
 
 // DeleteSecretAssignment deletes a secret assignment
@@ -898,32 +938,17 @@ func (r *SQLiteRepository) UpdatePingHistory(ctx context.Context, ping *models.P
 
 // GetLatestPingByUserID retrieves the latest ping for a user
 func (r *SQLiteRepository) GetLatestPingByUserID(ctx context.Context, userID string) (*models.PingHistory, error) {
-	ping := &models.PingHistory{}
-	err := r.db.QueryRowContext(ctx, `
-		SELECT id, user_id, sent_at, method, status, responded_at
-		FROM ping_history
+	row := r.db.QueryRowContext(ctx, pingHistoryBaseQuery+`
 		WHERE user_id = ?
 		ORDER BY sent_at DESC
 		LIMIT 1
-	`, userID).Scan(
-		&ping.ID, &ping.UserID, &ping.SentAt, &ping.Method, &ping.Status, &ping.RespondedAt,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("failed to get latest ping: %w", err)
-	}
-
-	return ping, nil
+	`, userID)
+	return r.scanPingHistoryRow(row)
 }
 
 // ListPingHistoryByUserID lists all pings for a user
 func (r *SQLiteRepository) ListPingHistoryByUserID(ctx context.Context, userID string) ([]*models.PingHistory, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, user_id, sent_at, method, status, responded_at
-		FROM ping_history
+	rows, err := r.db.QueryContext(ctx, pingHistoryBaseQuery+`
 		WHERE user_id = ?
 		ORDER BY sent_at DESC
 	`, userID)
@@ -934,13 +959,15 @@ func (r *SQLiteRepository) ListPingHistoryByUserID(ctx context.Context, userID s
 
 	var pings []*models.PingHistory
 	for rows.Next() {
-		ping := &models.PingHistory{}
-		if err := rows.Scan(
-			&ping.ID, &ping.UserID, &ping.SentAt, &ping.Method, &ping.Status, &ping.RespondedAt,
-		); err != nil {
-			return nil, fmt.Errorf("failed to scan ping history row: %w", err)
+		ping, err := r.scanPingHistoryRow(rows)
+		if err != nil {
+			return nil, err
 		}
 		pings = append(pings, ping)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating ping history rows: %w", err)
 	}
 
 	return pings, nil
@@ -974,24 +1001,8 @@ func (r *SQLiteRepository) CreatePingVerification(ctx context.Context, verificat
 
 // GetPingVerificationByCode retrieves a ping verification by code
 func (r *SQLiteRepository) GetPingVerificationByCode(ctx context.Context, code string) (*models.PingVerification, error) {
-	verification := &models.PingVerification{}
-	err := r.db.QueryRowContext(ctx, `
-		SELECT id, user_id, code, expires_at, used, created_at
-		FROM ping_verification
-		WHERE code = ?
-	`, code).Scan(
-		&verification.ID, &verification.UserID, &verification.Code,
-		&verification.ExpiresAt, &verification.Used, &verification.CreatedAt,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("failed to get ping verification: %w", err)
-	}
-
-	return verification, nil
+	row := r.db.QueryRowContext(ctx, pingVerificationBaseQuery+` WHERE code = ?`, code)
+	return r.scanPingVerificationRow(row)
 }
 
 // UpdatePingVerification updates an existing ping verification
@@ -1037,9 +1048,7 @@ func (r *SQLiteRepository) CreateDeliveryEvent(ctx context.Context, event *model
 
 // ListDeliveryEventsByUserID lists all delivery events for a user
 func (r *SQLiteRepository) ListDeliveryEventsByUserID(ctx context.Context, userID string) ([]*models.DeliveryEvent, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, user_id, recipient_id, sent_at, status, error_message
-		FROM delivery_events
+	rows, err := r.db.QueryContext(ctx, deliveryEventBaseQuery+`
 		WHERE user_id = ?
 		ORDER BY sent_at DESC
 	`, userID)
@@ -1050,14 +1059,15 @@ func (r *SQLiteRepository) ListDeliveryEventsByUserID(ctx context.Context, userI
 
 	var events []*models.DeliveryEvent
 	for rows.Next() {
-		event := &models.DeliveryEvent{}
-		if err := rows.Scan(
-			&event.ID, &event.UserID, &event.RecipientID,
-			&event.SentAt, &event.Status, &event.ErrorMessage,
-		); err != nil {
-			return nil, fmt.Errorf("failed to scan delivery event row: %w", err)
+		event, err := r.scanDeliveryEventRow(rows)
+		if err != nil {
+			return nil, err
 		}
 		events = append(events, event)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating delivery event rows: %w", err)
 	}
 
 	return events, nil
@@ -1093,9 +1103,7 @@ func (r *SQLiteRepository) CreateAuditLog(ctx context.Context, log *models.Audit
 
 // ListAuditLogsByUserID lists all audit logs for a user
 func (r *SQLiteRepository) ListAuditLogsByUserID(ctx context.Context, userID string) ([]*models.AuditLog, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, user_id, action, timestamp, ip_address, user_agent, details
-		FROM audit_log
+	rows, err := r.db.QueryContext(ctx, auditLogBaseQuery+`
 		WHERE user_id = ?
 		ORDER BY timestamp DESC
 	`, userID)
@@ -1106,14 +1114,15 @@ func (r *SQLiteRepository) ListAuditLogsByUserID(ctx context.Context, userID str
 
 	var logs []*models.AuditLog
 	for rows.Next() {
-		log := &models.AuditLog{}
-		if err := rows.Scan(
-			&log.ID, &log.UserID, &log.Action, &log.Timestamp,
-			&log.IPAddress, &log.UserAgent, &log.Details,
-		); err != nil {
-			return nil, fmt.Errorf("failed to scan audit log row: %w", err)
+		log, err := r.scanAuditLogRow(rows)
+		if err != nil {
+			return nil, err
 		}
 		logs = append(logs, log)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating audit log rows: %w", err)
 	}
 
 	return logs, nil
@@ -1150,25 +1159,8 @@ func (r *SQLiteRepository) CreateSession(ctx context.Context, session *models.Se
 
 // GetSessionByToken retrieves a session by token
 func (r *SQLiteRepository) GetSessionByToken(ctx context.Context, token string) (*models.Session, error) {
-	session := &models.Session{}
-	err := r.db.QueryRowContext(ctx, `
-		SELECT id, user_id, token, created_at, expires_at, last_activity, ip_address, user_agent
-		FROM sessions
-		WHERE token = ? AND expires_at > ?
-	`, token, time.Now().UTC()).Scan(
-		&session.ID, &session.UserID, &session.Token,
-		&session.CreatedAt, &session.ExpiresAt, &session.LastActivity,
-		&session.IPAddress, &session.UserAgent,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNotFound
-		}
-		return nil, fmt.Errorf("failed to get session: %w", err)
-	}
-
-	return session, nil
+	row := r.db.QueryRowContext(ctx, sessionBaseQuery+" WHERE token = ? AND expires_at > ?", token, time.Now().UTC())
+	return r.scanSessionRow(row)
 }
 
 // DeleteSession deletes a session
@@ -1209,12 +1201,7 @@ func (r *SQLiteRepository) UpdateSessionActivity(ctx context.Context, id string)
 
 // GetUsersForPinging retrieves all users who need to be pinged
 func (r *SQLiteRepository) GetUsersForPinging(ctx context.Context) ([]*models.User, error) {
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT
-			id, email, password_hash, telegram_id, telegram_username, github_username,
-			last_activity, created_at, updated_at,
-			ping_frequency, ping_deadline, pinging_enabled, ping_method, next_scheduled_ping
-		FROM users
+	rows, err := r.db.QueryContext(ctx, userBaseQuery+`
 		WHERE pinging_enabled = 1 AND (next_scheduled_ping IS NULL OR next_scheduled_ping <= ?)
 		ORDER BY next_scheduled_ping ASC
 	`, time.Now().UTC())
@@ -1225,13 +1212,9 @@ func (r *SQLiteRepository) GetUsersForPinging(ctx context.Context) ([]*models.Us
 
 	var users []*models.User
 	for rows.Next() {
-		user := &models.User{}
-		if err := rows.Scan(
-			&user.ID, &user.Email, &user.PasswordHash, &user.TelegramID, &user.TelegramUsername, &user.GitHubUsername,
-			&user.LastActivity, &user.CreatedAt, &user.UpdatedAt,
-			&user.PingFrequency, &user.PingDeadline, &user.PingingEnabled, &user.PingMethod, &user.NextScheduledPing,
-		); err != nil {
-			return nil, fmt.Errorf("failed to scan user row: %w", err)
+		user, err := r.scanUserRow(rows)
+		if err != nil {
+			return nil, err
 		}
 		users = append(users, user)
 	}
@@ -1242,18 +1225,13 @@ func (r *SQLiteRepository) GetUsersForPinging(ctx context.Context) ([]*models.Us
 // GetUsersWithExpiredPings retrieves all users who have not responded to pings and exceeded the deadline
 func (r *SQLiteRepository) GetUsersWithExpiredPings(ctx context.Context) ([]*models.User, error) {
 	now := time.Now().UTC()
-	rows, err := r.db.QueryContext(ctx, `
-		SELECT
-			u.id, u.email, u.password_hash, u.telegram_id, u.telegram_username, u.github_username,
-			u.last_activity, u.created_at, u.updated_at,
-			u.ping_frequency, u.ping_deadline, u.pinging_enabled, u.ping_method, u.next_scheduled_ping
-		FROM users u
-		WHERE u.pinging_enabled = 1
+	rows, err := r.db.QueryContext(ctx, userBaseQuery+`
+		WHERE pinging_enabled = 1
 		AND (
 			-- User has not been active in ping_deadline days
-			u.last_activity < ?
+			last_activity < ?
 		)
-		ORDER BY u.last_activity ASC
+		ORDER BY last_activity ASC
 	`, now.Add(-24*time.Hour*30)) // 30 days as a maximum deadline
 	if err != nil {
 		return nil, fmt.Errorf("failed to get users with expired pings: %w", err)
@@ -1262,13 +1240,9 @@ func (r *SQLiteRepository) GetUsersWithExpiredPings(ctx context.Context) ([]*mod
 
 	var users []*models.User
 	for rows.Next() {
-		user := &models.User{}
-		if err := rows.Scan(
-			&user.ID, &user.Email, &user.PasswordHash, &user.TelegramID, &user.TelegramUsername, &user.GitHubUsername,
-			&user.LastActivity, &user.CreatedAt, &user.UpdatedAt,
-			&user.PingFrequency, &user.PingDeadline, &user.PingingEnabled, &user.PingMethod, &user.NextScheduledPing,
-		); err != nil {
-			return nil, fmt.Errorf("failed to scan user row: %w", err)
+		user, err := r.scanUserRow(rows)
+		if err != nil {
+			return nil, err
 		}
 
 		// Further filter users who have exceeded their specific deadline

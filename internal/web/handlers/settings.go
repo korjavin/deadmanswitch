@@ -27,11 +27,11 @@ func (h *SettingsHandler) HandleSettings(w http.ResponseWriter, r *http.Request)
 
 	// Mock settings data
 	settingsData := map[string]interface{}{
-		"EmailCheckIn":      true,
-		"EmailWarning":      true,
-		"CheckInInterval":   30,  // Monthly
-		"GracePeriod":       7,   // 1 week
-		"TwoFactorEnabled":  false,
+		"EmailCheckIn":     true,
+		"EmailWarning":     true,
+		"CheckInInterval":  30, // Monthly
+		"GracePeriod":      7,  // 1 week
+		"TwoFactorEnabled": false,
 	}
 
 	data := templates.TemplateData{

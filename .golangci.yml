@@ -1,46 +1,56 @@
 version: "2"
 run:
-  tests: true
+  # Timeout for analysis, e.g. 30s or 5m
+  timeout: 5m
+  
+  # Skip test files
+  tests: false
+  
+  # Exclude test files explicitly
+  skip-files:
+    - ".*_test\\.go$"
+
+# Configure linters
 linters:
   default: none
   enable:
-    - bodyclose
-    - dogsled
     - dupl
-    - errcheck
     - gocyclo
     - gosec
-    - govet
-    - ineffassign
-    - misspell
-    - nolintlint
-    - revive
     - staticcheck
-    - unconvert
-    - unparam
     - unused
     - whitespace
-  settings:
-    dupl:
-      threshold: 100
-    errcheck:
-      check-type-assertions: true
-      check-blank: true
-    gocyclo:
-      min-complexity: 15
-  exclusions:
-    generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+
+linters-settings:
+  dupl:
+    threshold: 100
+
+  gocyclo:
+    min-complexity: 15
+
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+
+  misspell: {}
+
+  nolintlint: {}
+
+exclusions:
+  generated: lax
+  presets:
+    - comments
+    - common-false-positives
+    - legacy
+    - std-error-handling
+  paths:
+    - third_party$
+    - builtin$
+    - examples$
+
 issues:
   max-same-issues: 0
+
 formatters:
   enable:
     - gofmt

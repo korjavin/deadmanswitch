@@ -3,6 +3,7 @@ package activity
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -35,11 +36,18 @@ func TestGitHubProvider_IsConfigured(t *testing.T) {
 // mockGitHubServer creates a test server that returns GitHub events
 func mockGitHubServer(_ *testing.T, events []GitHubEvent) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Return the events as JSON regardless of the path
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(events)
+		handleMockGitHubRequests(w, r, events)
 	}))
+}
+
+func handleMockGitHubRequests(w http.ResponseWriter, r *http.Request, events []GitHubEvent) {
+	// Return the events as JSON regardless of the path
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(events); err != nil {
+		log.Printf("Error encoding events: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+	}
 }
 
 func TestGitHubProvider_CheckActivity(t *testing.T) {

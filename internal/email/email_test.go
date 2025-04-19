@@ -2,6 +2,7 @@ package email
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"strings"
 	"testing"
@@ -57,7 +58,10 @@ func (s *mockSMTPServer) handleConnection(conn net.Conn) {
 	defer conn.Close()
 
 	// Send greeting
-	conn.Write([]byte("220 mock.smtp.server ESMTP\r\n"))
+	if _, err := conn.Write([]byte("220 mock.smtp.server ESMTP\r\n")); err != nil {
+		log.Printf("Error writing to connection: %v", err)
+		return
+	}
 
 	// Buffer to store the message
 	var message strings.Builder
@@ -79,7 +83,10 @@ func (s *mockSMTPServer) handleConnection(conn net.Conn) {
 				// End of data
 				message.WriteString(strings.TrimSuffix(cmd, "\r\n.\r\n"))
 				s.messages = append(s.messages, message.String())
-				conn.Write([]byte("250 OK: message accepted\r\n"))
+				if _, err := conn.Write([]byte("250 OK: message accepted\r\n")); err != nil {
+					log.Printf("Error writing to connection: %v", err)
+					return
+				}
 				dataMode = false
 			} else {
 				message.WriteString(cmd)
@@ -90,26 +97,53 @@ func (s *mockSMTPServer) handleConnection(conn net.Conn) {
 		// Handle commands
 		switch {
 		case strings.HasPrefix(cmd, "EHLO"):
-			conn.Write([]byte("250-mock.smtp.server\r\n250-SIZE 35882577\r\n250-AUTH LOGIN PLAIN\r\n250-STARTTLS\r\n250 OK\r\n"))
+			if _, err := conn.Write([]byte("250-mock.smtp.server\r\n250-SIZE 35882577\r\n250-AUTH LOGIN PLAIN\r\n250-STARTTLS\r\n250 OK\r\n")); err != nil {
+				log.Printf("Error writing to connection: %v", err)
+				return
+			}
 		case strings.HasPrefix(cmd, "HELO"):
-			conn.Write([]byte("250 Hello\r\n"))
+			if _, err := conn.Write([]byte("250 Hello\r\n")); err != nil {
+				log.Printf("Error writing to connection: %v", err)
+				return
+			}
 		case strings.HasPrefix(cmd, "MAIL FROM:"):
-			conn.Write([]byte("250 OK\r\n"))
+			if _, err := conn.Write([]byte("250 OK\r\n")); err != nil {
+				log.Printf("Error writing to connection: %v", err)
+				return
+			}
 		case strings.HasPrefix(cmd, "RCPT TO:"):
-			conn.Write([]byte("250 OK\r\n"))
+			if _, err := conn.Write([]byte("250 OK\r\n")); err != nil {
+				log.Printf("Error writing to connection: %v", err)
+				return
+			}
 		case strings.HasPrefix(cmd, "DATA"):
-			conn.Write([]byte("354 End data with <CR><LF>.<CR><LF>\r\n"))
+			if _, err := conn.Write([]byte("354 End data with <CR><LF>.<CR><LF>\r\n")); err != nil {
+				log.Printf("Error writing to connection: %v", err)
+				return
+			}
 			dataMode = true
 			message.Reset()
 		case strings.HasPrefix(cmd, "STARTTLS"):
-			conn.Write([]byte("220 Ready to start TLS\r\n"))
+			if _, err := conn.Write([]byte("220 Ready to start TLS\r\n")); err != nil {
+				log.Printf("Error writing to connection: %v", err)
+				return
+			}
 		case strings.HasPrefix(cmd, "AUTH"):
-			conn.Write([]byte("235 Authentication successful\r\n"))
+			if _, err := conn.Write([]byte("235 Authentication successful\r\n")); err != nil {
+				log.Printf("Error writing to connection: %v", err)
+				return
+			}
 		case strings.HasPrefix(cmd, "QUIT"):
-			conn.Write([]byte("221 Bye\r\n"))
+			if _, err := conn.Write([]byte("221 Bye\r\n")); err != nil {
+				log.Printf("Error writing to connection: %v", err)
+				return
+			}
 			return
 		default:
-			conn.Write([]byte("500 Unrecognized command\r\n"))
+			if _, err := conn.Write([]byte("500 Unrecognized command\r\n")); err != nil {
+				log.Printf("Error writing to connection: %v", err)
+				return
+			}
 		}
 	}
 }
@@ -122,15 +156,26 @@ func (s *mockSMTPServer) stop() {
 
 // getHost returns the host part of the server address
 func (s *mockSMTPServer) getHost() string {
-	host, _, _ := net.SplitHostPort(s.addr)
+	host, _, err := net.SplitHostPort(s.addr)
+	if err != nil {
+		log.Printf("Error splitting host/port: %v", err)
+		return "localhost"
+	}
 	return host
 }
 
 // getPort returns the port part of the server address
 func (s *mockSMTPServer) getPort() int {
-	_, portStr, _ := net.SplitHostPort(s.addr)
-	var port int
-	fmt.Sscanf(portStr, "%d", &port)
+	_, portStr, err := net.SplitHostPort(s.addr)
+	if err != nil {
+		log.Printf("Error splitting host/port: %v", err)
+		return 0
+	}
+	port := 0
+	if _, err := fmt.Sscanf(portStr, "%d", &port); err != nil {
+		log.Printf("Error parsing port number: %v", err)
+		return 0
+	}
 	return port
 }
 

@@ -1,3 +1,5 @@
+// Package main implements the entry point for the Dead Man's Switch service.
+// It initializes configuration, sets up repositories, services, and starts the web server.
 package main
 
 import (

@@ -1,3 +1,6 @@
+// Package migrations provides database migration functionality
+// for the Dead Man's Switch application. It handles schema updates
+// and data migrations between application versions.
 package migrations
 
 import (

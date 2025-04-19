@@ -46,8 +46,8 @@ func TestGenerateSecureToken(t *testing.T) {
 	// Check that the token is a valid base64 URL-encoded string
 	// Base64 URL-encoded strings should only contain alphanumeric characters, '-', '_', and possibly '='
 	for _, c := range token {
-		if !((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '=') {
-			t.Errorf("Token contains invalid character: %c", c)
+		if c < 'A' || (c > 'Z' && c < 'a') || (c > 'z' && c < '0') || c > '9' && c != '-' && c != '_' && c != '=' {
+			t.Errorf("Generated invalid character in verification token: %c", c)
 			break
 		}
 	}

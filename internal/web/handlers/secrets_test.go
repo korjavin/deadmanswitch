@@ -128,7 +128,9 @@ func TestHandleCreateSecret(t *testing.T) {
 	req = req.WithContext(ctx)
 
 	// Parse the form before handling (simulates what http.Request does)
-	req.ParseForm()
+	if err := req.ParseForm(); err != nil {
+		t.Fatalf("Error parsing form: %v", err)
+	}
 
 	// Create a response recorder
 	rr := httptest.NewRecorder()

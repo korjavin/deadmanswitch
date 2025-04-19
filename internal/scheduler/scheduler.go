@@ -1,3 +1,6 @@
+// Package scheduler provides functionality for scheduling and executing
+// periodic tasks such as sending pings to users and checking for expired pings.
+// It manages background jobs that run at configurable intervals.
 package scheduler
 
 import (
@@ -467,7 +470,11 @@ func (s *Scheduler) externalActivityTask(ctx context.Context) error {
 			// Get the provider names that detected activity
 			activeProviderNames := make([]string, 0)
 			for _, provider := range configuredProviders {
-				isActive, _ := provider.CheckActivity(ctx, user, user.LastActivity)
+				isActive, err := provider.CheckActivity(ctx, user, user.LastActivity)
+				if err != nil {
+					log.Printf("Error checking activity with provider %T: %v", provider, err)
+					continue
+				}
 				if isActive {
 					activeProviderNames = append(activeProviderNames, provider.Name())
 				}
@@ -541,8 +548,8 @@ func extractNameFromEmail(email string) string {
 
 	name := parts[0]
 	// Replace dots and underscores with spaces
-	name = strings.Replace(name, ".", " ", -1)
-	name = strings.Replace(name, "_", " ", -1)
+	name = strings.ReplaceAll(name, ".", " ")
+	name = strings.ReplaceAll(name, "_", " ")
 
 	// Capitalize the first letter of each word
 	words := strings.Split(name, " ")

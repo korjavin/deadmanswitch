@@ -2,9 +2,6 @@ package web
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,7 +12,6 @@ import (
 	"github.com/korjavin/deadmanswitch/internal/auth"
 	"github.com/korjavin/deadmanswitch/internal/config"
 	"github.com/korjavin/deadmanswitch/internal/email"
-	"github.com/korjavin/deadmanswitch/internal/models"
 	"github.com/korjavin/deadmanswitch/internal/scheduler"
 	"github.com/korjavin/deadmanswitch/internal/storage"
 	"github.com/korjavin/deadmanswitch/internal/telegram"
@@ -200,8 +196,21 @@ func (s *Server) setupRoutes() {
 func (s *Server) handleMethodRouter(methods ...interface{}) http.HandlerFunc {
 	handlers := make(map[string]http.HandlerFunc)
 	for i := 0; i < len(methods); i += 2 {
-		method := methods[i].(string)
-		handler := methods[i+1].(http.HandlerFunc)
+		methodVal, ok := methods[i].(string)
+		if !ok {
+			log.Printf("Error: Expected method to be string at index %d", i)
+			continue
+		}
+
+		handlerVal, ok := methods[i+1].(http.HandlerFunc)
+		if !ok {
+			log.Printf("Error: Expected handler to be http.HandlerFunc at index %d", i+1)
+			continue
+		}
+
+		method := methodVal
+		handler := handlerVal
+
 		handlers[method] = handler
 	}
 
@@ -223,23 +232,30 @@ func (s *Server) handleSecrets(w http.ResponseWriter, r *http.Request) {
 
 	// Check if this is an "assign" request
 	if strings.HasSuffix(r.URL.Path, "/assign") {
-		if r.Method == http.MethodGet {
+		switch r.Method {
+		case http.MethodGet:
 			s.handlers.secrets.HandleManageRecipients(w, r)
-		} else if r.Method == http.MethodPost {
+		case http.MethodPost:
 			s.handlers.secrets.HandleUpdateSecretRecipients(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 		return
 	}
 
 	// Handle regular secret operations
-	if r.Method == http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
 		s.handlers.secrets.HandleViewSecretForm(w, r)
-	} else if r.Method == http.MethodPost {
+	case http.MethodPost:
 		if r.FormValue("_method") == "DELETE" {
 			s.handlers.secrets.HandleDeleteSecret(w, r)
 		} else {
 			s.handlers.secrets.HandleUpdateSecret(w, r)
+			return
 		}
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
@@ -258,23 +274,30 @@ func (s *Server) handleRecipients(w http.ResponseWriter, r *http.Request) {
 
 	// Handle secrets management
 	if strings.HasSuffix(r.URL.Path, "/secrets") {
-		if r.Method == http.MethodGet {
+		switch r.Method {
+		case http.MethodGet:
 			s.handlers.recipients.HandleManageSecrets(w, r)
-		} else if r.Method == http.MethodPost {
+		case http.MethodPost:
 			s.handlers.recipients.HandleUpdateRecipientSecrets(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 		return
 	}
 
 	// Handle regular recipient operations
-	if r.Method == http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
 		s.handlers.recipients.HandleEditRecipientForm(w, r)
-	} else if r.Method == http.MethodPost {
+	case http.MethodPost:
 		if r.FormValue("_method") == "DELETE" {
 			s.handlers.recipients.HandleDeleteRecipient(w, r)
 		} else {
 			s.handlers.recipients.HandleUpdateRecipient(w, r)
+			return
 		}
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
@@ -284,7 +307,12 @@ func (s *Server) handlePasskeys(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	s.handlers.passkey.HandleDeletePasskey(w, r)
+	switch r.Method {
+	case http.MethodPost:
+		s.handlers.passkey.HandleDeletePasskey(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 func (s *Server) handleConfirmation(w http.ResponseWriter, r *http.Request) {
@@ -293,7 +321,12 @@ func (s *Server) handleConfirmation(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	s.handlers.recipients.HandleConfirmRecipient(w, r)
+	switch r.Method {
+	case http.MethodPost:
+		s.handlers.recipients.HandleConfirmRecipient(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
 
 func (s *Server) setupFileServer() http.Handler {
@@ -319,98 +352,4 @@ func (s *Server) setupFileServer() http.Handler {
 	}
 
 	return fileServer
-}
-
-// Helper functions
-
-func generateSecureToken() string {
-	// Generate a random 32-byte token
-	tokenBytes := make([]byte, 32)
-	if _, err := rand.Read(tokenBytes); err != nil {
-		panic(err)
-	}
-	return base64.StdEncoding.EncodeToString(tokenBytes)
-}
-
-func generateID() string {
-	// Generate a UUID-like ID
-	idBytes := make([]byte, 16)
-	if _, err := rand.Read(idBytes); err != nil {
-		panic(err)
-	}
-	return hex.EncodeToString(idBytes)
-}
-
-// Adapter functions to convert between models and UI types
-
-// adaptUserToUI converts a models.User to a format suitable for templates
-func adaptUserToUI(user *models.User) map[string]interface{} {
-	return map[string]interface{}{
-		"ID":                user.ID,
-		"Email":             user.Email,
-		"Name":              user.Email, // Using email as name since name is not in the User model
-		"LastActivity":      user.LastActivity,
-		"CreatedAt":         user.CreatedAt,
-		"PingFrequency":     user.PingFrequency,
-		"PingDeadline":      user.PingDeadline,
-		"PingingEnabled":    user.PingingEnabled,
-		"NextScheduledPing": user.NextScheduledPing,
-	}
-}
-
-// adaptSecretToUI converts a models.Secret to a format suitable for templates
-func adaptSecretToUI(secret *models.Secret) map[string]interface{} {
-	// For real implementation, we would decode the encrypted data to determine the type
-	// For now, we'll use a placeholder approach
-	secretType := determineSecretType(secret)
-
-	return map[string]interface{}{
-		"ID":           secret.ID,
-		"Title":        secret.Name,
-		"Type":         secretType,
-		"Description":  "",                   // Not in base model, would be in metadata
-		"Content":      secret.EncryptedData, // In real impl, this would be decrypted
-		"CreatedAt":    secret.CreatedAt,
-		"LastModified": secret.UpdatedAt,
-	}
-}
-
-// determineSecretType attempts to determine the type of secret from its encrypted data
-// In a real implementation, this would be stored in metadata or determined by decryption
-func determineSecretType(secret *models.Secret) string {
-	// Store the secret type for categorization
-	// in metadata or could be determined from the decrypted data
-	return "note" // Default type
-}
-
-// adaptRecipientToUI converts a models.Recipient to a format suitable for templates
-func adaptRecipientToUI(recipient *models.Recipient) map[string]interface{} {
-	return map[string]interface{}{
-		"ID":            recipient.ID,
-		"Name":          recipient.Name,
-		"Email":         recipient.Email,
-		"PhoneNumber":   recipient.PhoneNumber,
-		"CreatedAt":     recipient.CreatedAt,
-		"Relationship":  "other", // Default value, not in the base model
-		"ContactMethod": determineContactMethod(recipient),
-		"Verified":      true, // Default value, not in the base model
-	}
-}
-
-// determineContactMethod determines the contact method based on recipient data
-func determineContactMethod(recipient *models.Recipient) string {
-	if recipient.PhoneNumber != "" {
-		return "phone"
-	}
-	return "email" // Default contact method
-}
-
-// sendEmail is a helper method to send emails
-func (s *Server) sendEmail(to []string, subject, body string, isHTML bool) error {
-	if s.emailClient == nil {
-		return fmt.Errorf("email client not configured")
-	}
-
-	// Use the simplified email sending method
-	return s.emailClient.SendEmailSimple(to, subject, body, isHTML)
 }

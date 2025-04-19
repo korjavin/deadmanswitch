@@ -136,15 +136,11 @@ func (h *ProfileHandler) HandleUpdateProfile(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Update user fields based on form data
-	if name := r.FormValue("name"); name != "" {
-		// If we had a name field in the User model, we would update it here
-	}
+	// Update other fields if needed
+	// Name field currently not implemented in User model
 
-	// Update ping settings
-	if pingFreq := r.FormValue("ping_frequency"); pingFreq != "" {
-		// Parse and update ping frequency
-	}
+	// Ping frequency currently not implemented in this handler
+	// If we want to implement it, we would parse and update it here
 
 	// Update GitHub username if provided
 	githubUsername := r.FormValue("github_username")

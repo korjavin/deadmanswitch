@@ -1,3 +1,6 @@
+// Package telegram provides integration with Telegram Bot API
+// for sending notifications and receiving commands from users.
+// It handles bot initialization, message processing, and command handling.
 package telegram
 
 import (
@@ -6,7 +9,6 @@ import (
 	"log"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/korjavin/deadmanswitch/internal/config"
@@ -23,7 +25,6 @@ type Bot struct {
 	repo     storage.Repository
 	handlers map[string]CommandHandler
 	updates  tgbotapi.UpdatesChannel
-	mu       sync.RWMutex
 }
 
 // CommandHandler is a function that handles a telegram command
@@ -116,13 +117,17 @@ func (b *Bot) handleMessage(ctx context.Context, message *tgbotapi.Message) {
 		if exists {
 			if err := handler(ctx, message, args); err != nil {
 				log.Printf("Error handling command %s: %v", command, err)
-				b.sendErrorMessage(message.Chat.ID, "An error occurred processing your command")
+				if sendErr := b.sendErrorMessage(message.Chat.ID, "An error occurred processing your command"); sendErr != nil {
+					log.Printf("Error sending error message: %v", sendErr)
+				}
 			}
 			return
 		}
 
 		// Unknown command
-		b.sendMessage(message.Chat.ID, "Unknown command. Type /help for available commands.")
+		if sendErr := b.sendMessage(message.Chat.ID, "Unknown command. Type /help for available commands."); sendErr != nil {
+			log.Printf("Error sending message: %v", sendErr)
+		}
 		return
 	}
 
@@ -150,7 +155,9 @@ func (b *Bot) handleMessage(ctx context.Context, message *tgbotapi.Message) {
 	}
 
 	// Default response for non-command messages
-	b.sendMessage(message.Chat.ID, "I only respond to commands. Type /help for available commands.")
+	if sendErr := b.sendMessage(message.Chat.ID, "I only respond to commands. Type /help for available commands."); sendErr != nil {
+		log.Printf("Error sending message: %v", sendErr)
+	}
 }
 
 // handleCallbackQuery processes a callback query (button press)
@@ -183,7 +190,9 @@ func (b *Bot) handleCallbackQuery(ctx context.Context, query *tgbotapi.CallbackQ
 		user, err := b.repo.GetUserByID(ctx, userID)
 		if err != nil {
 			log.Printf("Error getting user %s: %v", userID, err)
-			b.answerCallbackQuery(query.ID, "Error: User not found")
+			if sendErr := b.answerCallbackQuery(query.ID, "Error: User not found"); sendErr != nil {
+				log.Printf("Error answering callback query: %v", sendErr)
+			}
 			return
 		}
 
@@ -214,18 +223,24 @@ func (b *Bot) handleCallbackQuery(ctx context.Context, query *tgbotapi.CallbackQ
 		}
 
 		// Send confirmation message
-		b.editMessageText(query.Message.Chat.ID, query.Message.MessageID,
-			"✅ Thank you for confirming your status. Your Dead Man's Switch has been reset.")
-		b.answerCallbackQuery(query.ID, "Verification successful")
+		if editErr := b.editMessageText(query.Message.Chat.ID, query.Message.MessageID,
+			"✅ Thank you for confirming your status. Your Dead Man's Switch has been reset."); editErr != nil {
+			log.Printf("Error editing message text: %v", editErr)
+		}
+		if answerErr := b.answerCallbackQuery(query.ID, "Verification successful"); answerErr != nil {
+			log.Printf("Error answering callback query: %v", answerErr)
+		}
 
 	default:
 		log.Printf("Unknown callback action: %s", action)
-		b.answerCallbackQuery(query.ID, "Invalid action")
+		if answerErr := b.answerCallbackQuery(query.ID, "Invalid action"); answerErr != nil {
+			log.Printf("Error answering invalid action callback query: %v", answerErr)
+		}
 	}
 }
 
 // SendPingMessage sends a ping message to a user
-func (b *Bot) SendPingMessage(ctx context.Context, user *models.User, pingID string) error {
+func (b *Bot) SendPingMessage(_ context.Context, user *models.User, pingID string) error {
 	if user.TelegramID == "" {
 		return fmt.Errorf("user has no associated Telegram ID")
 	}
@@ -259,17 +274,18 @@ func (b *Bot) SendPingMessage(ctx context.Context, user *models.User, pingID str
 
 // Command handlers
 
-func (b *Bot) handleStart(ctx context.Context, message *tgbotapi.Message, args string) error {
+func (b *Bot) handleStart(ctx context.Context, message *tgbotapi.Message, _ string) error {
 	var response string
 
 	// Check if user already exists
 	tgID := strconv.FormatInt(message.From.ID, 10)
 	_, err := b.repo.GetUserByTelegramID(ctx, tgID)
 
-	if err == nil {
+	switch err {
+	case nil:
 		// User exists
 		response = fmt.Sprintf("Welcome back, %s! Your Dead Man's Switch is active. Type /status to see your current settings.", message.From.FirstName)
-	} else if err == storage.ErrNotFound {
+	case storage.ErrNotFound:
 		// New user
 		response = fmt.Sprintf(
 			"Welcome to Dead Man's Switch, %s!\n\n"+
@@ -279,7 +295,7 @@ func (b *Bot) handleStart(ctx context.Context, message *tgbotapi.Message, args s
 				"Or use the /connect command with your email: /connect your@email.com",
 			message.From.FirstName, b.config.BaseDomain, tgID,
 		)
-	} else {
+	default:
 		// Database error
 		return fmt.Errorf("database error: %w", err)
 	}
@@ -287,25 +303,22 @@ func (b *Bot) handleStart(ctx context.Context, message *tgbotapi.Message, args s
 	return b.sendMessage(message.Chat.ID, response)
 }
 
-func (b *Bot) handleHelp(ctx context.Context, message *tgbotapi.Message, args string) error {
-	helpText := `
-*Dead Man's Switch Bot Commands*
+func (b *Bot) handleHelp(_ context.Context, message *tgbotapi.Message, _ string) error {
+	// Create a message with help information
+	helpMsg := "Welcome to DeadMansSwitch Bot!\n\n" +
+		"Available commands:\n" +
+		"/start - Start the bot\n" +
+		"/help - Show this help message\n" +
+		"/ping - Send manual ping\n" +
+		"/status - Check your account status\n" +
+		"/link - Link your Telegram account to your DeadMansSwitch account\n"
 
-/start - Start the bot and get initial instructions
-/help - Show this help message
-/status - Check your current settings and status
-/verify - Manually verify that you're okay
-/connect [email] - Connect your Telegram account to your web account
-
-For more information, visit our web interface at https://` + b.config.BaseDomain
-
-	msg := tgbotapi.NewMessage(message.Chat.ID, helpText)
-	msg.ParseMode = "Markdown"
+	msg := tgbotapi.NewMessage(message.Chat.ID, helpMsg)
 	_, err := b.bot.Send(msg)
 	return err
 }
 
-func (b *Bot) handleStatus(ctx context.Context, message *tgbotapi.Message, args string) error {
+func (b *Bot) handleStatus(ctx context.Context, message *tgbotapi.Message, _ string) error {
 	// Get user by Telegram ID
 	tgID := strconv.FormatInt(message.From.ID, 10)
 	user, err := b.repo.GetUserByTelegramID(ctx, tgID)
@@ -367,7 +380,7 @@ func (b *Bot) handleStatus(ctx context.Context, message *tgbotapi.Message, args 
 	return err
 }
 
-func (b *Bot) handleVerify(ctx context.Context, message *tgbotapi.Message, args string) error {
+func (b *Bot) handleVerify(ctx context.Context, message *tgbotapi.Message, _ string) error {
 	// Get user by Telegram ID
 	tgID := strconv.FormatInt(message.From.ID, 10)
 	user, err := b.repo.GetUserByTelegramID(ctx, tgID)

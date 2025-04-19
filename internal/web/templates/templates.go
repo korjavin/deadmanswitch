@@ -1,3 +1,6 @@
+// Package templates provides HTML template rendering functionality
+// for the web interface of the Dead Man's Switch application.
+// It includes functions for loading, parsing, and rendering templates.
 package templates
 
 import (

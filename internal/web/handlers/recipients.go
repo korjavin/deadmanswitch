@@ -468,64 +468,21 @@ func (h *RecipientsHandler) HandleUpdateRecipientSecrets(w http.ResponseWriter, 
 	// Get the selected secret IDs
 	selectedSecretIDs := r.Form["secrets"]
 
-	// Fetch all current assignments for the recipient
-	currentAssignments, err := h.repo.ListSecretAssignmentsByRecipientID(context.Background(), recipientID)
+	// Use the shared helper function to update assignments
+	err = updateEntityAssignments(
+		context.Background(),
+		h.repo,
+		user.ID,
+		recipientID,
+		"recipient", // We're updating a recipient's secrets
+		recipient.Name,
+		selectedSecretIDs,
+	)
+
 	if err != nil {
-		http.Error(w, "Error fetching secret assignments", http.StatusInternalServerError)
-		log.Printf("Error fetching secret assignments: %v", err)
+		http.Error(w, "Error updating recipient secrets", http.StatusInternalServerError)
+		log.Printf("Error updating recipient secrets: %v", err)
 		return
-	}
-
-	// Create a map of current assignments for quick lookup
-	currentAssignmentMap := make(map[string]*models.SecretAssignment)
-	for _, a := range currentAssignments {
-		currentAssignmentMap[a.SecretID] = a
-	}
-
-	// Create a map of selected secret IDs for quick lookup
-	selectedSecretMap := make(map[string]bool)
-	for _, id := range selectedSecretIDs {
-		selectedSecretMap[id] = true
-	}
-
-	// Remove assignments that are no longer selected
-	for secretID, assignment := range currentAssignmentMap {
-		if !selectedSecretMap[secretID] {
-			if err := h.repo.DeleteSecretAssignment(context.Background(), assignment.ID); err != nil {
-				log.Printf("Error deleting secret assignment: %v", err)
-				// Continue anyway, don't fail the whole request
-			}
-		}
-	}
-
-	// Add new assignments for newly selected secrets
-	for _, secretID := range selectedSecretIDs {
-		if _, exists := currentAssignmentMap[secretID]; !exists {
-			// Create a new assignment
-			assignment := &models.SecretAssignment{
-				SecretID:    secretID,
-				RecipientID: recipientID,
-				UserID:      user.ID,
-			}
-
-			if err := h.repo.CreateSecretAssignment(context.Background(), assignment); err != nil {
-				log.Printf("Error creating secret assignment: %v", err)
-				// Continue anyway, don't fail the whole request
-			}
-		}
-	}
-
-	// Create an audit log entry
-	auditLog := &models.AuditLog{
-		UserID:    user.ID,
-		Action:    "update_recipient_secrets",
-		Timestamp: time.Now(),
-		Details:   "Updated secrets for recipient: " + recipient.Name,
-	}
-
-	if err := h.repo.CreateAuditLog(context.Background(), auditLog); err != nil {
-		log.Printf("Error creating audit log: %v", err)
-		// Continue anyway, don't fail the whole request
 	}
 
 	// Redirect to the recipient list page

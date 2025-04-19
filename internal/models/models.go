@@ -1,3 +1,6 @@
+// Package models provides data structures that represent
+// the core domain entities of the Dead Man's Switch application.
+// These models are persisted to storage and used throughout the application.
 package models
 
 import (

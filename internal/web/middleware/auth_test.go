@@ -52,7 +52,10 @@ func TestAuth(t *testing.T) {
 	}
 	repo.Sessions = append(repo.Sessions, invalidUserSession)
 
-	// Create a test handler
+	// Create the middleware
+	authMiddlewareWrapper := Auth(repo)
+
+	// Create a test handler for the middleware to wrap
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Check if the user is in the context
 		user, ok := GetUserFromContext(r)
@@ -70,150 +73,84 @@ func TestAuth(t *testing.T) {
 			t.Errorf("Expected session ID 'session123', got '%s'", session.ID)
 		}
 
-		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("test handler called"))
 	})
-
-	// Create the middleware
-	authMiddleware := Auth(repo)
 
 	// Test with valid session
 	t.Run("Valid Session", func(t *testing.T) {
-		req, err := http.NewRequest("GET", "/", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Add the session cookie
-		req.AddCookie(&http.Cookie{
-			Name:  "session_token",
-			Value: validSession.Token,
-		})
-
-		// Create a response recorder
-		rr := httptest.NewRecorder()
-
-		// Serve the request
-		authMiddleware(testHandler).ServeHTTP(rr, req)
-
-		// Check the status code
-		if status := rr.Code; status != http.StatusOK {
-			t.Errorf("Expected status code %d, got %d", http.StatusOK, status)
-		}
+		testAuthMiddlewareSessionScenario(t, "Valid Session", validSession.Token, false, testHandler, authMiddlewareWrapper)
 	})
 
 	// Test with expired session
 	t.Run("Expired Session", func(t *testing.T) {
-		req, err := http.NewRequest("GET", "/", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Add the session cookie
-		req.AddCookie(&http.Cookie{
-			Name:  "session_token",
-			Value: expiredSession.Token,
-		})
-
-		// Create a response recorder
-		rr := httptest.NewRecorder()
-
-		// Serve the request
-		authMiddleware(testHandler).ServeHTTP(rr, req)
-
-		// Check the status code
-		if status := rr.Code; status != http.StatusSeeOther {
-			t.Errorf("Expected status code %d, got %d", http.StatusSeeOther, status)
-		}
-
-		// Check the redirect location
-		if location := rr.Header().Get("Location"); location != "/login" {
-			t.Errorf("Expected redirect to '/login', got '%s'", location)
-		}
+		testAuthMiddlewareSessionScenario(t, "Expired Session", expiredSession.Token, true, testHandler, authMiddlewareWrapper)
 	})
 
 	// Test with invalid user ID
 	t.Run("Invalid User ID", func(t *testing.T) {
-		req, err := http.NewRequest("GET", "/", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Add the session cookie
-		req.AddCookie(&http.Cookie{
-			Name:  "session_token",
-			Value: invalidUserSession.Token,
-		})
-
-		// Create a response recorder
-		rr := httptest.NewRecorder()
-
-		// Serve the request
-		authMiddleware(testHandler).ServeHTTP(rr, req)
-
-		// Check the status code
-		if status := rr.Code; status != http.StatusSeeOther {
-			t.Errorf("Expected status code %d, got %d", http.StatusSeeOther, status)
-		}
-
-		// Check the redirect location
-		if location := rr.Header().Get("Location"); location != "/login" {
-			t.Errorf("Expected redirect to '/login', got '%s'", location)
-		}
+		testAuthMiddlewareSessionScenario(t, "Invalid User ID", invalidUserSession.Token, true, testHandler, authMiddlewareWrapper)
 	})
 
 	// Test with no session cookie
 	t.Run("No Session Cookie", func(t *testing.T) {
-		req, err := http.NewRequest("GET", "/", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		// Create a response recorder
-		rr := httptest.NewRecorder()
-
-		// Serve the request
-		authMiddleware(testHandler).ServeHTTP(rr, req)
-
-		// Check the status code
-		if status := rr.Code; status != http.StatusSeeOther {
-			t.Errorf("Expected status code %d, got %d", http.StatusSeeOther, status)
-		}
-
-		// Check the redirect location
-		if location := rr.Header().Get("Location"); location != "/login" {
-			t.Errorf("Expected redirect to '/login', got '%s'", location)
-		}
+		testAuthMiddlewareSessionScenario(t, "No Session Cookie", "", true, testHandler, authMiddlewareWrapper)
 	})
 
 	// Test with invalid session token
 	t.Run("Invalid Session Token", func(t *testing.T) {
-		req, err := http.NewRequest("GET", "/", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
+		testAuthMiddlewareSessionScenario(t, "Invalid Session Token", "invalid-token", true, testHandler, authMiddlewareWrapper)
+	})
+}
 
-		// Add the session cookie
+// testAuthMiddlewareSessionScenario is a helper function to test various session scenarios
+func testAuthMiddlewareSessionScenario(
+	t *testing.T,
+	scenarioName string,
+	sessionToken string,
+	expectRedirect bool,
+	testHandler http.HandlerFunc,
+	authMiddlewareWrapper func(http.HandlerFunc) http.HandlerFunc,
+) {
+	req, err := http.NewRequest("GET", "/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Add the session cookie if provided
+	if sessionToken != "" {
 		req.AddCookie(&http.Cookie{
 			Name:  "session_token",
-			Value: "invalid-token",
+			Value: sessionToken,
 		})
+	}
 
-		// Create a response recorder
-		rr := httptest.NewRecorder()
+	// Create a response recorder
+	rr := httptest.NewRecorder()
 
-		// Serve the request
-		authMiddleware(testHandler).ServeHTTP(rr, req)
+	// Serve the request
+	authMiddlewareWrapper(testHandler).ServeHTTP(rr, req)
 
-		// Check the status code
+	// Check the status code based on expected behavior
+	if expectRedirect {
 		if status := rr.Code; status != http.StatusSeeOther {
-			t.Errorf("Expected status code %d, got %d", http.StatusSeeOther, status)
+			t.Errorf("%s: Expected status code %d, got %d", scenarioName, http.StatusSeeOther, status)
 		}
 
 		// Check the redirect location
 		if location := rr.Header().Get("Location"); location != "/login" {
-			t.Errorf("Expected redirect to '/login', got '%s'", location)
+			t.Errorf("%s: Expected redirect to '/login', got '%s'", scenarioName, location)
 		}
-	})
+	} else {
+		if status := rr.Code; status != http.StatusOK {
+			t.Errorf("%s: Expected status code %d, got %d", scenarioName, http.StatusOK, status)
+		}
+
+		// Check the response body
+		expected := "test handler called"
+		if rr.Body.String() != expected {
+			t.Errorf("%s: Expected body '%s', got '%s'", scenarioName, expected, rr.Body.String())
+		}
+	}
 }
 
 func TestGetUserFromContext(t *testing.T) {
@@ -223,8 +160,8 @@ func TestGetUserFromContext(t *testing.T) {
 		Email: "test@example.com",
 	}
 
-	// Create a context with the user
-	ctx := context.WithValue(context.Background(), "user", user)
+	// Update test to use the proper context key type
+	ctx := context.WithValue(context.Background(), userContextKey, user)
 	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {
 		t.Fatal(err)
