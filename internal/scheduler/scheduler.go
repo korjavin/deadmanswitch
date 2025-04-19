@@ -464,6 +464,15 @@ func (s *Scheduler) externalActivityTask(ctx context.Context) error {
 			latestActivity := s.activityRegistry.GetLatestActivityTime(ctx, user)
 			log.Printf("User %s has been active on external platform at %s", user.ID, latestActivity.Format(time.RFC3339))
 
+			// Get the provider names that detected activity
+			activeProviderNames := make([]string, 0)
+			for _, provider := range configuredProviders {
+				isActive, _ := provider.CheckActivity(ctx, user, user.LastActivity)
+				if isActive {
+					activeProviderNames = append(activeProviderNames, provider.Name())
+				}
+			}
+
 			// Update the user's last activity time
 			user.LastActivity = latestActivity
 
@@ -475,17 +484,22 @@ func (s *Scheduler) externalActivityTask(ctx context.Context) error {
 				continue
 			}
 
-			// Create an audit log entry for the external activity
-			auditLog := &models.AuditLog{
-				ID:        uuid.New().String(),
-				UserID:    user.ID,
-				Action:    "external_activity_detected",
-				Timestamp: time.Now().UTC(),
-				Details:   "Activity detected on external platform",
-			}
+			// Create detailed audit log entries for each active provider
+			for _, providerName := range activeProviderNames {
+				auditLog := &models.AuditLog{
+					ID:        uuid.New().String(),
+					UserID:    user.ID,
+					Action:    fmt.Sprintf("%s_activity_detected", strings.ToLower(providerName)),
+					Timestamp: time.Now().UTC(),
+					Details: fmt.Sprintf("Activity detected on %s at %s, next check-in rescheduled to %s",
+						providerName,
+						latestActivity.Format(time.RFC3339),
+						user.NextScheduledPing.Format(time.RFC3339)),
+				}
 
-			if err := s.repo.CreateAuditLog(ctx, auditLog); err != nil {
-				log.Printf("Failed to create audit log for external activity: %v", err)
+				if err := s.repo.CreateAuditLog(ctx, auditLog); err != nil {
+					log.Printf("Failed to create audit log for external activity: %v", err)
+				}
 			}
 		}
 	}

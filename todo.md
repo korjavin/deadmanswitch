@@ -66,7 +66,7 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 - [ ] Add integration tests for all components, targeting code coverage to 80%, and show coverage in github interface
 - [ ] User check-ins not shown in activity log, also log all the detected activities like github activity
 - [ ] If user has a passkey attached, we should use this passkey as second factor (?), atleast let's give this option to user
-- [ ] Let's switch from sqlite to  modernc.org/sqlite and avoid CGO and long builds
+- [x] Let's switch from sqlite to  modernc.org/sqlite and avoid CGO and long builds
 
 ## Next Steps
 1. Complete the scheduler implementation:

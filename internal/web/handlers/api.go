@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/korjavin/deadmanswitch/internal/models"
 	"github.com/korjavin/deadmanswitch/internal/storage"
 	"github.com/korjavin/deadmanswitch/internal/web/middleware"
 )
@@ -34,10 +36,50 @@ func (h *APIHandler) HandleCheckIn(w http.ResponseWriter, r *http.Request) {
 
 	// Update the user's last activity time
 	user.LastActivity = time.Now()
+
+	// Calculate the next scheduled ping based on the user's ping frequency
+	user.NextScheduledPing = time.Now().AddDate(0, 0, user.PingFrequency)
+
+	// Enable pinging if it wasn't already enabled
+	if !user.PingingEnabled {
+		user.PingingEnabled = true
+	}
+
 	if err := h.repo.UpdateUser(ctx, user); err != nil {
 		log.Printf("Error updating user last activity: %v", err)
 		http.Error(w, "Error updating user", http.StatusInternalServerError)
 		return
+	}
+
+	// Create a ping history entry
+	pingHistory := &models.PingHistory{
+		ID:          uuid.New().String(),
+		UserID:      user.ID,
+		SentAt:      time.Now().UTC(),
+		Method:      "web",
+		Status:      "responded",
+		RespondedAt: &user.LastActivity,
+	}
+
+	if err := h.repo.CreatePingHistory(ctx, pingHistory); err != nil {
+		log.Printf("Error creating ping history during check-in: %v", err)
+		// Non-fatal error, continue
+	}
+
+	// Create audit log entry
+	auditLog := &models.AuditLog{
+		ID:        uuid.New().String(),
+		UserID:    user.ID,
+		Action:    "check_in",
+		Timestamp: time.Now().UTC(),
+		IPAddress: r.RemoteAddr,
+		UserAgent: r.UserAgent(),
+		Details:   "Manual user check-in via web interface",
+	}
+
+	if err := h.repo.CreateAuditLog(ctx, auditLog); err != nil {
+		log.Printf("Error creating audit log for check-in: %v", err)
+		// Non-fatal error, continue
 	}
 
 	// Return success response
@@ -45,6 +87,6 @@ func (h *APIHandler) HandleCheckIn(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success":       true,
 		"message":       "Check-in successful",
-		"next_check_in": user.LastActivity.AddDate(0, 0, user.PingFrequency).Format(time.RFC3339),
+		"next_check_in": user.NextScheduledPing.Format(time.RFC3339),
 	})
 }

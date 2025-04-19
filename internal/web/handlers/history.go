@@ -115,8 +115,10 @@ func determineActivityType(action string) string {
 		return "recipient"
 	case contains(action, "setting", "config"):
 		return "settings"
-	case contains(action, "check-in", "checkin", "ping"):
+	case contains(action, "check_in", "check-in", "checkin", "ping"):
 		return "checkin"
+	case contains(action, "github", "external_activity", "activity_detected"):
+		return "activity"
 	default:
 		return "other"
 	}
@@ -150,6 +152,12 @@ func formatActivityTitle(action string) string {
 		return "Recipient Deleted"
 	case contains(action, "setting", "config"):
 		return "Settings Updated"
+	case contains(action, "check_in"):
+		return "Manual Check-in"
+	case contains(action, "external_activity", "activity_detected"):
+		return "Activity Detected"
+	case contains(action, "github"):
+		return "GitHub Activity"
 	default:
 		return action
 	}
