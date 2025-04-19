@@ -158,7 +158,6 @@ func (h *RecipientsHandler) HandleCreateRecipient(w http.ResponseWriter, r *http
 	// Get form values
 	name := r.FormValue("name")
 	email := r.FormValue("email")
-	phoneNumber := r.FormValue("phoneNumber")
 	notes := r.FormValue("notes")
 
 	if name == "" || email == "" {
@@ -168,11 +167,10 @@ func (h *RecipientsHandler) HandleCreateRecipient(w http.ResponseWriter, r *http
 
 	// Create the recipient in the database
 	recipient := &models.Recipient{
-		UserID:      user.ID,
-		Name:        name,
-		Email:       email,
-		PhoneNumber: phoneNumber,
-		Message:     notes, // Use the notes field as the message
+		UserID:  user.ID,
+		Name:    name,
+		Email:   email,
+		Message: notes, // Use the notes field as the message
 	}
 
 	if err := h.repo.CreateRecipient(context.Background(), recipient); err != nil {
@@ -230,16 +228,13 @@ func (h *RecipientsHandler) HandleEditRecipientForm(w http.ResponseWriter, r *ht
 
 	// Determine contact method based on available fields
 	contactMethod := "email"
-	if recipient.PhoneNumber != "" {
-		contactMethod = "phone"
-	}
+	// Note: We no longer use phone numbers, only email or telegram
 
 	// Convert to template-friendly format
 	recipientData := map[string]interface{}{
 		"ID":            recipient.ID,
 		"Name":          recipient.Name,
 		"Email":         recipient.Email,
-		"PhoneNumber":   recipient.PhoneNumber,
 		"Notes":         recipient.Message,
 		"CreatedAt":     recipient.CreatedAt,
 		"UpdatedAt":     recipient.UpdatedAt,
@@ -306,7 +301,6 @@ func (h *RecipientsHandler) HandleUpdateRecipient(w http.ResponseWriter, r *http
 	// Get form values
 	name := r.FormValue("name")
 	email := r.FormValue("email")
-	phoneNumber := r.FormValue("phoneNumber")
 	notes := r.FormValue("notes")
 
 	if name == "" || email == "" {
@@ -317,7 +311,6 @@ func (h *RecipientsHandler) HandleUpdateRecipient(w http.ResponseWriter, r *http
 	// Update the recipient
 	recipient.Name = name
 	recipient.Email = email
-	recipient.PhoneNumber = phoneNumber
 	recipient.Message = notes
 
 	if err := h.repo.UpdateRecipient(context.Background(), recipient); err != nil {

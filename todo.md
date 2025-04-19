@@ -21,6 +21,8 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 - [ ] Production deployment guide
 
 ## Features & Improvements
+- [x] We don't use phone method for contacting receipients, remove it from everywhere. we use only email for recipients
+- [ ] Add tracing of adding tg accounts and connecting/disconnecting to tg bot into audit log and show it in history page
 - [ ] Remove settings functionality - remove 2FA and complex notification settings, just use defaults from environment variables
 - [x] Show connected telegram bots in profile page
 - [x] Telegram bot on login, should determine it's login from bot.Me and write this info to database, then it's name should be shown in profile page in istruction to connect
@@ -43,7 +45,9 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 - [ ] implement key derivation for encrypting secrets from master password
 - [ ] understand how can we passover encrypted secrets to user since we have no way to know the master password. I think we have to create a key for every recipient, encode copy of the secret with this key, and provide key to user if switch is triggered. need to describe it well in diagram and security doc, brainstorm the idea and threats
 - [ ] Find a way to secure bind telegram handle to registered user, that somebody else couldn't do it, and by those prevent switch trigger. Expalin this threat in security doc, and explain the solution well
-- [ ] We don't use phone method for contacting receipients, remove it from everywhere. we use only email for recipients
+
+- [ ] Add unit tests for all components, targeting code coverage to 80%, and show coverage in github interface
+- [ ] Add integration tests for all components, targeting code coverage to 80%, and show coverage in github interface
 
 ## Next Steps
 1. Complete the scheduler implementation:

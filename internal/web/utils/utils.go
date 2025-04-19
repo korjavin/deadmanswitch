@@ -41,9 +41,9 @@ func HashPassword(password string) ([]byte, error) {
 }
 
 // DetermineContactMethod determines the contact method based on recipient data
-func DetermineContactMethod(phoneNumber, email string) string {
-	if phoneNumber != "" {
-		return "phone"
+func DetermineContactMethod(telegramUsername, email string) string {
+	if telegramUsername != "" {
+		return "telegram"
 	}
 	return "email" // Default contact method
 }

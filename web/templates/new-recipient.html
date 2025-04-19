@@ -42,19 +42,11 @@
                     <select name="contactMethod" id="contactMethod" class="form-control" required onchange="toggleContactFields()">
                         <option value="">-- Select Contact Method --</option>
                         <option value="email" {{ if and .Data.Recipient (eq .Data.Recipient.ContactMethod "email") }}selected{{ end }}>Email Only</option>
-                        <option value="phone" {{ if and .Data.Recipient (eq .Data.Recipient.ContactMethod "phone") }}selected{{ end }}>Email + Phone</option>
                         <option value="telegram" {{ if and .Data.Recipient (eq .Data.Recipient.ContactMethod "telegram") }}selected{{ end }}>Email + Telegram</option>
                     </select>
                 </div>
 
-                <div id="phoneFields" class="contact-fields" style="display: none;">
-                    <div class="form-group">
-                        <label for="phoneNumber" class="form-label">Phone Number</label>
-                        <input type="tel" name="phoneNumber" id="phoneNumber" class="form-control"
-                               value="{{ if .Data.Recipient }}{{ .Data.Recipient.PhoneNumber }}{{ end }}"
-                               placeholder="Include country code, e.g. +1 555 123 4567">
-                    </div>
-                </div>
+
 
                 <div id="telegramFields" class="contact-fields" style="display: none;">
                     <div class="form-group">
@@ -113,9 +105,7 @@ function toggleContactFields() {
     // Show fields based on selected contact method
     const contactMethod = document.getElementById('contactMethod').value;
 
-    if (contactMethod === 'phone') {
-        document.getElementById('phoneFields').style.display = 'block';
-    } else if (contactMethod === 'telegram') {
+    if (contactMethod === 'telegram') {
         document.getElementById('telegramFields').style.display = 'block';
     }
 }
