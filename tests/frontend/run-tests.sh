@@ -95,7 +95,14 @@ else
   echo "Running in local environment"
   # Locally, run directly
   cd "$PROJECT_ROOT/tests/frontend"
-  npx playwright test "$@"
+  # Check if we're running in a terminal
+  if [ -t 1 ]; then
+    # Running in a terminal, use the HTML reporter with UI
+    npx playwright test "$@"
+  else
+    # Not running in a terminal, use list and HTML reporters without UI
+    npx playwright test --reporter=list,html "$@"
+  fi
   TEST_EXIT_CODE=$?
 fi
 

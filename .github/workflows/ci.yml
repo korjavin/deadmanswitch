@@ -375,10 +375,10 @@ jobs:
 
           # First check if the application is ready using Playwright
           echo "Checking application readiness with Playwright..."
-          docker run --rm --network host -v $(pwd):/app -w /app mcr.microsoft.com/playwright:v1.42.0-jammy /bin/bash -c "cd /app/tests/frontend && npm install && node -e \"const { chromium } = require('@playwright/test'); (async () => { try { const browser = await chromium.launch(); const page = await browser.newPage(); console.log('Trying to access http://localhost:8082/login...'); await page.goto('http://localhost:8082/login', { timeout: 60000 }); console.log('Page loaded successfully!'); console.log('Page title:', await page.title()); console.log('Page content:', await page.content()); await page.screenshot({ path: '/app/app-ready.png' }); await browser.close(); process.exit(0); } catch (e) { console.error('Error:', e); process.exit(1); } })()\"" || true
+          docker run --rm --network host -v $(pwd):/app -w /app mcr.microsoft.com/playwright:v1.52.0-jammy /bin/bash -c "cd /app/tests/frontend && npm install && node -e \"const { chromium } = require('@playwright/test'); (async () => { try { const browser = await chromium.launch(); const page = await browser.newPage(); console.log('Trying to access http://localhost:8082/login...'); await page.goto('http://localhost:8082/login', { timeout: 60000 }); console.log('Page loaded successfully!'); console.log('Page title:', await page.title()); console.log('Page content:', await page.content()); await page.screenshot({ path: '/app/app-ready.png' }); await browser.close(); process.exit(0); } catch (e) { console.error('Error:', e); process.exit(1); } })()\"" || true
 
-          # Run the tests using the Playwright Docker image
-          docker run --rm --network host -v $(pwd):/app -w /app mcr.microsoft.com/playwright:v1.42.0-jammy /bin/bash -c "cd /app/tests/frontend && npm install && npx playwright test"
+          # Run the tests using the Playwright Docker image with CI-specific reporter
+          docker run --rm --network host -v $(pwd):/app -w /app mcr.microsoft.com/playwright:v1.52.0-jammy /bin/bash -c "cd /app/tests/frontend && npm install && npx playwright test --reporter=list,html"
           TEST_EXIT_CODE=$?
 
           # Stop the containers
