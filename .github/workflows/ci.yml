@@ -238,7 +238,7 @@ jobs:
             deadmanswitch:
               image: ghcr.io/${{ github.repository_owner }}/deadmanswitch:test
               ports:
-                - "8082:8080"
+                - "8082:8082"
               volumes:
                 - ./data:/app/data
               environment:
@@ -279,6 +279,25 @@ jobs:
             echo "No container found with name containing 'deadmanswitch'"
           fi
 
+          # Check if the application is listening on port 8082
+          echo "\nChecking if port 8082 is open:"
+          # Install netstat if needed
+          docker exec $CONTAINER_ID sh -c "command -v netstat || (apt-get update && apt-get install -y net-tools)" || true
+          docker exec $CONTAINER_ID sh -c "netstat -tulpn | grep 8082" || echo "Port 8082 not found in container"
+
+          # Check if the application is accessible from inside the container
+          echo "\nChecking if application is accessible from inside the container:"
+          docker exec $CONTAINER_ID sh -c "command -v curl || (apt-get update && apt-get install -y curl)" || true
+          docker exec $CONTAINER_ID sh -c "curl -v http://localhost:8082/login" || echo "Failed to access application from inside container"
+
+          # Check network connectivity from host to container
+          echo "\nChecking network connectivity to container:"
+          docker exec $CONTAINER_ID cat /etc/hosts
+          echo "\nHost network configuration:"
+          ip addr show
+          echo "\nHost routing table:"
+          ip route
+
           # Wait for the application to start
           echo "Waiting for application to start..."
           MAX_WAIT=120
@@ -302,11 +321,22 @@ jobs:
               sleep 5
             fi
 
-            # Try to connect to the application
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8082/login || echo "000")
-            if [ "$STATUS" = "200" ]; then
-              echo "Application is ready!"
+            # Try to connect to the application with more debugging
+            echo "Attempting to connect to http://localhost:8082/login..."
+            CURL_OUTPUT=$(curl -v http://localhost:8082/login 2>&1)
+            STATUS=$(echo "$CURL_OUTPUT" | grep -c "HTTP/1.1 200")
+
+            echo "Curl output:"
+            echo "$CURL_OUTPUT" | head -n 20
+
+            if [ "$STATUS" -gt 0 ]; then
+              echo "Application is ready! Got HTTP 200 response."
               break
+            else
+              echo "Application not ready yet. Status check failed."
+              # Try the root path as well
+              echo "Trying root path http://localhost:8082/..."
+              curl -v http://localhost:8082/ 2>&1 | head -n 20
             fi
 
             COUNTER=$((COUNTER+1))
@@ -343,6 +373,10 @@ jobs:
             docker ps
             exit 1
           fi
+
+          # First check if the application is ready using Playwright
+          echo "Checking application readiness with Playwright..."
+          docker run --rm --network host -v $(pwd):/app -w /app mcr.microsoft.com/playwright:v1.42.0-jammy /bin/bash -c "cd /app/tests/frontend && npm install && node -e \"const { chromium } = require('@playwright/test'); (async () => { try { const browser = await chromium.launch(); const page = await browser.newPage(); console.log('Trying to access http://localhost:8082/login...'); await page.goto('http://localhost:8082/login', { timeout: 30000 }); console.log('Page loaded successfully!'); console.log('Page title:', await page.title()); await page.screenshot({ path: '/app/app-ready.png' }); await browser.close(); process.exit(0); } catch (e) { console.error('Error:', e); process.exit(1); } })()\"" || true
 
           # Run the tests using the Playwright Docker image
           docker run --rm --network host -v $(pwd):/app -w /app mcr.microsoft.com/playwright:v1.42.0-jammy /bin/bash -c "cd /app/tests/frontend && npm install && npx playwright test"
