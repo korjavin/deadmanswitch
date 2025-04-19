@@ -181,6 +181,22 @@ func (r *SQLiteRepository) initialize() error {
 		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 	);
 
+	-- Passkeys table
+	CREATE TABLE IF NOT EXISTS passkeys (
+		id TEXT PRIMARY KEY,
+		user_id TEXT NOT NULL,
+		credential_id BLOB NOT NULL,
+		public_key BLOB NOT NULL,
+		aaguid BLOB,
+		sign_count INTEGER NOT NULL DEFAULT 0,
+		name TEXT NOT NULL,
+		created_at DATETIME NOT NULL,
+		last_used_at DATETIME NOT NULL,
+		transports TEXT,
+		attestation_type TEXT,
+		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+	);
+
 	-- Create indexes for performance
 	CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 	CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);
@@ -195,6 +211,8 @@ func (r *SQLiteRepository) initialize() error {
 	CREATE INDEX IF NOT EXISTS idx_audit_log_user_id ON audit_log(user_id);
 	CREATE INDEX IF NOT EXISTS idx_sessions_token ON sessions(token);
 	CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
+	CREATE INDEX IF NOT EXISTS idx_passkeys_user_id ON passkeys(user_id);
+	CREATE INDEX IF NOT EXISTS idx_passkeys_credential_id ON passkeys(credential_id);
 	`)
 
 	return err

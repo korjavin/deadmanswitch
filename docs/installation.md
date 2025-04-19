@@ -124,6 +124,7 @@ The application includes Caddy as a reverse proxy, which automatically obtains a
 2. **Regular Backups**: Backup the data volume regularly
 3. **Updates**: Keep the application updated with the latest security patches
 4. **Monitoring**: Set up monitoring for the container to ensure it's running
+5. **Authentication**: Configure secure authentication methods - see [Authentication Guide](./authentication.md) for details on setting up passkeys and 2FA
 
 ## Troubleshooting
 

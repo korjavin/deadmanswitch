@@ -6,7 +6,7 @@
     max-width: 480px;
     margin: 2rem auto;
   }
-  
+
   .auth-title {
     text-align: center;
     margin-bottom: 2rem;
@@ -23,15 +23,35 @@
 {{ define "content" }}
 <div class="auth-container">
   <h1 class="auth-title">Login</h1>
-  
+
+  <div class="card mb-4">
+    <div class="card-header">
+      <h2>Login with Passkey</h2>
+    </div>
+    <div class="card-body">
+      <p>Use your passkey to sign in without a password.</p>
+      <div class="form-group">
+        <label for="passkey-email" class="form-label">Email Address</label>
+        <input type="email" id="passkey-email" class="form-control" required>
+      </div>
+      <button id="passkey-login-button" class="btn btn-primary btn-block">
+        <i class="fas fa-key"></i> Sign in with Passkey
+      </button>
+      <div id="passkey-status" class="mt-3" style="display: none;"></div>
+    </div>
+  </div>
+
   <div class="card">
+    <div class="card-header">
+      <h2>Login with Password</h2>
+    </div>
     <div class="card-body">
       <form action="/login" method="POST">
         <div class="form-group">
           <label for="email" class="form-label">Email Address</label>
-          <input type="email" id="email" name="email" class="form-control" required autofocus>
+          <input type="email" id="email" name="email" class="form-control" required>
         </div>
-        
+
         <div class="form-group">
           <label for="password" class="form-label">Password</label>
           <div style="position: relative;">
@@ -39,22 +59,165 @@
             <button type="button" class="password-toggle" data-target="password" style="position: absolute; right: 10px; top: 5px; border: none; background: none; cursor: pointer;">Show</button>
           </div>
         </div>
-        
+
         <div class="form-group">
           <div class="form-check">
             <input type="checkbox" id="remember" name="remember" class="form-check-input">
             <label for="remember" class="form-check-label">Remember me</label>
           </div>
         </div>
-        
-        <button type="submit" class="btn btn-primary btn-block">Log In</button>
+
+        <button type="submit" class="btn btn-primary btn-block">Log In with Password</button>
       </form>
     </div>
   </div>
-  
+
   <div class="auth-options">
     <a href="/register">Don't have an account? Register</a>
     <a href="/forgot-password">Forgot password?</a>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const passkeyLoginButton = document.getElementById('passkey-login-button');
+    const passkeyEmailInput = document.getElementById('passkey-email');
+    const statusDiv = document.getElementById('passkey-status');
+
+    passkeyLoginButton.addEventListener('click', async function() {
+        const email = passkeyEmailInput.value;
+        if (!email) {
+            showStatus('error', 'Please enter your email address.');
+            return;
+        }
+
+        // Disable the button and show loading state
+        passkeyLoginButton.disabled = true;
+        passkeyLoginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
+
+        try {
+            // Begin login
+            const beginResponse = await fetch('/login/passkey/begin', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email: email })
+            });
+
+            if (!beginResponse.ok) {
+                throw new Error('Failed to begin login');
+            }
+
+            const credentialRequestOptions = await beginResponse.json();
+
+            // Convert base64 strings to ArrayBuffers
+            credentialRequestOptions.publicKey.challenge = base64URLToArrayBuffer(credentialRequestOptions.publicKey.challenge);
+
+            if (credentialRequestOptions.publicKey.allowCredentials) {
+                for (let i = 0; i < credentialRequestOptions.publicKey.allowCredentials.length; i++) {
+                    credentialRequestOptions.publicKey.allowCredentials[i].id = base64URLToArrayBuffer(
+                        credentialRequestOptions.publicKey.allowCredentials[i].id
+                    );
+                }
+            }
+
+            // Get credential
+            showStatus('info', 'Please follow your browser\'s instructions to sign in with your passkey...');
+            const credential = await navigator.credentials.get({
+                publicKey: credentialRequestOptions.publicKey
+            });
+
+            // Prepare credential for sending to server
+            const credentialResponse = {
+                id: credential.id,
+                rawId: arrayBufferToBase64URL(credential.rawId),
+                type: credential.type,
+                response: {
+                    clientDataJSON: arrayBufferToBase64URL(credential.response.clientDataJSON),
+                    authenticatorData: arrayBufferToBase64URL(credential.response.authenticatorData),
+                    signature: arrayBufferToBase64URL(credential.response.signature),
+                    userHandle: credential.response.userHandle ? arrayBufferToBase64URL(credential.response.userHandle) : null
+                }
+            };
+
+            // Finish login
+            const finishResponse = await fetch('/login/passkey/finish', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    credential: credentialResponse,
+                    email: email
+                })
+            });
+
+            if (!finishResponse.ok) {
+                throw new Error('Failed to complete login');
+            }
+
+            const result = await finishResponse.json();
+
+            if (result.success) {
+                showStatus('success', 'Login successful! Redirecting...');
+                window.location.href = result.redirect || '/dashboard';
+            } else {
+                throw new Error(result.message || 'Login failed');
+            }
+
+        } catch (error) {
+            console.error('Error logging in with passkey:', error);
+            showStatus('error', 'Error logging in with passkey: ' + error.message);
+
+            // Re-enable the button
+            passkeyLoginButton.disabled = false;
+            passkeyLoginButton.innerHTML = '<i class="fas fa-key"></i> Sign in with Passkey';
+        }
+    });
+
+    function showStatus(type, message) {
+        statusDiv.style.display = 'block';
+        statusDiv.className = 'alert mt-3';
+
+        if (type === 'error') {
+            statusDiv.className += ' alert-danger';
+        } else if (type === 'success') {
+            statusDiv.className += ' alert-success';
+        } else {
+            statusDiv.className += ' alert-info';
+        }
+
+        statusDiv.textContent = message;
+    }
+
+    // Helper functions for ArrayBuffer <-> Base64URL conversion
+    function base64URLToArrayBuffer(base64URL) {
+        const base64 = base64URL.replace(/-/g, '+').replace(/_/g, '/');
+        const padLen = (4 - (base64.length % 4)) % 4;
+        const padded = base64 + '='.repeat(padLen);
+        const binary = atob(padded);
+        const buffer = new ArrayBuffer(binary.length);
+        const view = new Uint8Array(buffer);
+
+        for (let i = 0; i < binary.length; i++) {
+            view[i] = binary.charCodeAt(i);
+        }
+
+        return buffer;
+    }
+
+    function arrayBufferToBase64URL(buffer) {
+        const bytes = new Uint8Array(buffer);
+        let binary = '';
+
+        for (let i = 0; i < bytes.byteLength; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+
+        const base64 = btoa(binary);
+        return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    }
+});
+</script>
 {{ end }}

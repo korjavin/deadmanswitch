@@ -38,6 +38,7 @@ This project will always remain free and open source. If you find it valuable, p
 - **Flexible recipient management** - Assign different secrets to different recipients
 - **Dual verification methods** - Choose between Telegram and email for check-ins
 - **Customizable schedules** - Configure ping frequency and response deadlines
+- **Modern authentication** - Support for passwords, 2FA, and WebAuthn passkeys
 - **Simple web interface** - Easily manage your secrets and recipients
 - **Self-contained Docker image** - Simple deployment with automatic HTTPS
 - **Complete audit logs** - Track all system activities
@@ -56,7 +57,7 @@ For more detailed instructions, see the [Installation Guide](./docs/installation
 
 > ⚠️ **IMPORTANT**: The cryptography implementation is still under development. The current version uses placeholder encryption keys and simplified methods that are NOT suitable for production use.
 
-Security is the highest priority for this application. See our [Security Documentation](./docs/security.md) for details on the encryption methods and threat model.
+Security is the highest priority for this application. See our [Security Documentation](./docs/security.md) for details on the encryption methods and threat model, and our [Authentication Guide](./docs/authentication.md) for information on secure login options including passkeys.
 
 ## License
 

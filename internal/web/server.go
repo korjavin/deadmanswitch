@@ -10,10 +10,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/korjavin/deadmanswitch/internal/auth"
 	"github.com/korjavin/deadmanswitch/internal/config"
 	"github.com/korjavin/deadmanswitch/internal/email"
 	"github.com/korjavin/deadmanswitch/internal/models"
@@ -45,6 +47,7 @@ type Server struct {
 		settings   *handlers.SettingsHandler
 		history    *handlers.HistoryHandler
 		twofa      *handlers.TwoFAHandler
+		passkey    *handlers.PasskeyHandler
 	}
 }
 
@@ -65,6 +68,36 @@ func NewServer(
 		router:      chi.NewRouter(),
 	}
 
+	// Initialize WebAuthn service
+	// Determine if we're in a development environment (localhost)
+	isLocalhost := strings.Contains(cfg.BaseDomain, "localhost")
+
+	// Set the origin based on environment
+	var origin string
+	if isLocalhost {
+		// For localhost development, use HTTP and include the port
+		// Note: We need to use the same origin that the browser sends
+		// The browser is accessing the app at http://localhost:8082
+		origin = "http://localhost:8082"
+		log.Printf("Using development WebAuthn origin: %s", origin)
+	} else {
+		// For production, use HTTPS without port
+		origin = fmt.Sprintf("https://%s", cfg.BaseDomain)
+		log.Printf("Using production WebAuthn origin: %s", origin)
+	}
+
+	webAuthnConfig := auth.WebAuthnConfig{
+		RPDisplayName: "Dead Man's Switch",
+		RPID:          cfg.BaseDomain,
+		RPOrigin:      origin,
+	}
+	webAuthnService, err := auth.NewWebAuthnService(webAuthnConfig, repo)
+	if err != nil {
+		log.Printf("Warning: Failed to create WebAuthn service: %v", err)
+		// Continue without WebAuthn support
+		webAuthnService = nil
+	}
+
 	// Initialize handlers
 	server.handlers.index = handlers.NewIndexHandler()
 	server.handlers.auth = handlers.NewAuthHandler(repo, emailClient)
@@ -76,6 +109,7 @@ func NewServer(
 	server.handlers.settings = handlers.NewSettingsHandler()
 	server.handlers.history = handlers.NewHistoryHandler(repo)
 	server.handlers.twofa = handlers.NewTwoFAHandler(repo)
+	server.handlers.passkey = handlers.NewPasskeyHandler(repo, webAuthnService)
 
 	// Set up routes
 	server.setupRoutes()
@@ -132,6 +166,10 @@ func (s *Server) setupRoutes() {
 		r.Post("/login", s.handlers.auth.HandleLogin)
 		r.Get("/register", s.handlers.auth.HandleRegisterForm)
 		r.Post("/register", s.handlers.auth.HandleRegister)
+
+		// Passkey authentication
+		r.Post("/login/passkey/begin", s.handlers.passkey.HandleBeginLogin)
+		r.Post("/login/passkey/finish", s.handlers.passkey.HandleFinishLogin)
 
 		// Recipient confirmation
 		r.Get("/confirm/{code}", s.handlers.recipients.HandleConfirmRecipient)
@@ -218,6 +256,12 @@ func (s *Server) setupRoutes() {
 		r.Get("/2fa/setup", s.handlers.twofa.HandleSetup)
 		r.Post("/2fa/verify", s.handlers.twofa.HandleVerify)
 		r.Post("/2fa/disable", s.handlers.twofa.HandleDisable)
+
+		// Passkey management
+		r.Get("/profile/passkeys", s.handlers.passkey.HandlePasskeyManagement)
+		r.Post("/profile/passkeys/register/begin", s.handlers.passkey.HandleBeginRegistration)
+		r.Post("/profile/passkeys/register/finish", s.handlers.passkey.HandleFinishRegistration)
+		r.Post("/profile/passkeys/{id}", s.handlers.passkey.HandleDeletePasskey)
 
 		// History
 		r.Get("/history", s.handlers.history.HandleHistory)

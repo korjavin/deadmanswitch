@@ -86,13 +86,48 @@ The Dead Man's Switch application uses a layered encryption approach to protect 
    - Keep the application and its dependencies up to date
    - Monitor security advisories
 
+## Authentication Security
+
+### Password Authentication
+
+The application supports traditional password-based authentication with the following security measures:
+
+1. **Password Hashing** - Passwords are hashed using Argon2id with secure parameters
+2. **Rate Limiting** - Failed login attempts are rate-limited to prevent brute force attacks
+3. **Session Management** - Secure HTTP-only cookies with appropriate flags
+
+### Two-Factor Authentication (2FA)
+
+Users can enable 2FA using TOTP (Time-based One-Time Password) for additional security:
+
+1. **TOTP Implementation** - Compatible with standard authenticator apps (Google Authenticator, Authy, etc.)
+2. **Secure Backup Codes** - Recovery codes provided for account recovery
+
+### WebAuthn Passkeys
+
+The application supports WebAuthn passkeys as a phishing-resistant authentication method:
+
+1. **Implementation** - Uses the go-webauthn/webauthn library for server-side WebAuthn operations
+2. **Storage** - Passkey data is stored securely in the database with the following information:
+   - Credential ID: Unique identifier for the credential (stored as binary)
+   - Public Key: The public key component used for verification (stored as binary)
+   - User ID: Association with the user account
+   - Metadata: Name, creation time, last used time
+   - Sign Count: Counter to prevent cloning attacks
+   - AAGUID: Authenticator Attestation GUID identifying the authenticator model
+3. **Security Benefits**:
+   - Phishing resistance - credentials are bound to the origin
+   - No shared secrets - private keys never leave the authenticator
+   - Biometric or PIN protection on the device side
+   - No password transmission over the network
+
 ## Current Implementation Status
 
 The current version of the application has the following limitations:
 
 1. **Hardcoded Master Key** - A static, hardcoded master key is used for development purposes
 2. **Simplified Key Management** - The full key derivation and management system is not yet implemented
-3. **Limited Authentication** - Password security features are partially implemented
+3. **Limited Authentication** - Some password security features are partially implemented
 4. **Incomplete Audit Logging** - Not all security events are properly logged and monitored
 
 These issues will be addressed before the first stable release. The application should only be used in isolated, trusted environments for testing and development purposes until these issues are resolved.

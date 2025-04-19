@@ -70,6 +70,16 @@ type Repository interface {
 	CreateAuditLog(ctx context.Context, log *models.AuditLog) error
 	ListAuditLogsByUserID(ctx context.Context, userID string) ([]*models.AuditLog, error)
 
+	// Passkey operations
+	CreatePasskey(ctx context.Context, passkey *models.Passkey) error
+	GetPasskeyByID(ctx context.Context, id string) (*models.Passkey, error)
+	GetPasskeyByCredentialID(ctx context.Context, credentialID []byte) (*models.Passkey, error)
+	ListPasskeysByUserID(ctx context.Context, userID string) ([]*models.Passkey, error)
+	ListPasskeys(ctx context.Context) ([]*models.Passkey, error)
+	UpdatePasskey(ctx context.Context, passkey *models.Passkey) error
+	DeletePasskey(ctx context.Context, id string) error
+	DeletePasskeysByUserID(ctx context.Context, userID string) error
+
 	// Session operations
 	CreateSession(ctx context.Context, session *models.Session) error
 	GetSessionByToken(ctx context.Context, token string) (*models.Session, error)

@@ -26,7 +26,7 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 - [ ] Remove settings functionality - remove 2FA and complex notification settings, just use defaults from environment variables
 - [x] Show connected telegram bots in profile page
 - [x] Telegram bot on login, should determine it's login from bot.Me and write this info to database, then it's name should be shown in profile page in istruction to connect
-- [ ] On succeful tg bot connect, we store tg user id and username in database, and show this connection on profile page
+- [x] On succeful tg bot connect, we store tg user id and username in database, and show this connection on profile page
 - [ ] Implement profile update functionality, and allow user to disconect tg account from profile page, before disconecting message to tg user should be sent to warn user
 - [ ] After connecting telegram bot, schedule sending pings with tg bot also, make it configurable in profile page
 - [ ] When user logins send message to tg bot first if it's connected, then to email with explanation that someone just logged in and a link that can immediately invalidate all the sessions if user is not recognizing this activity.
@@ -42,13 +42,16 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 - [x] Add recipient confirmation functionality
 - [ ] Fix "in real implementation" TODOs in code
 - [x] Implement 2FA with Google Authenticator or similar for login
-- [ ] Implement passkeys to login, user can create up to 5 passkeys to his account
+- [x] Implement passkeys to login, user can create up to 5 passkeys to his account (using go-webauthn/webauthn library)
+- [ ] Research how can we let user login with passkey without make him to enter his email, and implement it if possilbe
 - [ ] implement key derivation for encrypting secrets from master password
 - [ ] Add ability to register github handle to user account, and then scheduler can check if user was active recently on github, and if yes reschedule pings on tg/email, as we know that user is okay. There we should think of some interface of ActivityProvider, as we are going to have many of them. Describe this well in userguide and in readme
 - [ ] Similar to github, add ability to subscribe to activitypub account and implement the same logic
 - [ ] similar to github and activitypub, add ability to monitor telegram channel
 - [ ] understand how can we passover encrypted secrets to user since we have no way to know the master password. I think we have to create a key for every recipient, encode copy of the secret with this key, and provide key to user if switch is triggered. need to describe it well in diagram and security doc, brainstorm the idea and threats
 - [ ] Find a way to secure bind telegram handle to registered user, that somebody else couldn't do it, and by those prevent switch trigger. Expalin this threat in security doc, and explain the solution well
+- [ ] Add golangci-lint and fix all the warnings
+- [ ] Add some security linters and fix the warnings
 
 - [ ] Add unit tests for all components, targeting code coverage to 80%, and show coverage in github interface
 - [ ] Add integration tests for all components, targeting code coverage to 80%, and show coverage in github interface
