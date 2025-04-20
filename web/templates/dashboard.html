@@ -56,6 +56,29 @@
     box-shadow: 0 0 8px var(--danger-color);
   }
 
+  /* Status details styling */
+  .status-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-gap: 1rem;
+  }
+
+  .status-detail-item {
+    padding: 0.75rem;
+    border-radius: 4px;
+    background-color: rgba(var(--primary-color-rgb), 0.05);
+  }
+
+  .detail-label {
+    font-size: 0.85rem;
+    color: var(--gray-color);
+    margin-bottom: 0.25rem;
+  }
+
+  .detail-value {
+    font-weight: 500;
+  }
+
   .timeline {
     position: relative;
     max-width: 600px;
@@ -119,6 +142,19 @@
     color: var(--gray-color);
     font-size: 0.85rem;
   }
+
+  /* Card header styling */
+  .card-header {
+    background-color: rgba(var(--primary-color-rgb), 0.05);
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid rgba(var(--primary-color-rgb), 0.1);
+  }
+
+  .card-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 500;
+  }
 </style>
 {{ end }}
 
@@ -133,22 +169,89 @@
   <div class="card-body">
     {{ if eq .Data.Status "active" }}
       <h2><span class="status-indicator active"></span> System Active</h2>
-      <p>Your dead man's switch is active and all systems are operational.</p>
+      <p>{{ .Data.StatusMessage }}</p>
       <p>Next check-in required: <strong>{{ .Data.NextCheckIn }}</strong></p>
       <button id="checkInButton" class="btn btn-primary">Check In Now</button>
     {{ else if eq .Data.Status "caution" }}
       <h2><span class="status-indicator caution"></span> Action Required</h2>
-      <p>Your check-in deadline is approaching. Please check in to keep your switch active.</p>
-      <p>Check-in deadline: <strong>{{ .Data.NextCheckIn }}</strong></p>
+      <p>{{ .Data.StatusMessage }}</p>
+      <p>Check-in deadline: <strong>{{ .Data.Deadline }}</strong></p>
+      <p>Time remaining: <strong>{{ .Data.TimeRemaining }}</strong></p>
       <button id="checkInButton" class="btn btn-warning">Check In Now</button>
     {{ else }}
       <h2><span class="status-indicator danger"></span> Critical Action Required</h2>
-      <p>Your check-in deadline has passed! Your switch will trigger soon if you don't check in.</p>
+      <p>{{ .Data.StatusMessage }}</p>
       <p>Trigger scheduled for: <strong>{{ .Data.TriggerTime }}</strong></p>
       <button id="checkInButton" class="btn btn-danger">Check In Now</button>
     {{ end }}
   </div>
 </div>
+
+<!-- Detailed Status Information -->
+<div class="card" style="margin-top: 1.5rem;">
+  <div class="card-header">
+    <h3>Check-in Status Details</h3>
+  </div>
+  <div class="card-body">
+    <div class="status-details">
+      <div class="status-detail-item">
+        <div class="detail-label">Last Activity:</div>
+        <div class="detail-value">{{ .Data.LastActivity }}</div>
+      </div>
+      <div class="status-detail-item">
+        <div class="detail-label">Next Check-in:</div>
+        <div class="detail-value">{{ .Data.NextCheckIn }}</div>
+      </div>
+      <div class="status-detail-item">
+        <div class="detail-label">Deadline:</div>
+        <div class="detail-value">{{ .Data.Deadline }}</div>
+      </div>
+      <div class="status-detail-item">
+        <div class="detail-label">Check-in Frequency:</div>
+        <div class="detail-value">Every {{ .Data.PingFrequency }} days</div>
+      </div>
+      <div class="status-detail-item">
+        <div class="detail-label">Grace Period:</div>
+        <div class="detail-value">{{ .Data.PingDeadline }} days</div>
+      </div>
+      <div class="status-detail-item">
+        <div class="detail-label">Notification Method:</div>
+        <div class="detail-value">{{ .Data.PingMethod }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Latest Ping Information -->
+{{ if .Data.LatestPing.Time }}
+<div class="card" style="margin-top: 1.5rem;">
+  <div class="card-header">
+    <h3>Latest Check-in Reminder</h3>
+  </div>
+  <div class="card-body">
+    <div class="status-details">
+      <div class="status-detail-item">
+        <div class="detail-label">Sent:</div>
+        <div class="detail-value">{{ .Data.LatestPing.Time }}</div>
+      </div>
+      <div class="status-detail-item">
+        <div class="detail-label">Method:</div>
+        <div class="detail-value">{{ .Data.LatestPing.Method }}</div>
+      </div>
+      <div class="status-detail-item">
+        <div class="detail-label">Status:</div>
+        <div class="detail-value">{{ .Data.LatestPing.Status }}</div>
+      </div>
+      {{ if .Data.LatestPing.RespondedAt }}
+      <div class="status-detail-item">
+        <div class="detail-label">Responded:</div>
+        <div class="detail-value">{{ .Data.LatestPing.RespondedAt }}</div>
+      </div>
+      {{ end }}
+    </div>
+  </div>
+</div>
+{{ end }}
 
 <!-- Statistics -->
 <div class="dashboard-grid">
@@ -214,7 +317,8 @@ document.addEventListener('DOMContentLoaded', function() {
           // Show success message and reload page
           const alertHTML = `
             <div class="alert alert-success">
-              Check-in successful! Your new check-in deadline is ${data.nextCheckIn}.
+              Check-in successful! Your next check-in is due by ${data.nextCheckIn}.
+              <br>Your switch will trigger on ${data.deadline} if you don't check in.
               <button type="button" class="alert-close">&times;</button>
             </div>
           `;

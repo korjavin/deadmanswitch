@@ -5,16 +5,67 @@
     <div class="header-actions">
         <h1>Account Settings</h1>
     </div>
-    
+
     <div class="card">
         <div class="card-header">
-            <h3>Notification Settings</h3>
+            <h3>Dead Man's Switch Settings</h3>
         </div>
         <div class="card-body">
-            <form action="/settings/notifications" method="POST">
+            <form action="/settings/deadmanswitch" method="POST">
+                <div class="form-group">
+                    <h4>Check-in Schedule</h4>
+                    <p>How often do you want to check in to keep your switch from triggering?</p>
+
+                    <select name="pingFrequency" id="pingFrequency" class="form-control">
+                        <option value="1" {{ if eq .Data.User.PingFrequency 1 }}selected{{ end }}>Daily</option>
+                        <option value="3" {{ if eq .Data.User.PingFrequency 3 }}selected{{ end }}>Every 3 days</option>
+                        <option value="7" {{ if eq .Data.User.PingFrequency 7 }}selected{{ end }}>Weekly</option>
+                        <option value="14" {{ if eq .Data.User.PingFrequency 14 }}selected{{ end }}>Every 2 weeks</option>
+                        <option value="30" {{ if eq .Data.User.PingFrequency 30 }}selected{{ end }}>Monthly</option>
+                    </select>
+                    <small class="form-help">This is how often you need to show activity or check in manually.</small>
+                </div>
+
+                <div class="form-group">
+                    <h4>Grace Period</h4>
+                    <p>How long after missing a check-in should the system wait before triggering?</p>
+
+                    <select name="pingDeadline" id="pingDeadline" class="form-control">
+                        <option value="3" {{ if eq .Data.User.PingDeadline 3 }}selected{{ end }}>3 days</option>
+                        <option value="7" {{ if eq .Data.User.PingDeadline 7 }}selected{{ end }}>1 week</option>
+                        <option value="14" {{ if eq .Data.User.PingDeadline 14 }}selected{{ end }}>2 weeks</option>
+                        <option value="21" {{ if eq .Data.User.PingDeadline 21 }}selected{{ end }}>3 weeks</option>
+                        <option value="30" {{ if eq .Data.User.PingDeadline 30 }}selected{{ end }}>1 month</option>
+                    </select>
+                    <small class="form-help">This is the total time since your last activity before the switch triggers.</small>
+                </div>
+
+                <div class="form-group">
+                    <h4>Notification Method</h4>
+                    <p>How would you like to receive check-in reminders?</p>
+
+                    <select name="pingMethod" id="pingMethod" class="form-control">
+                        <option value="email" {{ if eq .Data.User.PingMethod "email" }}selected{{ end }}>Email only</option>
+                        <option value="telegram" {{ if eq .Data.User.PingMethod "telegram" }}selected{{ end }}>Telegram only</option>
+                        <option value="both" {{ if eq .Data.User.PingMethod "both" }}selected{{ end }}>Both Email and Telegram</option>
+                    </select>
+                    <small class="form-help">To use Telegram, you must connect your Telegram account in your profile.</small>
+                </div>
+
+                <div class="form-group">
+                    <div class="form-check">
+                        <input type="checkbox" id="pingingEnabled" name="pingingEnabled" class="form-check-input"
+                               {{ if .Data.User.PingingEnabled }}checked{{ end }}>
+                        <label for="pingingEnabled" class="form-check-label">
+                            Enable check-in reminders and deadlines
+                        </label>
+                    </div>
+                    <small class="form-help">If disabled, the system will not send reminders or trigger the switch.</small>
+                </div>
+
                 <div class="form-group">
                     <h4>Email Notifications</h4>
-                    
+
                     <div class="form-check">
                         <input type="checkbox" id="emailCheckIn" name="notifications[]" value="email_checkin" class="form-check-input"
                                {{ if .Data.Settings.EmailCheckIn }}checked{{ end }}>
@@ -22,7 +73,7 @@
                             Send check-in reminders via email
                         </label>
                     </div>
-                    
+
                     <div class="form-check">
                         <input type="checkbox" id="emailWarning" name="notifications[]" value="email_warning" class="form-check-input"
                                {{ if .Data.Settings.EmailWarning }}checked{{ end }}>
@@ -31,41 +82,14 @@
                         </label>
                     </div>
                 </div>
-                
+
                 <div class="form-group">
-                    <h4>Check-in Schedule</h4>
-                    <p>How often do you want to check in to keep your switch from triggering?</p>
-                    
-                    <select name="checkInInterval" id="checkInInterval" class="form-control">
-                        <option value="7" {{ if eq .Data.Settings.CheckInInterval 7 }}selected{{ end }}>Weekly</option>
-                        <option value="14" {{ if eq .Data.Settings.CheckInInterval 14 }}selected{{ end }}>Every 2 weeks</option>
-                        <option value="30" {{ if eq .Data.Settings.CheckInInterval 30 }}selected{{ end }}>Monthly</option>
-                        <option value="90" {{ if eq .Data.Settings.CheckInInterval 90 }}selected{{ end }}>Quarterly</option>
-                        <option value="180" {{ if eq .Data.Settings.CheckInInterval 180 }}selected{{ end }}>Every 6 months</option>
-                        <option value="365" {{ if eq .Data.Settings.CheckInInterval 365 }}selected{{ end }}>Yearly</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <h4>Grace Period</h4>
-                    <p>How long after missing a check-in should the system wait before triggering?</p>
-                    
-                    <select name="gracePeriod" id="gracePeriod" class="form-control">
-                        <option value="1" {{ if eq .Data.Settings.GracePeriod 1 }}selected{{ end }}>1 day</option>
-                        <option value="3" {{ if eq .Data.Settings.GracePeriod 3 }}selected{{ end }}>3 days</option>
-                        <option value="7" {{ if eq .Data.Settings.GracePeriod 7 }}selected{{ end }}>1 week</option>
-                        <option value="14" {{ if eq .Data.Settings.GracePeriod 14 }}selected{{ end }}>2 weeks</option>
-                        <option value="30" {{ if eq .Data.Settings.GracePeriod 30 }}selected{{ end }}>1 month</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary">Save Notification Settings</button>
+                    <button type="submit" class="btn btn-primary">Save Dead Man's Switch Settings</button>
                 </div>
             </form>
         </div>
     </div>
-    
+
     <div class="card" style="margin-top: 2rem;">
         <div class="card-header">
             <h3>Security Settings</h3>
@@ -74,7 +98,7 @@
             <form action="/settings/security" method="POST">
                 <div class="form-group">
                     <h4>Two-Factor Authentication</h4>
-                    
+
                     <div class="form-check">
                         <input type="checkbox" id="enable2fa" name="enable2fa" class="form-check-input"
                                {{ if .Data.Settings.TwoFactorEnabled }}checked{{ end }}>
@@ -82,14 +106,14 @@
                             Enable two-factor authentication
                         </label>
                     </div>
-                    
+
                     {{ if not .Data.Settings.TwoFactorEnabled }}
                         <div class="setup-2fa" style="margin-top: 1rem; display: none;">
                             <p>Scan this QR code with your authenticator app:</p>
                             <div class="qr-placeholder" style="width: 200px; height: 200px; background-color: #f0f0f0; display: flex; align-items: center; justify-content: center;">
                                 QR Code Placeholder
                             </div>
-                            
+
                             <div class="form-group" style="margin-top: 1rem;">
                                 <label for="verificationCode" class="form-label">Verification Code</label>
                                 <input type="text" name="verificationCode" id="verificationCode" class="form-control" placeholder="Enter the 6-digit code">
@@ -102,14 +126,14 @@
                         </div>
                     {{ end }}
                 </div>
-                
+
                 <div class="form-group">
                     <button type="submit" class="btn btn-primary">Save Security Settings</button>
                 </div>
             </form>
         </div>
     </div>
-    
+
     <div class="card danger-zone" style="margin-top: 2rem; border-color: var(--danger-color);">
         <div class="card-header" style="background-color: rgba(var(--danger-color-rgb), 0.1); color: var(--danger-color);">
             <h3>Danger Zone</h3>
@@ -142,6 +166,35 @@
 .form-check {
     margin-bottom: 10px;
 }
+
+.form-help {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--gray-color);
+    font-size: 0.85rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group h4 {
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.card-header {
+    background-color: rgba(var(--primary-color-rgb), 0.05);
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid rgba(var(--primary-color-rgb), 0.1);
+}
+
+.card-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 500;
+}
 </style>
 {{ end }}
 
@@ -151,13 +204,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Toggle 2FA setup section
     const enable2faCheckbox = document.getElementById('enable2fa');
     const setup2faSection = document.querySelector('.setup-2fa');
-    
+
     if (enable2faCheckbox && setup2faSection) {
         enable2faCheckbox.addEventListener('change', function() {
             setup2faSection.style.display = this.checked ? 'block' : 'none';
         });
     }
-    
+
     // Delete account confirmation
     const deleteAccountButton = document.getElementById('deleteAccount');
     if (deleteAccountButton) {
@@ -177,7 +230,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
+
     // Disable 2FA confirmation
     const disable2faButton = document.getElementById('disable2fa');
     if (disable2faButton) {

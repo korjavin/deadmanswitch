@@ -82,11 +82,20 @@ func (h *APIHandler) HandleCheckIn(w http.ResponseWriter, r *http.Request) {
 		// Non-fatal error, continue
 	}
 
+	// Format the next check-in time for display
+	nextCheckInFormatted := user.NextScheduledPing.Format("Jan 2, 2006 15:04 MST")
+
+	// Calculate and format the deadline
+	deadline := user.LastActivity.AddDate(0, 0, user.PingDeadline)
+	deadlineFormatted := deadline.Format("Jan 2, 2006 15:04 MST")
+
 	// Return success response
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success":       true,
 		"message":       "Check-in successful",
 		"next_check_in": user.NextScheduledPing.Format(time.RFC3339),
+		"nextCheckIn":   nextCheckInFormatted,
+		"deadline":      deadlineFormatted,
 	})
 }

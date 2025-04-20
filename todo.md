@@ -16,6 +16,7 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 
 ## Features & Improvements
 - [ ] Remove user name everywhere from webUI and database as we are not going to use it
+- [ ] There are multiple time/duration related constants hardocded, make them configurable, and if not neccesary to have it configurable at least, make it defined once as a constant with a good name.
 - [ ] Move all the email templates from the code to dedicated templates folder
 - [x] We don't use phone method for contacting receipients, remove it from everywhere. we use only email for recipients
 - [ ] Add tracing of adding tg accounts and connecting/disconnecting to tg bot into audit log and show it in history page
