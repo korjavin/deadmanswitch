@@ -119,6 +119,15 @@ func (s *Scheduler) registerTasks() error {
 		Handler:    s.pingTask,
 	})
 
+	// Task for sending escalating reminders as deadlines approach
+	s.AddTask(&Task{
+		ID:         uuid.New().String(),
+		Name:       "ReminderTask",
+		Duration:   30 * time.Minute, // Check for approaching deadlines every 30 minutes
+		RunOnStart: true,
+		Handler:    s.reminderTask,
+	})
+
 	// Task for checking expired pings
 	s.AddTask(&Task{
 		ID:         uuid.New().String(),
@@ -339,8 +348,106 @@ func (s *Scheduler) deadSwitchTask(ctx context.Context) error {
 	log.Printf("Found %d users with expired pings", len(users))
 
 	for _, user := range users {
-		if err := s.deliverSecrets(ctx, user); err != nil {
-			log.Printf("Failed to deliver secrets for user %s: %v", user.ID, err)
+		// Perform a final check of all activity sources before triggering the switch
+		log.Printf("Performing final activity check for user %s before triggering switch", user.ID)
+
+		// Check if the user has been active on any external platform
+		active := false
+
+		// Check configured activity providers
+		configuredProviders := s.activityRegistry.GetConfiguredProviders(user)
+		if len(configuredProviders) > 0 {
+			activityDetected, err := s.activityRegistry.CheckAnyActivity(ctx, user, user.LastActivity)
+			if err != nil {
+				log.Printf("Error checking external activity for user %s: %v", user.ID, err)
+			} else if activityDetected {
+				active = true
+				latestActivity := s.activityRegistry.GetLatestActivityTime(ctx, user)
+				log.Printf("User %s has been active on external platform at %s, cancelling switch trigger",
+					user.ID, latestActivity.Format(time.RFC3339))
+
+				// Update the user's last activity time
+				user.LastActivity = latestActivity
+
+				// Reschedule the next ping based on the updated activity time
+				user.NextScheduledPing = latestActivity.Add(time.Duration(user.PingFrequency) * 24 * time.Hour)
+
+				if err := s.repo.UpdateUser(ctx, user); err != nil {
+					log.Printf("Failed to update user after detecting external activity: %v", err)
+				}
+
+				// Create audit log entry
+				auditLog := &models.AuditLog{
+					ID:        uuid.New().String(),
+					UserID:    user.ID,
+					Action:    "switch_trigger_cancelled",
+					Timestamp: time.Now().UTC(),
+					Details: fmt.Sprintf("Switch trigger cancelled due to activity detected on external platform at %s",
+						latestActivity.Format(time.RFC3339)),
+				}
+
+				if err := s.repo.CreateAuditLog(ctx, auditLog); err != nil {
+					log.Printf("Failed to create audit log for switch cancellation: %v", err)
+				}
+			}
+		}
+
+		// Check for recent ping responses
+		latestPing, err := s.repo.GetLatestPingByUserID(ctx, user.ID)
+		if err == nil && latestPing != nil && latestPing.Status == "responded" {
+			// User has responded to a ping, update their last activity
+			if latestPing.RespondedAt != nil && latestPing.RespondedAt.After(user.LastActivity) {
+				active = true
+				log.Printf("User %s has responded to a ping at %s, cancelling switch trigger",
+					user.ID, latestPing.RespondedAt.Format(time.RFC3339))
+
+				// Update the user's last activity time
+				user.LastActivity = *latestPing.RespondedAt
+
+				// Reschedule the next ping based on the updated activity time
+				user.NextScheduledPing = user.LastActivity.Add(time.Duration(user.PingFrequency) * 24 * time.Hour)
+
+				if err := s.repo.UpdateUser(ctx, user); err != nil {
+					log.Printf("Failed to update user after detecting ping response: %v", err)
+				}
+
+				// Create audit log entry
+				auditLog := &models.AuditLog{
+					ID:        uuid.New().String(),
+					UserID:    user.ID,
+					Action:    "switch_trigger_cancelled",
+					Timestamp: time.Now().UTC(),
+					Details: fmt.Sprintf("Switch trigger cancelled due to ping response detected at %s",
+						latestPing.RespondedAt.Format(time.RFC3339)),
+				}
+
+				if err := s.repo.CreateAuditLog(ctx, auditLog); err != nil {
+					log.Printf("Failed to create audit log for switch cancellation: %v", err)
+				}
+			}
+		}
+
+		// If no activity was detected, trigger the switch
+		if !active {
+			log.Printf("No activity detected for user %s, triggering switch", user.ID)
+
+			// Create audit log entry for switch trigger
+			auditLog := &models.AuditLog{
+				ID:        uuid.New().String(),
+				UserID:    user.ID,
+				Action:    "switch_triggered",
+				Timestamp: time.Now().UTC(),
+				Details:   fmt.Sprintf("Dead man's switch triggered after no activity for %d days", user.PingDeadline),
+			}
+
+			if err := s.repo.CreateAuditLog(ctx, auditLog); err != nil {
+				log.Printf("Failed to create audit log for switch trigger: %v", err)
+			}
+
+			// Deliver secrets
+			if err := s.deliverSecrets(ctx, user); err != nil {
+				log.Printf("Failed to deliver secrets for user %s: %v", user.ID, err)
+			}
 		}
 	}
 
@@ -507,6 +614,131 @@ func (s *Scheduler) externalActivityTask(ctx context.Context) error {
 	return nil
 }
 
+// reminderTask sends escalating reminders as deadlines approach
+func (s *Scheduler) reminderTask(ctx context.Context) error {
+	log.Println("Running reminderTask")
+
+	// Get all users with pinging enabled
+	users, err := s.repo.ListUsers(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to list users: %w", err)
+	}
+
+	now := time.Now().UTC()
+	for _, user := range users {
+		// Skip users that don't have pinging enabled
+		if !user.PingingEnabled {
+			continue
+		}
+
+		// Calculate deadline
+		deadline := user.LastActivity.Add(time.Duration(user.PingDeadline) * 24 * time.Hour)
+		timeUntilDeadline := deadline.Sub(now)
+
+		// Skip if deadline is not approaching
+		if timeUntilDeadline > 48*time.Hour {
+			continue
+		}
+
+		// Get the latest ping for this user
+		latestPing, err := s.repo.GetLatestPingByUserID(ctx, user.ID)
+		if err != nil {
+			// No pings yet, or error fetching
+			log.Printf("Error getting latest ping for user %s: %v", user.ID, err)
+			continue
+		}
+
+		// Skip if the latest ping was sent recently (within last 12 hours) or was already responded to
+		if latestPing != nil && (latestPing.Status == "responded" ||
+			now.Sub(latestPing.SentAt) < 12*time.Hour) {
+			continue
+		}
+
+		// Determine the urgency level based on time until deadline
+		urgencyLevel := ""
+		if timeUntilDeadline <= 12*time.Hour {
+			urgencyLevel = "FINAL WARNING"
+		} else if timeUntilDeadline <= 24*time.Hour {
+			urgencyLevel = "URGENT"
+		} else {
+			urgencyLevel = "REMINDER"
+		}
+
+		// Send appropriate reminders based on user's configured methods
+		if user.TelegramID != "" && (user.PingMethod == "telegram" || user.PingMethod == "both" || user.PingMethod == "") {
+			// Create a telegram ping with urgency level
+			telegramPing := &models.PingHistory{
+				ID:     uuid.New().String(),
+				UserID: user.ID,
+				SentAt: now,
+				Method: "telegram",
+				Status: "sent",
+			}
+
+			if err := s.repo.CreatePingHistory(ctx, telegramPing); err != nil {
+				log.Printf("Failed to create telegram reminder history for user %s: %v", user.ID, err)
+			} else {
+				// TODO: Enhance the SendPingMessage interface to include urgency level
+				if err := s.telegramBot.SendPingMessage(ctx, user, telegramPing.ID); err != nil {
+					log.Printf("Failed to send Telegram reminder to user %s: %v", user.ID, err)
+				}
+			}
+		}
+
+		// Always send email reminder as a backup
+		emailPing := &models.PingHistory{
+			ID:     uuid.New().String(),
+			UserID: user.ID,
+			SentAt: now,
+			Method: "email",
+			Status: "sent",
+		}
+
+		// Create verification code
+		verification := &models.PingVerification{
+			ID:        uuid.New().String(),
+			UserID:    user.ID,
+			Code:      generateVerificationCode(),
+			ExpiresAt: deadline,
+			Used:      false,
+			CreatedAt: now,
+		}
+
+		// Save verification code
+		if err := s.repo.CreatePingVerification(ctx, verification); err != nil {
+			log.Printf("Failed to create ping verification for reminder: %v", err)
+			continue
+		}
+
+		// Save ping history
+		if err := s.repo.CreatePingHistory(ctx, emailPing); err != nil {
+			log.Printf("Failed to create email reminder history for user %s: %v", user.ID, err)
+			continue
+		}
+
+		// Send email with urgency level
+		// TODO: Enhance the SendPingEmail interface to include urgency level
+		if err := s.emailClient.SendPingEmail(user.Email, extractNameFromEmail(user.Email), verification.Code); err != nil {
+			log.Printf("Failed to send email reminder to user %s: %v", user.ID, err)
+		}
+
+		// Create audit log entry for the reminder
+		auditLog := &models.AuditLog{
+			ID:        uuid.New().String(),
+			UserID:    user.ID,
+			Action:    fmt.Sprintf("%s_reminder_sent", strings.ToLower(urgencyLevel)),
+			Timestamp: now,
+			Details:   fmt.Sprintf("%s reminder sent. Deadline in %s", urgencyLevel, formatDuration(timeUntilDeadline)),
+		}
+
+		if err := s.repo.CreateAuditLog(ctx, auditLog); err != nil {
+			log.Printf("Failed to create audit log for reminder: %v", err)
+		}
+	}
+
+	return nil
+}
+
 // cleanupTask handles cleanup operations
 func (s *Scheduler) cleanupTask(ctx context.Context) error {
 	log.Println("Running cleanupTask")
@@ -553,4 +785,17 @@ func extractNameFromEmail(email string) string {
 	}
 
 	return strings.Join(words, " ")
+}
+
+// formatDuration formats a duration in a human-readable way
+func formatDuration(d time.Duration) string {
+	d = d.Round(time.Minute)
+	h := d / time.Hour
+	d -= h * time.Hour
+	m := d / time.Minute
+
+	if h > 0 {
+		return fmt.Sprintf("%dh %dm", h, m)
+	}
+	return fmt.Sprintf("%dm", m)
 }

@@ -78,6 +78,19 @@ For more details, see the [GitHub Activity Monitoring Guide](./docs/github-activ
 
 Security is the highest priority for this application. See our [Security Documentation](./docs/security.md) for details on the encryption methods and threat model, and our [Authentication Guide](./docs/authentication.md) for information on secure login options including passkeys.
 
+## Activity Detection and Dead Man's Switch Mechanism
+
+The application uses a sophisticated system to detect user activity from multiple sources, send reminders, and enforce deadlines. This ensures that your secrets are only shared when you're genuinely unable to respond.
+
+Key features of the detection system:
+
+1. **Multi-source activity detection** - Monitors web logins, Telegram activity, GitHub actions, and more
+2. **Graduated reminder system** - Sends escalating notifications as deadlines approach
+3. **Configurable deadlines** - Customize how long the system waits before triggering
+4. **Comprehensive audit trail** - Track all activity and notifications
+
+For detailed information on how the detection system works, see our [Activity Detection Documentation](./docs/detection.md).
+
 ## Development
 
 ### Running Tests

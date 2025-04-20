@@ -10,7 +10,7 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 - [x] User authentication system
 - [x] Secret storage
 - [ ] Secret proper encryption/re-encryption
-- [ ] Scheduler for check-in reminders and deadlines
+- [x] Scheduler for check-in reminders and deadlines
 - [ ] Email notification system
 - [ ] Telegram bot integration
 
