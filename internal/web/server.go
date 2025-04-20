@@ -251,11 +251,19 @@ func (s *Server) handleSecrets(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleRecipients(w http.ResponseWriter, r *http.Request) {
-	id := utils.GetLastURLSegment(r)
-	if id == "" {
+	// Extract the recipient ID from the URL path
+	path := strings.TrimPrefix(r.URL.Path, "/recipients/")
+	parts := strings.Split(path, "/")
+	if len(parts) == 0 || parts[0] == "" {
 		http.NotFound(w, r)
 		return
 	}
+
+	// The first part is the recipient ID
+	id := parts[0]
+
+	// Set the ID in the request context so handlers can access it
+	r = r.WithContext(context.WithValue(r.Context(), "recipientID", id))
 
 	// Handle test contact request
 	if strings.HasSuffix(r.URL.Path, "/test") {

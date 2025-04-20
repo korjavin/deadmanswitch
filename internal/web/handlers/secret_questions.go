@@ -5,9 +5,9 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/korjavin/deadmanswitch/internal/crypto"
 	"github.com/korjavin/deadmanswitch/internal/models"
 	"github.com/korjavin/deadmanswitch/internal/storage"
@@ -31,12 +31,11 @@ func NewSecretQuestionsHandler(repo storage.Repository, templates *templates.Tem
 }
 
 // RegisterRoutes registers the routes for the SecretQuestionsHandler
-func (h *SecretQuestionsHandler) RegisterRoutes(r *mux.Router, auth func(http.HandlerFunc) http.HandlerFunc) {
-	// Routes for managing secret questions
-	r.HandleFunc("/recipients/{id}/questions", auth(h.ShowQuestionsPage)).Methods("GET")
-	r.HandleFunc("/recipients/{id}/questions", auth(h.CreateQuestions)).Methods("POST")
-	r.HandleFunc("/recipients/{id}/questions/{questionId}", auth(h.UpdateQuestion)).Methods("POST")
-	r.HandleFunc("/recipients/{id}/questions/{questionId}/delete", auth(h.DeleteQuestion)).Methods("POST")
+// Note: This function is not used in the current implementation
+// Routes are registered in server.go instead
+func (h *SecretQuestionsHandler) RegisterRoutes(r *http.ServeMux, auth func(http.HandlerFunc) http.HandlerFunc) {
+	// This function is kept for reference but is not used
+	// Routes for managing secret questions are registered in server.go
 }
 
 // ShowQuestionsPage shows the page for managing secret questions for a recipient
@@ -48,9 +47,12 @@ func (h *SecretQuestionsHandler) ShowQuestionsPage(w http.ResponseWriter, r *htt
 		return
 	}
 
-	// Get the recipient ID from the URL
-	vars := mux.Vars(r)
-	recipientID := vars["id"]
+	// Get the recipient ID from the context
+	recipientID, ok := r.Context().Value("recipientID").(string)
+	if !ok || recipientID == "" {
+		http.Error(w, "Recipient ID is required", http.StatusBadRequest)
+		return
+	}
 
 	// Get the recipient
 	recipient, err := h.repo.GetRecipientByID(r.Context(), recipientID)
@@ -153,9 +155,12 @@ func (h *SecretQuestionsHandler) CreateQuestions(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// Get the recipient ID from the URL
-	vars := mux.Vars(r)
-	recipientID := vars["id"]
+	// Get the recipient ID from the context
+	recipientID, ok := r.Context().Value("recipientID").(string)
+	if !ok || recipientID == "" {
+		http.Error(w, "Recipient ID is required", http.StatusBadRequest)
+		return
+	}
 
 	// Get the recipient
 	recipient, err := h.repo.GetRecipientByID(r.Context(), recipientID)
@@ -373,10 +378,28 @@ func (h *SecretQuestionsHandler) UpdateQuestion(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Get the recipient ID and question ID from the URL
-	vars := mux.Vars(r)
-	recipientID := vars["id"]
-	questionID := vars["questionId"]
+	// Get the recipient ID from the context
+	recipientID, ok := r.Context().Value("recipientID").(string)
+	if !ok || recipientID == "" {
+		http.Error(w, "Recipient ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Extract the question ID from the URL path
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+	var questionID string
+	for i, part := range parts {
+		if part == "questions" && i+1 < len(parts) {
+			questionID = parts[i+1]
+			break
+		}
+	}
+
+	if questionID == "" {
+		http.Error(w, "Question ID is required", http.StatusBadRequest)
+		return
+	}
 
 	// Get the recipient
 	recipient, err := h.repo.GetRecipientByID(r.Context(), recipientID)
@@ -629,10 +652,28 @@ func (h *SecretQuestionsHandler) DeleteQuestion(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	// Get the recipient ID and question ID from the URL
-	vars := mux.Vars(r)
-	recipientID := vars["id"]
-	questionID := vars["questionId"]
+	// Get the recipient ID from the context
+	recipientID, ok := r.Context().Value("recipientID").(string)
+	if !ok || recipientID == "" {
+		http.Error(w, "Recipient ID is required", http.StatusBadRequest)
+		return
+	}
+
+	// Extract the question ID from the URL path
+	path := r.URL.Path
+	parts := strings.Split(path, "/")
+	var questionID string
+	for i, part := range parts {
+		if part == "questions" && i+1 < len(parts) {
+			questionID = parts[i+1]
+			break
+		}
+	}
+
+	if questionID == "" {
+		http.Error(w, "Question ID is required", http.StatusBadRequest)
+		return
+	}
 
 	// Get the recipient
 	recipient, err := h.repo.GetRecipientByID(r.Context(), recipientID)
