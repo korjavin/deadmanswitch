@@ -1,5 +1,8 @@
 FROM golang:1.24-alpine AS builder
 
+# Install Git for dependency downloads
+RUN apk add --no-cache git
+
 # Set working directory
 WORKDIR /app
 

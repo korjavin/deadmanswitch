@@ -14,6 +14,11 @@ func RunMigrations(db *sql.DB) error {
 		return err
 	}
 
+	// Add secret questions tables
+	if err := AddSecretQuestionsTables(db); err != nil {
+		return err
+	}
+
 	log.Println("All migrations completed successfully")
 	return nil
 }

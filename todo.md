@@ -15,6 +15,11 @@ This document tracks remaining tasks and implementation status for the Dead Man'
 - [ ] Telegram bot integration
 
 ## Features & Improvements
+- [ ] Implement timebased and shamir division for secret questions for a recipient
+      - [ ] First let's add interface to add secret questions to a recipient and 
+          - [ ] Encode them in  timelock‑encrypted JSON , locked as user_active_timestamp+ deadline_time
+          - [ ] Let's implement reencoding them once user_active_timestamp+ deadline_time-some_safe_margin reached and user is still active
+          - [ ] add some unit tests for this
 - [ ] Remove user name everywhere from webUI and database as we are not going to use it
 - [ ] There are multiple time/duration related constants hardocded, make them configurable, and if not neccesary to have it configurable at least, make it defined once as a constant with a good name.
 - [ ] Move all the email templates from the code to dedicated templates folder
