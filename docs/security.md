@@ -146,6 +146,51 @@ The application supports WebAuthn passkeys as a phishing-resistant authenticatio
    - Biometric or PIN protection on the device side
    - No password transmission over the network
 
+## Telegram Account Binding Security
+
+The application allows users to bind their Telegram account for notifications and activity monitoring. This feature has specific security considerations:
+
+### Threat Model
+
+1. **Unauthorized Binding**:
+   - An attacker could attempt to bind their Telegram account to a user's profile
+   - This would allow them to receive notifications and potentially prevent the dead man's switch from triggering
+   - Particularly dangerous if combined with other compromised authentication methods
+
+2. **Notification Spoofing**:
+   - Fake notifications could be sent to mislead the user
+   - Could be used in phishing attempts or to hide legitimate security alerts
+
+### Security Measures
+
+1. **Binding Verification**:
+   - Telegram binding requires authentication through an existing method (password + 2FA or passkey)
+   - A unique verification code is sent to the user's registered email
+   - The code must be entered in the Telegram chat to complete binding
+
+2. **Binding Confirmation**:
+   - Successful binding triggers an immediate notification to both email and Telegram
+   - Users can review and revoke Telegram connections in their profile
+   - All binding events are logged in the audit trail
+
+3. **Rate Limiting**:
+   - Binding attempts are rate-limited to prevent brute force attacks
+   - Suspicious activity triggers additional verification steps
+
+4. **Pending Verification State**:
+   - When a user initiates Telegram binding, their Telegram ID is stored in a pending state
+   - The pending state requires explicit verification through a unique code
+   - Until verified, the Telegram ID cannot be used to receive notifications or affect the dead man's switch
+   - Pending bindings expire after 24 hours if not verified
+   - Only one pending binding is allowed per user at a time
+
+### Threat Mitigation
+- **Preventing Unauthorized Binding**:
+  - The pending verification state ensures no Telegram account can be bound without explicit user confirmation
+  - Even if an attacker gains temporary access to the user's account, they cannot complete binding without access to the verification code
+  - The pending state prevents attackers from pre-binding their own Telegram account
+
+
 ## Current Implementation Status
 
 The current version of the application has the following limitations:
