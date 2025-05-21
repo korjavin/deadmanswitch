@@ -266,7 +266,7 @@ func (r *SQLiteRepository) UpdateSecretQuestionSet(ctx context.Context, set *mod
 		WHERE id = ?
 	`
 
-	_, err := r.db.ExecContext(
+	res, err := r.db.ExecContext(
 		ctx,
 		query,
 		set.Threshold,
@@ -281,6 +281,15 @@ func (r *SQLiteRepository) UpdateSecretQuestionSet(ctx context.Context, set *mod
 		return fmt.Errorf("failed to update secret question set: %w", err)
 	}
 
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		// Log this error, but don't necessarily return it as the primary error.
+		// For example, log.Printf("Error getting rows affected for update: %v", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("%w: secret question set not found or no changes made", ErrNotFound)
+	}
+
 	return nil
 }
 
@@ -288,9 +297,18 @@ func (r *SQLiteRepository) UpdateSecretQuestionSet(ctx context.Context, set *mod
 func (r *SQLiteRepository) DeleteSecretQuestionSet(ctx context.Context, id string) error {
 	query := `DELETE FROM secret_question_sets WHERE id = ?`
 
-	_, err := r.db.ExecContext(ctx, query, id)
+	res, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {
 		return fmt.Errorf("failed to delete secret question set: %w", err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		// Log or handle error from RowsAffected() if necessary
+		// For example, log.Printf("Error getting rows affected for delete: %v", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("%w: secret question set not found", ErrNotFound)
 	}
 
 	return nil

@@ -16,14 +16,40 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+// ClientBotAPI defines the interface for tgbotapi.BotAPI methods used by telegram.Bot
+type ClientBotAPI interface {
+	Send(c tgbotapi.Chattable) (tgbotapi.Message, error)
+	Request(c tgbotapi.Chattable) (*tgbotapi.APIResponse, error)
+	GetUpdatesChan(config tgbotapi.UpdateConfig) tgbotapi.UpdatesChannel
+	// Note: Self (tgbotapi.User) is handled by fetching from concrete BotAPI instance in NewBot
+}
+
+// botAPIWrapper implements ClientBotAPI and wraps the real *tgbotapi.BotAPI
+type botAPIWrapper struct {
+	bot *tgbotapi.BotAPI
+}
+
+func (w *botAPIWrapper) Send(c tgbotapi.Chattable) (tgbotapi.Message, error) {
+	return w.bot.Send(c)
+}
+
+func (w *botAPIWrapper) Request(c tgbotapi.Chattable) (*tgbotapi.APIResponse, error) {
+	return w.bot.Request(c)
+}
+
+func (w *botAPIWrapper) GetUpdatesChan(config tgbotapi.UpdateConfig) tgbotapi.UpdatesChannel {
+	return w.bot.GetUpdatesChan(config)
+}
+
 // Bot represents a Telegram bot service
 type Bot struct {
-	bot      *tgbotapi.BotAPI
+	api      ClientBotAPI // Changed from bot *tgbotapi.BotAPI
 	config   *config.Config
 	repo     storage.Repository
 	handlers map[string]CommandHandler
-	updates  tgbotapi.UpdatesChannel
+	updates  tgbotapi.UpdatesChannel // This will be populated by api.GetUpdatesChan
 	mu       sync.RWMutex
+	// botUserName string // Store username if needed separately from concrete bot post-init
 }
 
 // CommandHandler is a function that handles a telegram command
@@ -31,23 +57,24 @@ type CommandHandler func(ctx context.Context, message *tgbotapi.Message, args st
 
 // NewBot creates a new Telegram bot
 func NewBot(cfg *config.Config, repo storage.Repository) (*Bot, error) {
-	bot, err := tgbotapi.NewBotAPI(cfg.TelegramBotToken)
+	concreteBot, err := tgbotapi.NewBotAPI(cfg.TelegramBotToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Telegram bot: %w", err)
 	}
 
-	bot.Debug = cfg.Debug
+	concreteBot.Debug = cfg.Debug
 
-	log.Printf("Authorized on Telegram bot account %s", bot.Self.UserName)
+	log.Printf("Authorized on Telegram bot account %s", concreteBot.Self.UserName)
 
 	// Store the bot username in the config
-	cfg.TelegramBotUsername = "@" + bot.Self.UserName
+	cfg.TelegramBotUsername = "@" + concreteBot.Self.UserName
 
 	b := &Bot{
-		bot:      bot,
+		api:      &botAPIWrapper{bot: concreteBot}, // Assign wrapped bot
 		config:   cfg,
 		repo:     repo,
 		handlers: make(map[string]CommandHandler),
+		// updates will be initialized in StartListening
 	}
 
 	// Register command handlers
@@ -72,7 +99,8 @@ func (b *Bot) StartListening(ctx context.Context) error {
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 
-	updates := b.bot.GetUpdatesChan(u)
+	// Use the interface to get the updates channel
+	updates := b.api.GetUpdatesChan(u)
 	b.updates = updates
 
 	for {
@@ -253,7 +281,7 @@ func (b *Bot) SendPingMessage(ctx context.Context, user *models.User, pingID str
 	msg.ParseMode = "Markdown"
 	msg.ReplyMarkup = keyboard
 
-	_, err = b.bot.Send(msg)
+	_, err = b.api.Send(msg) // Use interface
 	return err
 }
 
@@ -301,7 +329,7 @@ For more information, visit our web interface at https://` + b.config.BaseDomain
 
 	msg := tgbotapi.NewMessage(message.Chat.ID, helpText)
 	msg.ParseMode = "Markdown"
-	_, err := b.bot.Send(msg)
+	_, err := b.api.Send(msg) // Use interface
 	return err
 }
 
@@ -363,7 +391,7 @@ func (b *Bot) handleStatus(ctx context.Context, message *tgbotapi.Message, args 
 
 	msg := tgbotapi.NewMessage(message.Chat.ID, statusText)
 	msg.ParseMode = "Markdown"
-	_, err = b.bot.Send(msg)
+	_, err = b.api.Send(msg) // Use interface
 	return err
 }
 
@@ -388,7 +416,7 @@ func (b *Bot) handleVerify(ctx context.Context, message *tgbotapi.Message, args 
 	msg := tgbotapi.NewMessage(message.Chat.ID, "Please confirm you're okay by pressing the button below:")
 	msg.ReplyMarkup = keyboard
 
-	_, err = b.bot.Send(msg)
+	_, err = b.api.Send(msg) // Use interface
 	return err
 }
 
@@ -434,7 +462,7 @@ func (b *Bot) handleConnect(ctx context.Context, message *tgbotapi.Message, args
 
 func (b *Bot) sendMessage(chatID int64, text string) error {
 	msg := tgbotapi.NewMessage(chatID, text)
-	_, err := b.bot.Send(msg)
+	_, err := b.api.Send(msg) // Use interface
 	return err
 }
 
@@ -444,12 +472,12 @@ func (b *Bot) sendErrorMessage(chatID int64, text string) error {
 
 func (b *Bot) editMessageText(chatID int64, messageID int, text string) error {
 	msg := tgbotapi.NewEditMessageText(chatID, messageID, text)
-	_, err := b.bot.Send(msg)
+	_, err := b.api.Send(msg) // Use interface
 	return err
 }
 
 func (b *Bot) answerCallbackQuery(queryID string, text string) error {
 	callback := tgbotapi.NewCallback(queryID, text)
-	_, err := b.bot.Request(callback)
+	_, err := b.api.Request(callback) // Use interface
 	return err
 }

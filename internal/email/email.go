@@ -83,11 +83,16 @@ func (c *Client) SendEmailSimple(to []string, subject, body string, isHTML bool)
 	}
 	defer smtpClient.Close()
 
-	// Enable TLS if the server supports it
-	if err := smtpClient.StartTLS(&tls.Config{ServerName: c.config.SMTPHost}); err != nil {
-		// Some servers might not support TLS, continue without it
-		// but log a warning
-		fmt.Printf("Warning: TLS not supported by SMTP server: %s\n", err)
+	// Enable TLS if the server supports it and SMTPNoTLS is false
+	if !c.config.SMTPNoTLS {
+		if err := smtpClient.StartTLS(&tls.Config{ServerName: c.config.SMTPHost}); err != nil {
+			// Log a warning but continue if StartTLS fails, as some servers might not support it
+			// or it might be disabled for testing.
+			fmt.Printf("Warning: StartTLS failed or not supported by SMTP server: %s\n", err)
+			// Depending on server behavior, it might close the connection here or allow commands.
+			// If it closes, subsequent commands will fail.
+			// If testing against a mock that doesn't implement STARTTLS properly, this might still fail.
+		}
 	}
 
 	// Authenticate

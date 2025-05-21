@@ -40,6 +40,9 @@ type Config struct {
 
 	// Log level
 	LogLevel string
+
+	// SMTPNoTLS disables STARTTLS for testing against mock servers
+	SMTPNoTLS bool
 }
 
 // LoadFromEnv loads configuration from environment variables
@@ -126,6 +129,9 @@ func LoadFromEnv() (*Config, error) {
 	if config.LogLevel == "" {
 		config.LogLevel = "info"
 	}
+
+	// SMTPNoTLS - mainly for testing
+	config.SMTPNoTLS = os.Getenv("SMTP_NO_TLS") == "true"
 
 	return config, nil
 }
