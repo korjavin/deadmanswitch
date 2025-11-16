@@ -2,7 +2,6 @@ version: "2"
 
 run:
   tests: true
-  timeout: 5m
 
 linters:
   default: none
@@ -21,7 +20,7 @@ linters:
     - sqlclosecheck # Check sql.Rows/sql.Stmt are closed
     - misspell      # Find misspelled words
 
-    # Code quality linters (relaxed thresholds)
+    # Code quality linters
     - copyloopvar   # Find places where loop variables are copied
     - unconvert     # Remove unnecessary type conversions
 
@@ -54,12 +53,6 @@ linters:
 
 issues:
   max-same-issues: 0
-  exclude-rules:
-    # Exclude some checks for test files
-    - path: _test\.go
-      linters:
-        - errcheck
-        - gosec
 
 formatters:
   enable:
