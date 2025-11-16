@@ -63,7 +63,7 @@ func TestAuth(t *testing.T) {
 		}
 
 		// Check if the session is in the context
-		session, ok := r.Context().Value("session").(*models.Session)
+		session, ok := r.Context().Value(SessionContextKey).(*models.Session)
 		if !ok {
 			t.Error("Expected session in context, got none")
 		} else if session.ID != "session123" {
