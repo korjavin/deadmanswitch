@@ -1,14 +1,12 @@
-# golangci-lint configuration
-version: 2
+version: "2"
 
 run:
-  timeout: 5m
   tests: true
-  modules-download-mode: readonly
 
 linters:
+  default: none
   enable:
-    # Enabled by default
+    # Core linters
     - errcheck      # Check for unchecked errors
     - govet         # Vet examines Go source code
     - ineffassign   # Detect ineffectual assignments
@@ -36,72 +34,58 @@ linters:
     - unconvert     # Remove unnecessary type conversions
     - unparam       # Find unused function parameters
 
-  disable:
-    - gochecknoglobals # We use some globals for config
-    - gochecknoinits   # We may have init functions for setup
-    - gocognit         # Similar to gocyclo, less strict
-    - godox            # Don't fail on TODO comments
-    - err113           # Too strict on error wrapping
-    - mnd              # Magic number detector (too noisy)
-    - lll              # Line length
-    - nlreturn         # Too strict on blank lines
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
 
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
+    gocyclo:
+      min-complexity: 15
 
-  govet:
-    check-shadowing: true
-    enable-all: true
+    dupl:
+      threshold: 100
 
-  gocyclo:
-    min-complexity: 15
+    goconst:
+      min-len: 3
+      min-occurrences: 3
 
-  dupl:
-    threshold: 100
+    misspell:
+      locale: US
 
-  goconst:
-    min-len: 3
-    min-occurrences: 3
+    gosec:
+      excludes:
+        - G404 # Use of weak random number generator - we use crypto/rand where needed
 
-  misspell:
-    locale: US
+    revive:
+      rules:
+        - name: exported
+          disabled: true # Don't require doc comments on all exports
+        - name: package-comments
+          disabled: true
 
-  gosec:
-    excludes:
-      - G404 # Use of weak random number generator - we use crypto/rand where needed
-
-  revive:
-    rules:
-      - name: exported
-        disabled: true # Don't require doc comments on all exports
-      - name: package-comments
-        disabled: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+      - _test\.go$
 
 issues:
-  exclude-rules:
-    # Exclude some linters from running on tests
-    - path: _test\.go
-      linters:
-        - gocyclo
-        - errcheck
-        - dupl
-        - gosec
-
-    # Exclude specific gosec rules for test files
-    - path: _test\.go
-      text: "G404:"  # Weak random in tests is OK
-
-    # Ignore long lines in templates
-    - path: web/templates/
-      linters:
-        - lll
-
-  max-issues-per-linter: 0
   max-same-issues: 0
 
-output:
-  format: colored-line-number
-  print-issued-lines: true
-  print-linter-name: true
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
