@@ -1,53 +1,107 @@
-version: "2"
+# golangci-lint configuration
+version: 2
+
 run:
+  timeout: 5m
   tests: true
+  modules-download-mode: readonly
+
 linters:
-  default: none
   enable:
-    - bodyclose
-    - dogsled
-    - dupl
-    - errcheck
-    - gocyclo
-    - gosec
-    - govet
-    - ineffassign
-    - misspell
-    - nolintlint
-    - revive
-    - staticcheck
-    - unconvert
-    - unparam
-    - unused
-    - whitespace
-  settings:
-    dupl:
-      threshold: 100
-    errcheck:
-      check-type-assertions: true
-      check-blank: true
-    gocyclo:
-      min-complexity: 15
-  exclusions:
-    generated: lax
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+    # Enabled by default
+    - errcheck      # Check for unchecked errors
+    - govet         # Vet examines Go source code
+    - ineffassign   # Detect ineffectual assignments
+    - staticcheck   # Static analysis (includes gosimple)
+    - unused        # Find unused code
+
+    # Additional recommended linters
+    - bodyclose     # Check HTTP response body is closed
+    - copyloopvar   # Find places where loop variables are copied
+    - dogsled       # Find assignments with too many blank identifiers
+    - dupl          # Find code duplication
+    - exhaustive    # Check exhaustiveness of enum switch statements
+    - goconst       # Find repeated strings that could be constants
+    - gocritic      # Comprehensive Go linter
+    - gocyclo       # Compute cyclomatic complexity
+    - godot         # Check comments end in period
+    - gosec         # Security checker
+    - misspell      # Find misspelled words
+    - nakedret      # Find naked returns in large functions
+    - nolintlint    # Check nolint directives
+    - prealloc      # Find slice declarations that could be preallocated
+    - revive        # Fast, configurable, extensible, flexible, and beautiful linter
+    - rowserrcheck  # Check sql.Rows.Err is checked
+    - sqlclosecheck # Check sql.Rows/sql.Stmt are closed
+    - unconvert     # Remove unnecessary type conversions
+    - unparam       # Find unused function parameters
+
+  disable:
+    - gochecknoglobals # We use some globals for config
+    - gochecknoinits   # We may have init functions for setup
+    - gocognit         # Similar to gocyclo, less strict
+    - godox            # Don't fail on TODO comments
+    - err113           # Too strict on error wrapping
+    - mnd              # Magic number detector (too noisy)
+    - lll              # Line length
+    - nlreturn         # Too strict on blank lines
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+
+  govet:
+    check-shadowing: true
+    enable-all: true
+
+  gocyclo:
+    min-complexity: 15
+
+  dupl:
+    threshold: 100
+
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+  misspell:
+    locale: US
+
+  gosec:
+    excludes:
+      - G404 # Use of weak random number generator - we use crypto/rand where needed
+
+  revive:
+    rules:
+      - name: exported
+        disabled: true # Don't require doc comments on all exports
+      - name: package-comments
+        disabled: true
+
 issues:
+  exclude-rules:
+    # Exclude some linters from running on tests
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - gosec
+
+    # Exclude specific gosec rules for test files
+    - path: _test\.go
+      text: "G404:"  # Weak random in tests is OK
+
+    # Ignore long lines in templates
+    - path: web/templates/
+      linters:
+        - lll
+
+  max-issues-per-linter: 0
   max-same-issues: 0
-formatters:
-  enable:
-    - gofmt
-    - goimports
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
