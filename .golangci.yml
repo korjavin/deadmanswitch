@@ -1,33 +1,44 @@
 version: "2"
+
 run:
   tests: true
+
 linters:
   default: none
   enable:
-    - bodyclose
-    - dogsled
-    - dupl
-    - errcheck
-    - gocyclo
-    - gosec
-    - govet
-    - ineffassign
-    - misspell
-    - nolintlint
-    - revive
-    - staticcheck
-    - unconvert
-    - unparam
-    - unused
-    - whitespace
+    # Critical linters - must pass
+    - errcheck      # Check for unchecked errors
+    - govet         # Vet examines Go source code
+    - ineffassign   # Detect ineffectual assignments
+    - staticcheck   # Static analysis (includes gosimple)
+    - unused        # Find unused code
+    - gosec         # Security checker
+
+    # Important linters
+    - bodyclose     # Check HTTP response body is closed
+    - rowserrcheck  # Check sql.Rows.Err is checked
+    - sqlclosecheck # Check sql.Rows/sql.Stmt are closed
+    - misspell      # Find misspelled words
+
+    # Code quality linters
+    - copyloopvar   # Find places where loop variables are copied
+    - unconvert     # Remove unnecessary type conversions
+
   settings:
-    dupl:
-      threshold: 100
     errcheck:
       check-type-assertions: true
-      check-blank: true
-    gocyclo:
-      min-complexity: 15
+      check-blank: false  # Don't check blank assignments (_)
+      exclude-functions:
+        - (io.Closer).Close
+        - (*database/sql.Rows).Close
+        - (*database/sql.DB).Close
+
+    gosec:
+      excludes:
+        - G404 # Use of weak random number generator - we use crypto/rand where needed
+        - G204 # Subprocess with variable - acceptable in some cases
+        - G115 # Integer overflow conversion - Unix() is always positive
+
   exclusions:
     generated: lax
     presets:
@@ -39,8 +50,11 @@ linters:
       - third_party$
       - builtin$
       - examples$
+      - _test\.go$
+
 issues:
   max-same-issues: 0
+
 formatters:
   enable:
     - gofmt

@@ -301,7 +301,7 @@ func (r *SQLiteRepository) DeleteSecretQuestionSet(ctx context.Context, id strin
 func (r *SQLiteRepository) ListSecretQuestionSetsNeedingReencryption(ctx context.Context, safeMarginSeconds int64) ([]*models.SecretQuestionSet, error) {
 	// Calculate the drand round for the current time + safe margin
 	currentTime := time.Now().Add(time.Duration(safeMarginSeconds) * time.Second)
-	
+
 	// This is a simplified query that assumes we can calculate the round directly in SQL
 	// In a real implementation, we would need to calculate this in Go code
 	query := `

@@ -11,6 +11,8 @@ import (
 
 	"github.com/korjavin/deadmanswitch/internal/models"
 	"github.com/korjavin/deadmanswitch/internal/storage"
+
+	"github.com/korjavin/deadmanswitch/internal/web/middleware"
 )
 
 // Setup a test environment directory to help template loading
@@ -97,7 +99,7 @@ func TestHandleHistorySuccess(t *testing.T) {
 	req := httptest.NewRequest("GET", "/history", nil)
 
 	// Create a context with the authenticated user
-	ctx := context.WithValue(req.Context(), "user", user)
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, user)
 	req = req.WithContext(ctx)
 
 	// Create a response recorder
@@ -151,7 +153,7 @@ func TestHandleHistoryWithDBErrors(t *testing.T) {
 	req := httptest.NewRequest("GET", "/history", nil)
 
 	// Create a context with the authenticated user
-	ctx := context.WithValue(req.Context(), "user", user)
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, user)
 	req = req.WithContext(ctx)
 
 	// Create a response recorder

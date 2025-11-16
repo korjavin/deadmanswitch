@@ -11,6 +11,8 @@ import (
 
 	"github.com/korjavin/deadmanswitch/internal/models"
 	"github.com/korjavin/deadmanswitch/internal/storage"
+
+	"github.com/korjavin/deadmanswitch/internal/web/middleware"
 )
 
 func TestHandleCheckInSuccess(t *testing.T) {
@@ -33,7 +35,7 @@ func TestHandleCheckInSuccess(t *testing.T) {
 	req := httptest.NewRequest("POST", "/api/check-in", nil)
 
 	// Create a context with the authenticated user
-	ctx := context.WithValue(req.Context(), "user", user)
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, user)
 	req = req.WithContext(ctx)
 
 	// Create a response recorder
@@ -157,7 +159,7 @@ func TestHandleCheckInUpdateUserError(t *testing.T) {
 	req := httptest.NewRequest("POST", "/api/check-in", nil)
 
 	// Create a context with the authenticated user
-	ctx := context.WithValue(req.Context(), "user", user)
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, user)
 	req = req.WithContext(ctx)
 
 	// Create a response recorder

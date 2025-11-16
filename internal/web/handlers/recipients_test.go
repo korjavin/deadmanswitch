@@ -12,6 +12,8 @@ import (
 	"github.com/korjavin/deadmanswitch/internal/email"
 	"github.com/korjavin/deadmanswitch/internal/models"
 	"github.com/korjavin/deadmanswitch/internal/storage"
+
+	"github.com/korjavin/deadmanswitch/internal/web/middleware"
 )
 
 // TestHandleListRecipients tests the list recipients handler
@@ -78,7 +80,7 @@ func TestHandleListRecipients(t *testing.T) {
 	req := httptest.NewRequest("GET", "/recipients", nil)
 
 	// Create a context with the authenticated user
-	ctx := context.WithValue(req.Context(), "user", user)
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, user)
 	req = req.WithContext(ctx)
 
 	// Create a response recorder
@@ -146,7 +148,7 @@ func TestHandleCreateRecipient(t *testing.T) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	// Create a context with the authenticated user
-	ctx := context.WithValue(req.Context(), "user", user)
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, user)
 	req = req.WithContext(ctx)
 
 	// Create a response recorder

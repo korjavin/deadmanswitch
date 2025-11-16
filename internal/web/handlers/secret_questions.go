@@ -48,7 +48,7 @@ func (h *SecretQuestionsHandler) ShowQuestionsPage(w http.ResponseWriter, r *htt
 	}
 
 	// Get the recipient ID from the context
-	recipientID, ok := r.Context().Value("recipientID").(string)
+	recipientID, ok := r.Context().Value(middleware.RecipientIDContextKey).(string)
 	if !ok || recipientID == "" {
 		http.Error(w, "Recipient ID is required", http.StatusBadRequest)
 		return
@@ -156,7 +156,7 @@ func (h *SecretQuestionsHandler) CreateQuestions(w http.ResponseWriter, r *http.
 	}
 
 	// Get the recipient ID from the context
-	recipientID, ok := r.Context().Value("recipientID").(string)
+	recipientID, ok := r.Context().Value(middleware.RecipientIDContextKey).(string)
 	if !ok || recipientID == "" {
 		http.Error(w, "Recipient ID is required", http.StatusBadRequest)
 		return
@@ -326,7 +326,11 @@ func (h *SecretQuestionsHandler) CreateQuestions(w http.ResponseWriter, r *http.
 		log.Printf("Error starting transaction: %v", err)
 		return
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			log.Printf("Failed to rollback transaction: %v", err)
+		}
+	}()
 
 	// Create the question set
 	if err := tx.CreateSecretQuestionSet(r.Context(), questionSet); err != nil {
@@ -379,7 +383,7 @@ func (h *SecretQuestionsHandler) UpdateQuestion(w http.ResponseWriter, r *http.R
 	}
 
 	// Get the recipient ID from the context
-	recipientID, ok := r.Context().Value("recipientID").(string)
+	recipientID, ok := r.Context().Value(middleware.RecipientIDContextKey).(string)
 	if !ok || recipientID == "" {
 		http.Error(w, "Recipient ID is required", http.StatusBadRequest)
 		return
@@ -591,7 +595,11 @@ func (h *SecretQuestionsHandler) UpdateQuestion(w http.ResponseWriter, r *http.R
 		log.Printf("Error starting transaction: %v", err)
 		return
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			log.Printf("Failed to rollback transaction: %v", err)
+		}
+	}()
 
 	// Update the question set
 	if err := tx.UpdateSecretQuestionSet(r.Context(), questionSet); err != nil {
@@ -653,7 +661,7 @@ func (h *SecretQuestionsHandler) DeleteQuestion(w http.ResponseWriter, r *http.R
 	}
 
 	// Get the recipient ID from the context
-	recipientID, ok := r.Context().Value("recipientID").(string)
+	recipientID, ok := r.Context().Value(middleware.RecipientIDContextKey).(string)
 	if !ok || recipientID == "" {
 		http.Error(w, "Recipient ID is required", http.StatusBadRequest)
 		return
@@ -748,7 +756,11 @@ func (h *SecretQuestionsHandler) DeleteQuestion(w http.ResponseWriter, r *http.R
 		log.Printf("Error starting transaction: %v", err)
 		return
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			log.Printf("Failed to rollback transaction: %v", err)
+		}
+	}()
 
 	// Delete the question
 	if err := tx.DeleteSecretQuestion(r.Context(), questionID); err != nil {

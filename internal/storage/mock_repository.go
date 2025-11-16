@@ -685,6 +685,10 @@ func (t *MockTransaction) CreateDeliveryEvent(ctx context.Context, event *models
 	return t.repo.CreateDeliveryEvent(ctx, event)
 }
 
+func (t *MockTransaction) UpdateDeliveryEvent(ctx context.Context, event *models.DeliveryEvent) error {
+	return t.repo.UpdateDeliveryEvent(ctx, event)
+}
+
 func (t *MockTransaction) ListDeliveryEventsByUserID(ctx context.Context, userID string) ([]*models.DeliveryEvent, error) {
 	return t.repo.ListDeliveryEventsByUserID(ctx, userID)
 }
@@ -755,4 +759,28 @@ func (t *MockTransaction) DeletePasskey(ctx context.Context, id string) error {
 
 func (t *MockTransaction) DeletePasskeysByUserID(ctx context.Context, userID string) error {
 	return t.repo.DeletePasskeysByUserID(ctx, userID)
+}
+
+func (t *MockTransaction) CreateAccessCode(ctx context.Context, code *models.AccessCode) error {
+	return t.repo.CreateAccessCode(ctx, code)
+}
+
+func (t *MockTransaction) GetAccessCodeByCode(ctx context.Context, code string) (*models.AccessCode, error) {
+	return t.repo.GetAccessCodeByCode(ctx, code)
+}
+
+func (t *MockTransaction) VerifyAccessCode(ctx context.Context, code string) (*models.AccessCode, error) {
+	return t.repo.VerifyAccessCode(ctx, code)
+}
+
+func (t *MockTransaction) MarkAccessCodeAsUsed(ctx context.Context, id string) error {
+	return t.repo.MarkAccessCodeAsUsed(ctx, id)
+}
+
+func (t *MockTransaction) IncrementAccessCodeAttempts(ctx context.Context, id string) error {
+	return t.repo.IncrementAccessCodeAttempts(ctx, id)
+}
+
+func (t *MockTransaction) DeleteExpiredAccessCodes(ctx context.Context) error {
+	return t.repo.DeleteExpiredAccessCodes(ctx)
 }

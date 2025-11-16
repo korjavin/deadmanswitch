@@ -6,7 +6,6 @@ import (
 	"log"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/korjavin/deadmanswitch/internal/config"
@@ -23,7 +22,6 @@ type Bot struct {
 	repo     storage.Repository
 	handlers map[string]CommandHandler
 	updates  tgbotapi.UpdatesChannel
-	mu       sync.RWMutex
 }
 
 // CommandHandler is a function that handles a telegram command
@@ -116,13 +114,17 @@ func (b *Bot) handleMessage(ctx context.Context, message *tgbotapi.Message) {
 		if exists {
 			if err := handler(ctx, message, args); err != nil {
 				log.Printf("Error handling command %s: %v", command, err)
-				b.sendErrorMessage(message.Chat.ID, "An error occurred processing your command")
+				if sendErr := b.sendErrorMessage(message.Chat.ID, "An error occurred processing your command"); sendErr != nil {
+					log.Printf("Failed to send error message: %v", sendErr)
+				}
 			}
 			return
 		}
 
 		// Unknown command
-		b.sendMessage(message.Chat.ID, "Unknown command. Type /help for available commands.")
+		if err := b.sendMessage(message.Chat.ID, "Unknown command. Type /help for available commands."); err != nil {
+			log.Printf("Failed to send unknown command message: %v", err)
+		}
 		return
 	}
 
@@ -150,7 +152,9 @@ func (b *Bot) handleMessage(ctx context.Context, message *tgbotapi.Message) {
 	}
 
 	// Default response for non-command messages
-	b.sendMessage(message.Chat.ID, "I only respond to commands. Type /help for available commands.")
+	if err := b.sendMessage(message.Chat.ID, "I only respond to commands. Type /help for available commands."); err != nil {
+		log.Printf("Failed to send default response: %v", err)
+	}
 }
 
 // handleCallbackQuery processes a callback query (button press)
@@ -183,7 +187,9 @@ func (b *Bot) handleCallbackQuery(ctx context.Context, query *tgbotapi.CallbackQ
 		user, err := b.repo.GetUserByID(ctx, userID)
 		if err != nil {
 			log.Printf("Error getting user %s: %v", userID, err)
-			b.answerCallbackQuery(query.ID, "Error: User not found")
+			if answerErr := b.answerCallbackQuery(query.ID, "Error: User not found"); answerErr != nil {
+				log.Printf("Failed to answer callback query: %v", answerErr)
+			}
 			return
 		}
 
@@ -214,13 +220,19 @@ func (b *Bot) handleCallbackQuery(ctx context.Context, query *tgbotapi.CallbackQ
 		}
 
 		// Send confirmation message
-		b.editMessageText(query.Message.Chat.ID, query.Message.MessageID,
-			"✅ Thank you for confirming your status. Your Dead Man's Switch has been reset.")
-		b.answerCallbackQuery(query.ID, "Verification successful")
+		if err := b.editMessageText(query.Message.Chat.ID, query.Message.MessageID,
+			"✅ Thank you for confirming your status. Your Dead Man's Switch has been reset."); err != nil {
+			log.Printf("Failed to edit message: %v", err)
+		}
+		if err := b.answerCallbackQuery(query.ID, "Verification successful"); err != nil {
+			log.Printf("Failed to answer callback query: %v", err)
+		}
 
 	default:
 		log.Printf("Unknown callback action: %s", action)
-		b.answerCallbackQuery(query.ID, "Invalid action")
+		if err := b.answerCallbackQuery(query.ID, "Invalid action"); err != nil {
+			log.Printf("Failed to answer callback query: %v", err)
+		}
 	}
 }
 
@@ -266,10 +278,11 @@ func (b *Bot) handleStart(ctx context.Context, message *tgbotapi.Message, args s
 	tgID := strconv.FormatInt(message.From.ID, 10)
 	_, err := b.repo.GetUserByTelegramID(ctx, tgID)
 
-	if err == nil {
+	switch err {
+	case nil:
 		// User exists
 		response = fmt.Sprintf("Welcome back, %s! Your Dead Man's Switch is active. Type /status to see your current settings.", message.From.FirstName)
-	} else if err == storage.ErrNotFound {
+	case storage.ErrNotFound:
 		// New user
 		response = fmt.Sprintf(
 			"Welcome to Dead Man's Switch, %s!\n\n"+
@@ -279,7 +292,7 @@ func (b *Bot) handleStart(ctx context.Context, message *tgbotapi.Message, args s
 				"Or use the /connect command with your email: /connect your@email.com",
 			message.From.FirstName, b.config.BaseDomain, tgID,
 		)
-	} else {
+	default:
 		// Database error
 		return fmt.Errorf("database error: %w", err)
 	}

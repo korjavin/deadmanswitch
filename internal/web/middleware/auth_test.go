@@ -63,7 +63,7 @@ func TestAuth(t *testing.T) {
 		}
 
 		// Check if the session is in the context
-		session, ok := r.Context().Value("session").(*models.Session)
+		session, ok := r.Context().Value(SessionContextKey).(*models.Session)
 		if !ok {
 			t.Error("Expected session in context, got none")
 		} else if session.ID != "session123" {
@@ -224,7 +224,7 @@ func TestGetUserFromContext(t *testing.T) {
 	}
 
 	// Create a context with the user
-	ctx := context.WithValue(context.Background(), "user", user)
+	ctx := context.WithValue(context.Background(), UserContextKey, user)
 	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {
 		t.Fatal(err)

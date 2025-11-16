@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"encoding/base64"
+	"os"
 	"testing"
 	"time"
 
@@ -291,6 +292,46 @@ func TestDeleteExpiredAccessCodes(t *testing.T) {
 }
 
 // Helper functions
+
+func setupTestDB(t *testing.T) (Repository, func()) {
+	t.Helper()
+
+	// Create a temporary database file with a unique name
+	dbPath := "./test_access_code_" + t.Name() + ".sqlite"
+
+	// Create a new repository
+	repo, err := NewSQLiteRepository(dbPath)
+	if err != nil {
+		t.Fatalf("Failed to create repository: %v", err)
+	}
+
+	// Return cleanup function
+	cleanup := func() {
+		os.Remove(dbPath)
+	}
+
+	return repo, cleanup
+}
+
+func createTestUser(t *testing.T, repo Repository, email string) *models.User {
+	t.Helper()
+
+	user := &models.User{
+		Email:          email,
+		PasswordHash:   []byte("hashed_password"),
+		PingFrequency:  3,
+		PingDeadline:   14,
+		PingingEnabled: true,
+		PingMethod:     "both",
+	}
+
+	err := repo.CreateUser(context.Background(), user)
+	if err != nil {
+		t.Fatalf("Failed to create test user: %v", err)
+	}
+
+	return user
+}
 
 func createTestRecipient(t *testing.T, repo Repository, userID, email string) *models.Recipient {
 	t.Helper()
