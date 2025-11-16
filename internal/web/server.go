@@ -12,7 +12,6 @@ import (
 	"github.com/korjavin/deadmanswitch/internal/auth"
 	"github.com/korjavin/deadmanswitch/internal/config"
 	"github.com/korjavin/deadmanswitch/internal/email"
-	"github.com/korjavin/deadmanswitch/internal/models"
 	"github.com/korjavin/deadmanswitch/internal/scheduler"
 	"github.com/korjavin/deadmanswitch/internal/storage"
 	"github.com/korjavin/deadmanswitch/internal/telegram"
