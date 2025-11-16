@@ -19,6 +19,11 @@ func RunMigrations(db *sql.DB) error {
 		return err
 	}
 
+	// Add access codes table
+	if err := AddAccessCodesTable(db); err != nil {
+		return err
+	}
+
 	log.Println("All migrations completed successfully")
 	return nil
 }

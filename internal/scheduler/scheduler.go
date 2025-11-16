@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/korjavin/deadmanswitch/internal/activity"
 	"github.com/korjavin/deadmanswitch/internal/config"
+	"github.com/korjavin/deadmanswitch/internal/crypto"
 	"github.com/korjavin/deadmanswitch/internal/email"
 	"github.com/korjavin/deadmanswitch/internal/models"
 	"github.com/korjavin/deadmanswitch/internal/storage"
@@ -153,6 +155,15 @@ func (s *Scheduler) registerTasks() error {
 		Duration:   1 * time.Hour, // Re-encrypt questions hourly
 		RunOnStart: true,
 		Handler:    s.ReencryptQuestionsTask,
+	})
+
+	// Task for cleaning up expired access codes
+	s.AddTask(&Task{
+		ID:         uuid.New().String(),
+		Name:       "CleanupAccessCodesTask",
+		Duration:   24 * time.Hour, // Clean up expired codes daily
+		RunOnStart: false,
+		Handler:    s.cleanupAccessCodesTask,
 	})
 
 	// Task for cleaning expired sessions
@@ -486,12 +497,48 @@ func (s *Scheduler) deliverSecrets(ctx context.Context, user *models.User) error
 			continue
 		}
 
-		// Generate access code for the secrets
-		accessCode := generateAccessCode()
+		// Create delivery event first to get an ID
+		deliveryEvent := &models.DeliveryEvent{
+			ID:          uuid.New().String(),
+			UserID:      user.ID,
+			RecipientID: recipient.ID,
+			SentAt:      time.Now().UTC(),
+			Status:      "pending",
+		}
+		if err := s.repo.CreateDeliveryEvent(ctx, deliveryEvent); err != nil {
+			log.Printf("Failed to create delivery event: %v", err)
+			continue
+		}
 
-		// TODO: Store access code securely with TTL
-		// For now, this is a simplified version - in a production system,
-		// we would store this code securely and set an expiration
+		// Generate and hash access code
+		accessCode := generateAccessCode()
+		hashedCode, err := crypto.HashPassword(accessCode, nil)
+		if err != nil {
+			log.Printf("Failed to hash access code: %v", err)
+			continue
+		}
+		hashedCodeStr := base64.StdEncoding.EncodeToString(hashedCode)
+
+		// Store access code securely with TTL
+		accessCodeModel := &models.AccessCode{
+			ID:              uuid.New().String(),
+			Code:            hashedCodeStr,
+			RecipientID:     recipient.ID,
+			UserID:          user.ID,
+			DeliveryEventID: deliveryEvent.ID,
+			CreatedAt:       time.Now().UTC(),
+			ExpiresAt:       time.Now().UTC().Add(time.Duration(s.config.AccessCodeExpirationDays) * 24 * time.Hour),
+			MaxAttempts:     s.config.AccessCodeMaxAttempts,
+		}
+
+		if err := s.repo.CreateAccessCode(ctx, accessCodeModel); err != nil {
+			log.Printf("Failed to store access code for recipient %s: %v", recipient.ID, err)
+			// Update delivery event to failed
+			deliveryEvent.Status = "failed"
+			deliveryEvent.ErrorMessage = fmt.Sprintf("Failed to store access code: %v", err)
+			s.repo.UpdateDeliveryEvent(ctx, deliveryEvent)
+			continue
+		}
 
 		// Send delivery email
 		if err := s.emailClient.SendSecretDeliveryEmail(
@@ -502,32 +549,21 @@ func (s *Scheduler) deliverSecrets(ctx context.Context, user *models.User) error
 		); err != nil {
 			log.Printf("Failed to send delivery email to %s: %v", recipient.Email, err)
 
-			// Record the failed delivery
-			event := &models.DeliveryEvent{
-				ID:           uuid.New().String(),
-				UserID:       user.ID,
-				RecipientID:  recipient.ID,
-				SentAt:       time.Now().UTC(),
-				Status:       "failed",
-				ErrorMessage: err.Error(),
-			}
-			if err := s.repo.CreateDeliveryEvent(ctx, event); err != nil {
-				log.Printf("Failed to record delivery event: %v", err)
+			// Update delivery event to failed
+			deliveryEvent.Status = "failed"
+			deliveryEvent.ErrorMessage = err.Error()
+			if updateErr := s.repo.UpdateDeliveryEvent(ctx, deliveryEvent); updateErr != nil {
+				log.Printf("Failed to update delivery event: %v", updateErr)
 			}
 
 			continue
 		}
 
-		// Record the successful delivery
-		event := &models.DeliveryEvent{
-			ID:          uuid.New().String(),
-			UserID:      user.ID,
-			RecipientID: recipient.ID,
-			SentAt:      time.Now().UTC(),
-			Status:      "sent",
-		}
-		if err := s.repo.CreateDeliveryEvent(ctx, event); err != nil {
-			log.Printf("Failed to record delivery event: %v", err)
+		// Update delivery event to sent
+		deliveryEvent.Status = "sent"
+		deliveryEvent.ErrorMessage = ""
+		if err := s.repo.UpdateDeliveryEvent(ctx, deliveryEvent); err != nil {
+			log.Printf("Failed to update delivery event: %v", err)
 		}
 	}
 
@@ -756,6 +792,19 @@ func (s *Scheduler) cleanupTask(ctx context.Context) error {
 		return fmt.Errorf("failed to delete expired sessions: %w", err)
 	}
 
+	return nil
+}
+
+// cleanupAccessCodesTask handles cleanup of expired access codes
+func (s *Scheduler) cleanupAccessCodesTask(ctx context.Context) error {
+	log.Println("Running cleanupAccessCodesTask")
+
+	// Delete expired access codes
+	if err := s.repo.DeleteExpiredAccessCodes(ctx); err != nil {
+		return fmt.Errorf("failed to delete expired access codes: %w", err)
+	}
+
+	log.Println("Expired access codes cleaned up successfully")
 	return nil
 }
 

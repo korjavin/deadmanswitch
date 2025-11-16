@@ -1035,6 +1035,30 @@ func (r *SQLiteRepository) CreateDeliveryEvent(ctx context.Context, event *model
 	return nil
 }
 
+// UpdateDeliveryEvent updates an existing delivery event
+func (r *SQLiteRepository) UpdateDeliveryEvent(ctx context.Context, event *models.DeliveryEvent) error {
+	result, err := r.db.ExecContext(ctx, `
+		UPDATE delivery_events
+		SET status = ?, error_message = ?
+		WHERE id = ?
+	`, event.Status, event.ErrorMessage, event.ID)
+
+	if err != nil {
+		return fmt.Errorf("failed to update delivery event: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return ErrNotFound
+	}
+
+	return nil
+}
+
 // ListDeliveryEventsByUserID lists all delivery events for a user
 func (r *SQLiteRepository) ListDeliveryEventsByUserID(ctx context.Context, userID string) ([]*models.DeliveryEvent, error) {
 	rows, err := r.db.QueryContext(ctx, `

@@ -19,6 +19,7 @@ type MockRepository struct {
 	PingHistories         []*models.PingHistory
 	PingVerifications     []*models.PingVerification
 	DeliveryEvents        []*models.DeliveryEvent
+	AccessCodes           []*models.AccessCode
 	Sessions              []*models.Session
 	AuditLogs             []*models.AuditLog
 	UsersForPinging       []*models.User
@@ -38,6 +39,7 @@ func NewMockRepository() *MockRepository {
 		PingHistories:         make([]*models.PingHistory, 0),
 		PingVerifications:     make([]*models.PingVerification, 0),
 		DeliveryEvents:        make([]*models.DeliveryEvent, 0),
+		AccessCodes:           make([]*models.AccessCode, 0),
 		Sessions:              make([]*models.Session, 0),
 		AuditLogs:             make([]*models.AuditLog, 0),
 		UsersForPinging:       make([]*models.User, 0),
@@ -388,6 +390,16 @@ func (m *MockRepository) CreateDeliveryEvent(ctx context.Context, event *models.
 	return nil
 }
 
+func (m *MockRepository) UpdateDeliveryEvent(ctx context.Context, event *models.DeliveryEvent) error {
+	for i, e := range m.DeliveryEvents {
+		if e.ID == event.ID {
+			m.DeliveryEvents[i] = event
+			return nil
+		}
+	}
+	return ErrNotFound
+}
+
 func (m *MockRepository) ListDeliveryEventsByUserID(ctx context.Context, userID string) ([]*models.DeliveryEvent, error) {
 	var result []*models.DeliveryEvent
 	for _, e := range m.DeliveryEvents {
@@ -396,6 +408,67 @@ func (m *MockRepository) ListDeliveryEventsByUserID(ctx context.Context, userID 
 		}
 	}
 	return result, nil
+}
+
+// AccessCode methods
+func (m *MockRepository) CreateAccessCode(ctx context.Context, code *models.AccessCode) error {
+	m.AccessCodes = append(m.AccessCodes, code)
+	return nil
+}
+
+func (m *MockRepository) GetAccessCodeByCode(ctx context.Context, code string) (*models.AccessCode, error) {
+	for _, c := range m.AccessCodes {
+		if c.Code == code {
+			return c, nil
+		}
+	}
+	return nil, ErrNotFound
+}
+
+func (m *MockRepository) VerifyAccessCode(ctx context.Context, code string) (*models.AccessCode, error) {
+	// This is a simplified mock - just search for matching code
+	// Real implementation uses password hashing
+	for _, c := range m.AccessCodes {
+		if c.UsedAt == nil && time.Now().Before(c.ExpiresAt) {
+			// In mock, we'll just do a simple comparison
+			// Real implementation would verify hash
+			return c, nil
+		}
+	}
+	return nil, ErrNotFound
+}
+
+func (m *MockRepository) MarkAccessCodeAsUsed(ctx context.Context, id string) error {
+	for _, c := range m.AccessCodes {
+		if c.ID == id {
+			now := time.Now()
+			c.UsedAt = &now
+			return nil
+		}
+	}
+	return ErrNotFound
+}
+
+func (m *MockRepository) IncrementAccessCodeAttempts(ctx context.Context, id string) error {
+	for _, c := range m.AccessCodes {
+		if c.ID == id {
+			c.AttemptCount++
+			return nil
+		}
+	}
+	return ErrNotFound
+}
+
+func (m *MockRepository) DeleteExpiredAccessCodes(ctx context.Context) error {
+	var filtered []*models.AccessCode
+	now := time.Now()
+	for _, c := range m.AccessCodes {
+		if c.ExpiresAt.After(now) {
+			filtered = append(filtered, c)
+		}
+	}
+	m.AccessCodes = filtered
+	return nil
 }
 
 // AuditLog methods

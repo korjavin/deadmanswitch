@@ -115,3 +115,17 @@ type Session struct {
 	IPAddress    string    `json:"ip_address"`
 	UserAgent    string    `json:"user_agent"`
 }
+
+// AccessCode represents a time-limited access code for secret delivery
+type AccessCode struct {
+	ID              string     `json:"id"`
+	Code            string     `json:"code"` // Hashed access code
+	RecipientID     string     `json:"recipient_id"`
+	UserID          string     `json:"user_id"`
+	DeliveryEventID string     `json:"delivery_event_id"`
+	CreatedAt       time.Time  `json:"created_at"`
+	ExpiresAt       time.Time  `json:"expires_at"`
+	UsedAt          *time.Time `json:"used_at,omitempty"` // NULL if not used yet
+	AttemptCount    int        `json:"attempt_count"`     // Track failed attempts
+	MaxAttempts     int        `json:"max_attempts"`      // Default: 5
+}
