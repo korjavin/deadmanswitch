@@ -79,6 +79,7 @@ type Repository interface {
 
 	// DeliveryEvent operations
 	CreateDeliveryEvent(ctx context.Context, event *models.DeliveryEvent) error
+	UpdateDeliveryEvent(ctx context.Context, event *models.DeliveryEvent) error
 	ListDeliveryEventsByUserID(ctx context.Context, userID string) ([]*models.DeliveryEvent, error)
 
 	// Audit log operations
@@ -101,6 +102,14 @@ type Repository interface {
 	DeleteSession(ctx context.Context, id string) error
 	DeleteExpiredSessions(ctx context.Context) error
 	UpdateSessionActivity(ctx context.Context, id string) error
+
+	// AccessCode operations
+	CreateAccessCode(ctx context.Context, code *models.AccessCode) error
+	GetAccessCodeByCode(ctx context.Context, code string) (*models.AccessCode, error)
+	VerifyAccessCode(ctx context.Context, code string) (*models.AccessCode, error)
+	MarkAccessCodeAsUsed(ctx context.Context, id string) error
+	IncrementAccessCodeAttempts(ctx context.Context, id string) error
+	DeleteExpiredAccessCodes(ctx context.Context) error
 
 	// Scheduler operations
 	GetUsersForPinging(ctx context.Context) ([]*models.User, error)

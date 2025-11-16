@@ -32,6 +32,10 @@ type Config struct {
 	PingFrequency time.Duration
 	PingDeadline  time.Duration
 
+	// Access code settings
+	AccessCodeExpirationDays int
+	AccessCodeMaxAttempts    int
+
 	// Database settings
 	DBPath string
 
@@ -109,6 +113,35 @@ func LoadFromEnv() (*Config, error) {
 			return nil, fmt.Errorf("PING_DEADLINE must be between 7 and 30 days")
 		}
 		config.PingDeadline = time.Duration(days) * 24 * time.Hour
+	}
+
+	// Access code settings
+	accessCodeExpirationStr := os.Getenv("ACCESS_CODE_EXPIRATION_DAYS")
+	if accessCodeExpirationStr == "" {
+		config.AccessCodeExpirationDays = 30 // 30 days default
+	} else {
+		days, err := strconv.Atoi(accessCodeExpirationStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ACCESS_CODE_EXPIRATION_DAYS: %w", err)
+		}
+		if days < 1 || days > 365 {
+			return nil, fmt.Errorf("ACCESS_CODE_EXPIRATION_DAYS must be between 1 and 365 days")
+		}
+		config.AccessCodeExpirationDays = days
+	}
+
+	accessCodeMaxAttemptsStr := os.Getenv("ACCESS_CODE_MAX_ATTEMPTS")
+	if accessCodeMaxAttemptsStr == "" {
+		config.AccessCodeMaxAttempts = 5 // 5 attempts default
+	} else {
+		attempts, err := strconv.Atoi(accessCodeMaxAttemptsStr)
+		if err != nil {
+			return nil, fmt.Errorf("invalid ACCESS_CODE_MAX_ATTEMPTS: %w", err)
+		}
+		if attempts < 1 || attempts > 20 {
+			return nil, fmt.Errorf("ACCESS_CODE_MAX_ATTEMPTS must be between 1 and 20")
+		}
+		config.AccessCodeMaxAttempts = attempts
 	}
 
 	// Database settings
