@@ -286,10 +286,11 @@ func TestSendPingEmail(t *testing.T) {
 	email := "user@example.com"
 	name := "Test User"
 	verificationCode := "abc123"
+	urgency := "normal"
 
 	// This will fail because we're not actually connecting to an SMTP server
 	// but we can verify that it attempts to send the email
-	err = client.SendPingEmail(email, name, verificationCode)
+	err = client.SendPingEmail(email, name, verificationCode, urgency)
 	if err == nil {
 		t.Fatal("Expected error for SMTP connection, got nil")
 	}
