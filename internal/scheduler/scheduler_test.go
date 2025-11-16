@@ -303,11 +303,6 @@ func (m *MockRepository) UpdateDeliveryEvent(ctx context.Context, event *models.
 	return nil
 }
 
-// Session expiration method
-func (m *MockRepository) DeleteExpiredSessions(ctx context.Context) error {
-	return nil
-}
-
 // MockEmailClient is a mock implementation of the email client
 type MockEmailClient struct {
 	sentEmails int
