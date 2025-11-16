@@ -370,13 +370,3 @@ func (s *Server) setupFileServer() http.Handler {
 
 	return fileServer
 }
-
-// sendEmail is a helper method to send emails
-func (s *Server) sendEmail(to []string, subject, body string, isHTML bool) error {
-	if s.emailClient == nil {
-		return fmt.Errorf("email client not configured")
-	}
-
-	// Use the simplified email sending method
-	return s.emailClient.SendEmailSimple(to, subject, body, isHTML)
-}
