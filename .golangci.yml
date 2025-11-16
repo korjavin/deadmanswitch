@@ -37,6 +37,7 @@ linters:
       excludes:
         - G404 # Use of weak random number generator - we use crypto/rand where needed
         - G204 # Subprocess with variable - acceptable in some cases
+        - G115 # Integer overflow conversion - Unix() is always positive
 
   exclusions:
     generated: lax

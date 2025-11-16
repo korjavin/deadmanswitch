@@ -91,11 +91,13 @@ func (h *APIHandler) HandleCheckIn(w http.ResponseWriter, r *http.Request) {
 
 	// Return success response
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{
 		"success":       true,
 		"message":       "Check-in successful",
 		"next_check_in": user.NextScheduledPing.Format(time.RFC3339),
 		"nextCheckIn":   nextCheckInFormatted,
 		"deadline":      deadlineFormatted,
-	})
+	}); err != nil {
+		log.Printf("Failed to encode JSON response: %v", err)
+	}
 }

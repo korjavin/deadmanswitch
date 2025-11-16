@@ -13,9 +13,9 @@ import (
 
 // TOTPConfig holds configuration for TOTP
 type TOTPConfig struct {
-	Issuer  string // The issuer name (usually the app name)
-	Period  uint   // The period in seconds (default: 30)
-	Digits  otp.Digits // The number of digits (default: 6)
+	Issuer    string        // The issuer name (usually the app name)
+	Period    uint          // The period in seconds (default: 30)
+	Digits    otp.Digits    // The number of digits (default: 6)
 	Algorithm otp.Algorithm // The algorithm (default: SHA1)
 }
 

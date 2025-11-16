@@ -84,7 +84,10 @@ func (c *Client) SendEmailSimple(to []string, subject, body string, isHTML bool)
 	defer smtpClient.Close()
 
 	// Enable TLS if the server supports it
-	if err := smtpClient.StartTLS(&tls.Config{ServerName: c.config.SMTPHost}); err != nil {
+	if err := smtpClient.StartTLS(&tls.Config{
+		ServerName: c.config.SMTPHost,
+		MinVersion: tls.VersionTLS12, // Require TLS 1.2 or higher for security
+	}); err != nil {
 		// Some servers might not support TLS, continue without it
 		// but log a warning
 		fmt.Printf("Warning: TLS not supported by SMTP server: %s\n", err)

@@ -143,6 +143,11 @@ func (r *SQLiteRepository) VerifyAccessCode(ctx context.Context, code string) (*
 		}
 	}
 
+	// Check for errors from iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating access codes: %w", err)
+	}
+
 	return nil, ErrNotFound
 }
 

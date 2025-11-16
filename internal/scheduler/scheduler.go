@@ -536,7 +536,9 @@ func (s *Scheduler) deliverSecrets(ctx context.Context, user *models.User) error
 			// Update delivery event to failed
 			deliveryEvent.Status = "failed"
 			deliveryEvent.ErrorMessage = fmt.Sprintf("Failed to store access code: %v", err)
-			s.repo.UpdateDeliveryEvent(ctx, deliveryEvent)
+			if updateErr := s.repo.UpdateDeliveryEvent(ctx, deliveryEvent); updateErr != nil {
+				log.Printf("Failed to update delivery event: %v", updateErr)
+			}
 			continue
 		}
 

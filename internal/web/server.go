@@ -201,7 +201,11 @@ func (s *Server) setupRoutes() {
 func (s *Server) handleMethodRouter(methods ...interface{}) http.HandlerFunc {
 	handlers := make(map[string]http.HandlerFunc)
 	for i := 0; i < len(methods); i += 2 {
-		method := methods[i].(string)
+		method, ok := methods[i].(string)
+		if !ok {
+			log.Printf("Invalid method type at index %d", i)
+			continue
+		}
 		switch h := methods[i+1].(type) {
 		case http.HandlerFunc:
 			handlers[method] = h

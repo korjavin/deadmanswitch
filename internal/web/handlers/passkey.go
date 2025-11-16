@@ -110,7 +110,9 @@ func (h *PasskeyHandler) HandleBeginRegistration(w http.ResponseWriter, r *http.
 
 	// Return options as JSON
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(optionsJSON)
+	if _, err := w.Write(optionsJSON); err != nil {
+		log.Printf("Failed to write response: %v", err)
+	}
 }
 
 // HandleFinishRegistration handles the completion of passkey registration
@@ -212,7 +214,9 @@ func (h *PasskeyHandler) HandleFinishRegistration(w http.ResponseWriter, r *http
 
 	// Return success
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"success": true, "message": "Passkey registered successfully"}`))
+	if _, err := w.Write([]byte(`{"success": true, "message": "Passkey registered successfully"}`)); err != nil {
+		log.Printf("Failed to write response: %v", err)
+	}
 }
 
 // HandleDeletePasskey handles the deletion of a passkey
@@ -364,7 +368,9 @@ func (h *PasskeyHandler) HandleBeginLogin(w http.ResponseWriter, r *http.Request
 
 	// Return options as JSON
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(optionsJSON)
+	if _, err := w.Write(optionsJSON); err != nil {
+		log.Printf("Failed to write response: %v", err)
+	}
 }
 
 // HandleFinishLogin handles the completion of passkey login
@@ -501,5 +507,7 @@ func (h *PasskeyHandler) HandleFinishLogin(w http.ResponseWriter, r *http.Reques
 
 	// Return success
 	w.Header().Set("Content-Type", "application/json")
-	w.Write([]byte(`{"success": true, "redirect": "/dashboard"}`))
+	if _, err := w.Write([]byte(`{"success": true, "redirect": "/dashboard"}`)); err != nil {
+		log.Printf("Failed to write response: %v", err)
+	}
 }
