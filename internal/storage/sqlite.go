@@ -789,6 +789,11 @@ func (r *SQLiteRepository) ListSecretAssignmentsBySecretID(ctx context.Context, 
 		assignments = append(assignments, assignment)
 	}
 
+	// Check for errors from iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	return assignments, nil
 }
 
@@ -816,6 +821,11 @@ func (r *SQLiteRepository) ListSecretAssignmentsByRecipientID(ctx context.Contex
 		assignments = append(assignments, assignment)
 	}
 
+	// Check for errors from iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	return assignments, nil
 }
 
@@ -841,6 +851,11 @@ func (r *SQLiteRepository) ListSecretAssignmentsByUserID(ctx context.Context, us
 			return nil, fmt.Errorf("failed to scan secret assignment row: %w", err)
 		}
 		assignments = append(assignments, assignment)
+	}
+
+	// Check for errors from iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return assignments, nil
@@ -941,6 +956,11 @@ func (r *SQLiteRepository) ListPingHistoryByUserID(ctx context.Context, userID s
 			return nil, fmt.Errorf("failed to scan ping history row: %w", err)
 		}
 		pings = append(pings, ping)
+	}
+
+	// Check for errors from iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return pings, nil
@@ -1084,6 +1104,11 @@ func (r *SQLiteRepository) ListDeliveryEventsByUserID(ctx context.Context, userI
 		events = append(events, event)
 	}
 
+	// Check for errors from iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	return events, nil
 }
 
@@ -1138,6 +1163,11 @@ func (r *SQLiteRepository) ListAuditLogsByUserID(ctx context.Context, userID str
 			return nil, fmt.Errorf("failed to scan audit log row: %w", err)
 		}
 		logs = append(logs, log)
+	}
+
+	// Check for errors from iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return logs, nil
@@ -1260,6 +1290,11 @@ func (r *SQLiteRepository) GetUsersForPinging(ctx context.Context) ([]*models.Us
 		users = append(users, user)
 	}
 
+	// Check for errors from iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
 	return users, nil
 }
 
@@ -1300,6 +1335,11 @@ func (r *SQLiteRepository) GetUsersWithExpiredPings(ctx context.Context) ([]*mod
 		if now.After(deadline) {
 			users = append(users, user)
 		}
+	}
+
+	// Check for errors from iteration
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
 	}
 
 	return users, nil

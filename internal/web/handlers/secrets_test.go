@@ -11,6 +11,8 @@ import (
 
 	"github.com/korjavin/deadmanswitch/internal/models"
 	"github.com/korjavin/deadmanswitch/internal/storage"
+
+	"github.com/korjavin/deadmanswitch/internal/web/middleware"
 )
 
 // TestHandleListSecrets tests the list secrets handler
@@ -53,7 +55,7 @@ func TestHandleListSecrets(t *testing.T) {
 	req := httptest.NewRequest("GET", "/secrets", nil)
 
 	// Create a context with the authenticated user
-	ctx := context.WithValue(req.Context(), "user", user)
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, user)
 	req = req.WithContext(ctx)
 
 	// Create a response recorder
@@ -124,7 +126,7 @@ func TestHandleCreateSecret(t *testing.T) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	// Create a context with the authenticated user
-	ctx := context.WithValue(req.Context(), "user", user)
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, user)
 	req = req.WithContext(ctx)
 
 	// Parse the form before handling (simulates what http.Request does)

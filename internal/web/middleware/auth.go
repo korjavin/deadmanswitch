@@ -10,6 +10,18 @@ import (
 	"github.com/korjavin/deadmanswitch/internal/storage"
 )
 
+// contextKey is a custom type for context keys to avoid collisions
+type contextKey string
+
+const (
+	// UserContextKey is the context key for storing user data
+	UserContextKey contextKey = "user"
+	// SessionContextKey is the context key for storing session data
+	SessionContextKey contextKey = "session"
+	// RecipientIDContextKey is the context key for storing recipient ID
+	RecipientIDContextKey contextKey = "recipientID"
+)
+
 // Auth is a middleware that checks if the user is authenticated
 func Auth(repo storage.Repository) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
@@ -66,8 +78,8 @@ func Auth(repo storage.Repository) func(http.HandlerFunc) http.HandlerFunc {
 			}
 
 			// Add the user and session to the request context
-			ctx = context.WithValue(ctx, "user", user)
-			ctx = context.WithValue(ctx, "session", session)
+			ctx = context.WithValue(ctx, UserContextKey, user)
+			ctx = context.WithValue(ctx, SessionContextKey, session)
 
 			// Call the next handler with the updated context
 			next(w, r.WithContext(ctx))
@@ -77,6 +89,6 @@ func Auth(repo storage.Repository) func(http.HandlerFunc) http.HandlerFunc {
 
 // GetUserFromContext gets the user from the request context
 func GetUserFromContext(r *http.Request) (*models.User, bool) {
-	user, ok := r.Context().Value("user").(*models.User)
+	user, ok := r.Context().Value(UserContextKey).(*models.User)
 	return user, ok
 }

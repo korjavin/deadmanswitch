@@ -234,18 +234,20 @@ func (s *Server) handleSecrets(w http.ResponseWriter, r *http.Request) {
 
 	// Check if this is an "assign" request
 	if strings.HasSuffix(r.URL.Path, "/assign") {
-		if r.Method == http.MethodGet {
+		switch r.Method {
+		case http.MethodGet:
 			s.handlers.secrets.HandleManageRecipients(w, r)
-		} else if r.Method == http.MethodPost {
+		case http.MethodPost:
 			s.handlers.secrets.HandleUpdateSecretRecipients(w, r)
 		}
 		return
 	}
 
 	// Handle regular secret operations
-	if r.Method == http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
 		s.handlers.secrets.HandleViewSecretForm(w, r)
-	} else if r.Method == http.MethodPost {
+	case http.MethodPost:
 		if r.FormValue("_method") == "DELETE" {
 			s.handlers.secrets.HandleDeleteSecret(w, r)
 		} else {
@@ -267,7 +269,7 @@ func (s *Server) handleRecipients(w http.ResponseWriter, r *http.Request) {
 	id := parts[0]
 
 	// Set the ID in the request context so handlers can access it
-	r = r.WithContext(context.WithValue(r.Context(), "recipientID", id))
+	r = r.WithContext(context.WithValue(r.Context(), authMiddleware.RecipientIDContextKey, id))
 
 	// Handle test contact request
 	if strings.HasSuffix(r.URL.Path, "/test") {
@@ -277,9 +279,10 @@ func (s *Server) handleRecipients(w http.ResponseWriter, r *http.Request) {
 
 	// Handle secrets management
 	if strings.HasSuffix(r.URL.Path, "/secrets") {
-		if r.Method == http.MethodGet {
+		switch r.Method {
+		case http.MethodGet:
 			s.handlers.recipients.HandleManageSecrets(w, r)
-		} else if r.Method == http.MethodPost {
+		case http.MethodPost:
 			s.handlers.recipients.HandleUpdateRecipientSecrets(w, r)
 		}
 		return
@@ -287,9 +290,10 @@ func (s *Server) handleRecipients(w http.ResponseWriter, r *http.Request) {
 
 	// Handle questions management
 	if strings.HasSuffix(r.URL.Path, "/questions") {
-		if r.Method == http.MethodGet {
+		switch r.Method {
+		case http.MethodGet:
 			s.handlers.secretQuestions.ShowQuestionsPage(w, r)
-		} else if r.Method == http.MethodPost {
+		case http.MethodPost:
 			s.handlers.secretQuestions.CreateQuestions(w, r)
 		}
 		return
@@ -313,9 +317,10 @@ func (s *Server) handleRecipients(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Handle regular recipient operations
-	if r.Method == http.MethodGet {
+	switch r.Method {
+	case http.MethodGet:
 		s.handlers.recipients.HandleEditRecipientForm(w, r)
-	} else if r.Method == http.MethodPost {
+	case http.MethodPost:
 		if r.FormValue("_method") == "DELETE" {
 			s.handlers.recipients.HandleDeleteRecipient(w, r)
 		} else {
@@ -365,70 +370,6 @@ func (s *Server) setupFileServer() http.Handler {
 	}
 
 	return fileServer
-}
-
-// Adapter functions to convert between models and UI types
-
-// adaptUserToUI converts a models.User to a format suitable for templates
-func adaptUserToUI(user *models.User) map[string]interface{} {
-	return map[string]interface{}{
-		"ID":                user.ID,
-		"Email":             user.Email,
-		"Name":              user.Email, // Using email as name since name is not in the User model
-		"LastActivity":      user.LastActivity,
-		"CreatedAt":         user.CreatedAt,
-		"PingFrequency":     user.PingFrequency,
-		"PingDeadline":      user.PingDeadline,
-		"PingingEnabled":    user.PingingEnabled,
-		"NextScheduledPing": user.NextScheduledPing,
-	}
-}
-
-// adaptSecretToUI converts a models.Secret to a format suitable for templates
-func adaptSecretToUI(secret *models.Secret) map[string]interface{} {
-	// For real implementation, we would decode the encrypted data to determine the type
-	// For now, we'll use a placeholder approach
-	secretType := determineSecretType(secret)
-
-	return map[string]interface{}{
-		"ID":           secret.ID,
-		"Title":        secret.Name,
-		"Type":         secretType,
-		"Description":  "",                   // Not in base model, would be in metadata
-		"Content":      secret.EncryptedData, // In real impl, this would be decrypted
-		"CreatedAt":    secret.CreatedAt,
-		"LastModified": secret.UpdatedAt,
-	}
-}
-
-// determineSecretType attempts to determine the type of secret from its encrypted data
-// In a real implementation, this would be stored in metadata or determined by decryption
-func determineSecretType(secret *models.Secret) string {
-	// Store the secret type for categorization
-	// in metadata or could be determined from the decrypted data
-	return "note" // Default type
-}
-
-// adaptRecipientToUI converts a models.Recipient to a format suitable for templates
-func adaptRecipientToUI(recipient *models.Recipient) map[string]interface{} {
-	return map[string]interface{}{
-		"ID":            recipient.ID,
-		"Name":          recipient.Name,
-		"Email":         recipient.Email,
-		"PhoneNumber":   recipient.PhoneNumber,
-		"CreatedAt":     recipient.CreatedAt,
-		"Relationship":  "other", // Default value, not in the base model
-		"ContactMethod": determineContactMethod(recipient),
-		"Verified":      true, // Default value, not in the base model
-	}
-}
-
-// determineContactMethod determines the contact method based on recipient data
-func determineContactMethod(recipient *models.Recipient) string {
-	if recipient.PhoneNumber != "" {
-		return "phone"
-	}
-	return "email" // Default contact method
 }
 
 // sendEmail is a helper method to send emails

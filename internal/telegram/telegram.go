@@ -6,7 +6,6 @@ import (
 	"log"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/korjavin/deadmanswitch/internal/config"
@@ -23,7 +22,6 @@ type Bot struct {
 	repo     storage.Repository
 	handlers map[string]CommandHandler
 	updates  tgbotapi.UpdatesChannel
-	mu       sync.RWMutex
 }
 
 // CommandHandler is a function that handles a telegram command
@@ -280,10 +278,11 @@ func (b *Bot) handleStart(ctx context.Context, message *tgbotapi.Message, args s
 	tgID := strconv.FormatInt(message.From.ID, 10)
 	_, err := b.repo.GetUserByTelegramID(ctx, tgID)
 
-	if err == nil {
+	switch err {
+	case nil:
 		// User exists
 		response = fmt.Sprintf("Welcome back, %s! Your Dead Man's Switch is active. Type /status to see your current settings.", message.From.FirstName)
-	} else if err == storage.ErrNotFound {
+	case storage.ErrNotFound:
 		// New user
 		response = fmt.Sprintf(
 			"Welcome to Dead Man's Switch, %s!\n\n"+
@@ -293,7 +292,7 @@ func (b *Bot) handleStart(ctx context.Context, message *tgbotapi.Message, args s
 				"Or use the /connect command with your email: /connect your@email.com",
 			message.From.FirstName, b.config.BaseDomain, tgID,
 		)
-	} else {
+	default:
 		// Database error
 		return fmt.Errorf("database error: %w", err)
 	}

@@ -135,16 +135,16 @@ func TestUserModel(t *testing.T) {
 func TestPasskeyModel(t *testing.T) {
 	now := time.Now()
 	passkey := Passkey{
-		ID:             "passkey123",
-		UserID:         "user123",
-		CredentialID:   []byte("credential_id"),
-		PublicKey:      []byte("public_key"),
-		AAGUID:         []byte("aaguid"),
-		SignCount:      42,
-		Name:           "My Passkey",
-		CreatedAt:      now,
-		LastUsedAt:     now,
-		Transports:     []string{"internal", "usb"},
+		ID:              "passkey123",
+		UserID:          "user123",
+		CredentialID:    []byte("credential_id"),
+		PublicKey:       []byte("public_key"),
+		AAGUID:          []byte("aaguid"),
+		SignCount:       42,
+		Name:            "My Passkey",
+		CreatedAt:       now,
+		LastUsedAt:      now,
+		Transports:      []string{"internal", "usb"},
 		AttestationType: "none",
 	}
 
@@ -224,7 +224,7 @@ func TestRecipientModel(t *testing.T) {
 	now := time.Now()
 	confirmedAt := now.Add(-1 * time.Hour)
 	confirmationSentAt := now.Add(-2 * time.Hour)
-	
+
 	recipient := Recipient{
 		ID:                 "recipient123",
 		UserID:             "user123",
@@ -282,7 +282,7 @@ func TestRecipientModel(t *testing.T) {
 func TestSessionModel(t *testing.T) {
 	now := time.Now()
 	expiresAt := now.Add(24 * time.Hour)
-	
+
 	session := Session{
 		ID:           "session123",
 		UserID:       "user123",

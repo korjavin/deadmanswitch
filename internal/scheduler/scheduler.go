@@ -833,8 +833,8 @@ func extractNameFromEmail(email string) string {
 
 	name := parts[0]
 	// Replace dots and underscores with spaces
-	name = strings.Replace(name, ".", " ", -1)
-	name = strings.Replace(name, "_", " ", -1)
+	name = strings.ReplaceAll(name, ".", " ")
+	name = strings.ReplaceAll(name, "_", " ")
 
 	// Capitalize the first letter of each word
 	words := strings.Split(name, " ")

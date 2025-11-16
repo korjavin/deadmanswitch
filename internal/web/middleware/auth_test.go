@@ -224,7 +224,7 @@ func TestGetUserFromContext(t *testing.T) {
 	}
 
 	// Create a context with the user
-	ctx := context.WithValue(context.Background(), "user", user)
+	ctx := context.WithValue(context.Background(), UserContextKey, user)
 	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {
 		t.Fatal(err)

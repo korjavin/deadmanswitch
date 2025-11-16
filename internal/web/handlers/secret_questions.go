@@ -48,7 +48,7 @@ func (h *SecretQuestionsHandler) ShowQuestionsPage(w http.ResponseWriter, r *htt
 	}
 
 	// Get the recipient ID from the context
-	recipientID, ok := r.Context().Value("recipientID").(string)
+	recipientID, ok := r.Context().Value(middleware.RecipientIDContextKey).(string)
 	if !ok || recipientID == "" {
 		http.Error(w, "Recipient ID is required", http.StatusBadRequest)
 		return
@@ -156,7 +156,7 @@ func (h *SecretQuestionsHandler) CreateQuestions(w http.ResponseWriter, r *http.
 	}
 
 	// Get the recipient ID from the context
-	recipientID, ok := r.Context().Value("recipientID").(string)
+	recipientID, ok := r.Context().Value(middleware.RecipientIDContextKey).(string)
 	if !ok || recipientID == "" {
 		http.Error(w, "Recipient ID is required", http.StatusBadRequest)
 		return
@@ -383,7 +383,7 @@ func (h *SecretQuestionsHandler) UpdateQuestion(w http.ResponseWriter, r *http.R
 	}
 
 	// Get the recipient ID from the context
-	recipientID, ok := r.Context().Value("recipientID").(string)
+	recipientID, ok := r.Context().Value(middleware.RecipientIDContextKey).(string)
 	if !ok || recipientID == "" {
 		http.Error(w, "Recipient ID is required", http.StatusBadRequest)
 		return
@@ -661,7 +661,7 @@ func (h *SecretQuestionsHandler) DeleteQuestion(w http.ResponseWriter, r *http.R
 	}
 
 	// Get the recipient ID from the context
-	recipientID, ok := r.Context().Value("recipientID").(string)
+	recipientID, ok := r.Context().Value(middleware.RecipientIDContextKey).(string)
 	if !ok || recipientID == "" {
 		http.Error(w, "Recipient ID is required", http.StatusBadRequest)
 		return

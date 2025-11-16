@@ -40,9 +40,9 @@ func TestLoadFromEnv(t *testing.T) {
 		{
 			name: "Valid configuration with required fields only",
 			envVars: map[string]string{
-				"BASE_DOMAIN":   "example.com",
-				"TG_BOT_TOKEN":  "test-token",
-				"ADMIN_EMAIL":   "admin@example.com",
+				"BASE_DOMAIN":  "example.com",
+				"TG_BOT_TOKEN": "test-token",
+				"ADMIN_EMAIL":  "admin@example.com",
 			},
 			expectError: false,
 			validate: func(t *testing.T, cfg *Config) {
@@ -84,8 +84,8 @@ func TestLoadFromEnv(t *testing.T) {
 		{
 			name: "Missing TG_BOT_TOKEN",
 			envVars: map[string]string{
-				"BASE_DOMAIN":  "example.com",
-				"ADMIN_EMAIL":  "admin@example.com",
+				"BASE_DOMAIN": "example.com",
+				"ADMIN_EMAIL": "admin@example.com",
 			},
 			expectError: true,
 		},
@@ -236,10 +236,10 @@ func TestLoadFromEnv(t *testing.T) {
 		{
 			name: "Debug mode with '1'",
 			envVars: map[string]string{
-				"BASE_DOMAIN":   "example.com",
-				"TG_BOT_TOKEN":  "test-token",
-				"ADMIN_EMAIL":   "admin@example.com",
-				"DEBUG":         "1",
+				"BASE_DOMAIN":  "example.com",
+				"TG_BOT_TOKEN": "test-token",
+				"ADMIN_EMAIL":  "admin@example.com",
+				"DEBUG":        "1",
 			},
 			expectError: false,
 			validate: func(t *testing.T, cfg *Config) {

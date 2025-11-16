@@ -9,6 +9,8 @@ import (
 
 	"github.com/korjavin/deadmanswitch/internal/models"
 	"github.com/korjavin/deadmanswitch/internal/storage"
+
+	"github.com/korjavin/deadmanswitch/internal/web/middleware"
 )
 
 // TestHandleDashboardSuccess tests the dashboard handler with an authenticated user
@@ -34,7 +36,7 @@ func TestHandleDashboardSuccess(t *testing.T) {
 	req := httptest.NewRequest("GET", "/dashboard", nil)
 
 	// Create a context with the authenticated user
-	ctx := context.WithValue(req.Context(), "user", user)
+	ctx := context.WithValue(req.Context(), middleware.UserContextKey, user)
 	req = req.WithContext(ctx)
 
 	// Create a response recorder
