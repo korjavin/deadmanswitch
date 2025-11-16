@@ -31,14 +31,15 @@ These tasks address security vulnerabilities and must be completed before produc
 
 ## 🟠 High Priority Tasks
 
-These tasks improve security and core functionality:
+~~These tasks improve security and core functionality:~~
 
-| Task | Title | Effort | Status |
-|------|-------|--------|--------|
-| [TASK-004](./TASK-004-complete-secret-questions-implementation.md) | Complete Secret Questions Implementation | 8-10h | Partially Complete |
+~~| Task | Title | Effort | Status |~~
+~~|------|-------|--------|--------|~~
+~~| [TASK-004](./TASK-004-complete-secret-questions-implementation.md) | Complete Secret Questions Implementation | 8-10h | Partially Complete |~~
 
-**Why High Priority:**
-- Secret questions feature is partially implemented but critical re-encryption logic is missing
+**⚠️ NOTE: TASK-004 is CANCELLED**
+- The secret questions feature is being removed (see TASK-009)
+- TASK-004 should be deleted after TASK-009 is completed
 
 ## 🟡 Medium Priority Tasks
 
@@ -48,10 +49,12 @@ These tasks enhance user experience and maintainability:
 |------|-------|--------|--------|
 | [TASK-003](./TASK-003-enhance-ping-urgency-levels.md) | Enhance Ping Messages with Urgency Levels | 3-4h | Not Started |
 | [TASK-008](./TASK-008-add-golangci-lint.md) | Add golangci-lint and Fix Warnings | 5-7h | Not Started |
+| [TASK-009](./TASK-009-remove-drand-timelock-mechanism.md) | Remove drand/Timelock Mechanism | 3-4h | Not Started |
 
 **Why Medium Priority:**
 - TASK-003: Improves UX by showing urgency in notifications (removes TODOs)
 - TASK-008: Improves code quality and catches potential bugs
+- TASK-009: Removes unwanted complex feature (~2,500 lines of code)
 
 ## 🟢 Low Priority Tasks
 
@@ -69,12 +72,12 @@ These tasks improve code organization and maintainability:
 
 ## 📊 Task Statistics
 
-- **Total Tasks:** 8
+- **Total Tasks:** 8 (excluding cancelled TASK-004)
 - **Critical:** 2 (25%)
-- **High:** 1 (12.5%)
-- **Medium:** 2 (25%)
+- **High:** 0 (0%) - TASK-004 cancelled
+- **Medium:** 3 (37.5%)
 - **Low:** 3 (37.5%)
-- **Total Estimated Effort:** 39-53 hours
+- **Total Estimated Effort:** 34-47 hours (excluding cancelled TASK-004)
 
 ## 🎯 Recommended Implementation Order
 
@@ -93,15 +96,16 @@ These tasks improve code organization and maintainability:
 
 **Phase 1 Total:** 10-14 hours
 
-### Phase 2: Core Functionality (High Priority)
-**Goal:** Complete partially implemented features
+### Phase 2: Feature Cleanup (Medium Priority)
+**Goal:** Remove unwanted complex features
 
-3. **TASK-004** - Secret Questions (8-10h)
-   - Completes timelock + Shamir implementation
-   - Adds re-encryption scheduler task
-   - Advanced feature for secret recovery
+3. **TASK-009** - Remove drand/Timelock (3-4h)
+   - Removes unwanted secret questions feature
+   - Deletes ~2,500 lines of code
+   - Simplifies codebase significantly
+   - **Note:** This cancels/deletes TASK-004
 
-**Phase 2 Total:** 8-10 hours
+**Phase 2 Total:** 3-4 hours
 
 ### Phase 3: User Experience (Medium Priority)
 **Goal:** Improve notifications and code quality
@@ -163,8 +167,11 @@ The following items from `/todo.md` are not yet converted to task files but shou
 ```
 TASK-001 (Master Key)
     ↓
-    ├── TASK-002 (Access Codes) - Needs secure encryption
-    └── TASK-004 (Secret Questions) - Needs proper key management
+    └── TASK-002 (Access Codes) - Needs secure encryption
+
+TASK-009 (Remove drand/timelock) - Independent
+    ↓
+    └── Deletes TASK-004 (Secret Questions)
 
 TASK-003 (Urgency Levels)
     ↓
@@ -303,5 +310,13 @@ Or use GitHub Issues with labels:
 ---
 
 **Last Updated:** 2025-11-16
-**Total Tasks:** 8
-**Total Estimated Effort:** 39-53 hours
+**Total Active Tasks:** 8 (TASK-004 cancelled)
+**Total Estimated Effort:** 34-47 hours (excluding cancelled TASK-004)
+
+## ⚠️ Important Notes
+
+**TASK-004 vs TASK-009 Conflict:**
+- TASK-004 was created to complete the secret questions feature
+- TASK-009 removes the entire secret questions feature
+- **Decision:** TASK-009 takes priority - feature will be removed
+- **Action Required:** Delete TASK-004 file after TASK-009 is completed
