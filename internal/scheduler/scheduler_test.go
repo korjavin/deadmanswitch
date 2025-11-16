@@ -241,6 +241,73 @@ func (m *MockRepository) GetPasskeyByID(ctx context.Context, id string) (*models
 func (m *MockRepository) DeletePasskey(ctx context.Context, id string) error              { return nil }
 func (m *MockRepository) DeletePasskeysByUserID(ctx context.Context, userID string) error { return nil }
 
+// Access code methods
+func (m *MockRepository) CreateAccessCode(ctx context.Context, code *models.AccessCode) error {
+	return nil
+}
+func (m *MockRepository) GetAccessCodeByCode(ctx context.Context, code string) (*models.AccessCode, error) {
+	return nil, nil
+}
+func (m *MockRepository) VerifyAccessCode(ctx context.Context, code string) (*models.AccessCode, error) {
+	return nil, nil
+}
+func (m *MockRepository) MarkAccessCodeAsUsed(ctx context.Context, id string) error {
+	return nil
+}
+func (m *MockRepository) IncrementAccessCodeAttempts(ctx context.Context, id string) error {
+	return nil
+}
+func (m *MockRepository) DeleteExpiredAccessCodes(ctx context.Context) error {
+	return nil
+}
+
+// SecretQuestion methods
+func (m *MockRepository) CreateSecretQuestion(ctx context.Context, question *models.SecretQuestion) error {
+	return nil
+}
+func (m *MockRepository) GetSecretQuestion(ctx context.Context, id string) (*models.SecretQuestion, error) {
+	return nil, nil
+}
+func (m *MockRepository) UpdateSecretQuestion(ctx context.Context, question *models.SecretQuestion) error {
+	return nil
+}
+func (m *MockRepository) DeleteSecretQuestion(ctx context.Context, id string) error {
+	return nil
+}
+func (m *MockRepository) ListSecretQuestionsByAssignmentID(ctx context.Context, assignmentID string) ([]*models.SecretQuestion, error) {
+	return nil, nil
+}
+
+// SecretQuestionSet methods
+func (m *MockRepository) CreateSecretQuestionSet(ctx context.Context, set *models.SecretQuestionSet) error {
+	return nil
+}
+func (m *MockRepository) GetSecretQuestionSet(ctx context.Context, id string) (*models.SecretQuestionSet, error) {
+	return nil, nil
+}
+func (m *MockRepository) GetSecretQuestionSetByAssignmentID(ctx context.Context, assignmentID string) (*models.SecretQuestionSet, error) {
+	return nil, nil
+}
+func (m *MockRepository) UpdateSecretQuestionSet(ctx context.Context, set *models.SecretQuestionSet) error {
+	return nil
+}
+func (m *MockRepository) DeleteSecretQuestionSet(ctx context.Context, id string) error {
+	return nil
+}
+func (m *MockRepository) ListSecretQuestionSetsNeedingReencryption(ctx context.Context, safeMarginSeconds int64) ([]*models.SecretQuestionSet, error) {
+	return nil, nil
+}
+
+// DeliveryEvent update method
+func (m *MockRepository) UpdateDeliveryEvent(ctx context.Context, event *models.DeliveryEvent) error {
+	return nil
+}
+
+// Session expiration method
+func (m *MockRepository) DeleteExpiredSessions(ctx context.Context) error {
+	return nil
+}
+
 // MockEmailClient is a mock implementation of the email client
 type MockEmailClient struct {
 	sentEmails int
