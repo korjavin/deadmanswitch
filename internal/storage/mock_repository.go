@@ -2,6 +2,8 @@ package storage
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"time"
 
 	"github.com/korjavin/deadmanswitch/internal/models"
@@ -416,22 +418,13 @@ func (m *MockRepository) CreateAccessCode(ctx context.Context, code *models.Acce
 	return nil
 }
 
-func (m *MockRepository) GetAccessCodeByCode(ctx context.Context, code string) (*models.AccessCode, error) {
-	for _, c := range m.AccessCodes {
-		if c.Code == code {
-			return c, nil
-		}
-	}
-	return nil, ErrNotFound
-}
-
 func (m *MockRepository) VerifyAccessCode(ctx context.Context, code string) (*models.AccessCode, error) {
-	// This is a simplified mock - just search for matching code
-	// Real implementation uses password hashing
+	// Hash the code using SHA256 (same as real implementation)
+	hash := sha256.Sum256([]byte(code))
+	codeHash := hex.EncodeToString(hash[:])
+
 	for _, c := range m.AccessCodes {
-		if c.UsedAt == nil && time.Now().Before(c.ExpiresAt) {
-			// In mock, we'll just do a simple comparison
-			// Real implementation would verify hash
+		if c.Code == codeHash && c.UsedAt == nil && time.Now().Before(c.ExpiresAt) && c.AttemptCount < c.MaxAttempts {
 			return c, nil
 		}
 	}

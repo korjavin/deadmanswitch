@@ -2,21 +2,66 @@ package storage
 
 import (
 	"context"
-	"encoding/base64"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"testing"
 	"time"
 
-	"github.com/korjavin/deadmanswitch/internal/crypto"
 	"github.com/korjavin/deadmanswitch/internal/models"
 )
+
+// Helper function to create a test user
+func createTestUserForAccessCode(t *testing.T, repo Repository, email string) *models.User {
+	t.Helper()
+
+	user := &models.User{
+		Email:        email,
+		PasswordHash: []byte("test-hash"),
+		LastActivity: time.Now().UTC(),
+	}
+
+	err := repo.CreateUser(context.Background(), user)
+	if err != nil {
+		t.Fatalf("Failed to create test user: %v", err)
+	}
+
+	return user
+}
+
+// Helper function to create a test recipient
+func createTestRecipientForAccessCode(t *testing.T, repo Repository, userID, email string) *models.Recipient {
+	t.Helper()
+
+	recipient := &models.Recipient{
+		UserID:      userID,
+		Email:       email,
+		Name:        "Test Recipient",
+		Message:     "Test message",
+		IsConfirmed: true,
+	}
+
+	err := repo.CreateRecipient(context.Background(), recipient)
+	if err != nil {
+		t.Fatalf("Failed to create test recipient: %v", err)
+	}
+
+	return recipient
+}
+
+// Helper function to hash an access code using SHA256
+func hashAccessCode(code string) string {
+	hash := sha256.Sum256([]byte(code))
+	return hex.EncodeToString(hash[:])
+}
 
 func TestCreateAccessCode(t *testing.T) {
 	repo, cleanup := setupTestDB(t)
 	defer cleanup()
 
 	// Create test user and recipient first
-	user := createTestUser(t, repo, "test@example.com")
-	recipient := createTestRecipient(t, repo, user.ID, "recipient@example.com")
+	user := createTestUserForAccessCode(t, repo, "test@example.com")
+	recipient := createTestRecipientForAccessCode(t, repo, user.ID, "recipient@example.com")
 
 	// Create delivery event
 	deliveryEvent := &models.DeliveryEvent{
@@ -32,11 +77,7 @@ func TestCreateAccessCode(t *testing.T) {
 
 	// Hash an access code
 	plainCode := "test-access-code-12345"
-	hashedCode, err := crypto.HashPassword(plainCode, nil)
-	if err != nil {
-		t.Fatalf("Failed to hash code: %v", err)
-	}
-	hashedCodeStr := base64.StdEncoding.EncodeToString(hashedCode)
+	hashedCodeStr := hashAccessCode(plainCode)
 
 	// Create access code
 	accessCode := &models.AccessCode{
@@ -69,8 +110,8 @@ func TestVerifyAccessCode(t *testing.T) {
 	defer cleanup()
 
 	// Create test user and recipient
-	user := createTestUser(t, repo, "test@example.com")
-	recipient := createTestRecipient(t, repo, user.ID, "recipient@example.com")
+	user := createTestUserForAccessCode(t, repo, "test@example.com")
+	recipient := createTestRecipientForAccessCode(t, repo, user.ID, "recipient@example.com")
 
 	// Create delivery event
 	deliveryEvent := &models.DeliveryEvent{
@@ -86,11 +127,7 @@ func TestVerifyAccessCode(t *testing.T) {
 
 	// Hash an access code
 	plainCode := "test-access-code-valid"
-	hashedCode, err := crypto.HashPassword(plainCode, nil)
-	if err != nil {
-		t.Fatalf("Failed to hash code: %v", err)
-	}
-	hashedCodeStr := base64.StdEncoding.EncodeToString(hashedCode)
+	hashedCodeStr := hashAccessCode(plainCode)
 
 	// Create access code
 	accessCode := &models.AccessCode{
@@ -129,8 +166,8 @@ func TestVerifyAccessCodeExpired(t *testing.T) {
 	defer cleanup()
 
 	// Create test user and recipient
-	user := createTestUser(t, repo, "test2@example.com")
-	recipient := createTestRecipient(t, repo, user.ID, "recipient2@example.com")
+	user := createTestUserForAccessCode(t, repo, "test2@example.com")
+	recipient := createTestRecipientForAccessCode(t, repo, user.ID, "recipient2@example.com")
 
 	// Create delivery event
 	deliveryEvent := &models.DeliveryEvent{
@@ -146,11 +183,7 @@ func TestVerifyAccessCodeExpired(t *testing.T) {
 
 	// Hash an access code
 	plainCode := "test-access-code-expired"
-	hashedCode, err := crypto.HashPassword(plainCode, nil)
-	if err != nil {
-		t.Fatalf("Failed to hash code: %v", err)
-	}
-	hashedCodeStr := base64.StdEncoding.EncodeToString(hashedCode)
+	hashedCodeStr := hashAccessCode(plainCode)
 
 	// Create expired access code
 	accessCode := &models.AccessCode{
@@ -179,8 +212,8 @@ func TestMarkAccessCodeAsUsed(t *testing.T) {
 	defer cleanup()
 
 	// Create test user and recipient
-	user := createTestUser(t, repo, "test3@example.com")
-	recipient := createTestRecipient(t, repo, user.ID, "recipient3@example.com")
+	user := createTestUserForAccessCode(t, repo, "test3@example.com")
+	recipient := createTestRecipientForAccessCode(t, repo, user.ID, "recipient3@example.com")
 
 	// Create delivery event
 	deliveryEvent := &models.DeliveryEvent{
@@ -196,11 +229,7 @@ func TestMarkAccessCodeAsUsed(t *testing.T) {
 
 	// Hash an access code
 	plainCode := "test-access-code-used"
-	hashedCode, err := crypto.HashPassword(plainCode, nil)
-	if err != nil {
-		t.Fatalf("Failed to hash code: %v", err)
-	}
-	hashedCodeStr := base64.StdEncoding.EncodeToString(hashedCode)
+	hashedCodeStr := hashAccessCode(plainCode)
 
 	// Create access code
 	accessCode := &models.AccessCode{
@@ -235,8 +264,8 @@ func TestDeleteExpiredAccessCodes(t *testing.T) {
 	defer cleanup()
 
 	// Create test user and recipient
-	user := createTestUser(t, repo, "test4@example.com")
-	recipient := createTestRecipient(t, repo, user.ID, "recipient4@example.com")
+	user := createTestUserForAccessCode(t, repo, "test4@example.com")
+	recipient := createTestRecipientForAccessCode(t, repo, user.ID, "recipient4@example.com")
 
 	// Create delivery event
 	deliveryEvent := &models.DeliveryEvent{
@@ -252,12 +281,8 @@ func TestDeleteExpiredAccessCodes(t *testing.T) {
 
 	// Create multiple access codes, some expired
 	for i := 0; i < 5; i++ {
-		plainCode := "test-access-code-" + string(rune(i))
-		hashedCode, err := crypto.HashPassword(plainCode, nil)
-		if err != nil {
-			t.Fatalf("Failed to hash code: %v", err)
-		}
-		hashedCodeStr := base64.StdEncoding.EncodeToString(hashedCode)
+		plainCode := fmt.Sprintf("test-access-code-%d", i)
+		hashedCodeStr := hashAccessCode(plainCode)
 
 		expiresAt := time.Now().UTC().Add(30 * 24 * time.Hour)
 		if i%2 == 0 {
@@ -288,25 +313,4 @@ func TestDeleteExpiredAccessCodes(t *testing.T) {
 
 	// Note: We can't easily verify the count without adding a count method,
 	// but at least we verified the operation doesn't error
-}
-
-// Helper functions
-
-func createTestRecipient(t *testing.T, repo Repository, userID, email string) *models.Recipient {
-	t.Helper()
-
-	recipient := &models.Recipient{
-		UserID:      userID,
-		Email:       email,
-		Name:        "Test Recipient",
-		Message:     "Test message",
-		IsConfirmed: true,
-	}
-
-	err := repo.CreateRecipient(context.Background(), recipient)
-	if err != nil {
-		t.Fatalf("Failed to create test recipient: %v", err)
-	}
-
-	return recipient
 }

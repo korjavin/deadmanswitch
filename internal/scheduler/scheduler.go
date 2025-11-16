@@ -2,7 +2,8 @@ package scheduler
 
 import (
 	"context"
-	"encoding/base64"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"log"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/korjavin/deadmanswitch/internal/activity"
 	"github.com/korjavin/deadmanswitch/internal/config"
-	"github.com/korjavin/deadmanswitch/internal/crypto"
 	"github.com/korjavin/deadmanswitch/internal/email"
 	"github.com/korjavin/deadmanswitch/internal/models"
 	"github.com/korjavin/deadmanswitch/internal/storage"
@@ -497,7 +497,21 @@ func (s *Scheduler) deliverSecrets(ctx context.Context, user *models.User) error
 			continue
 		}
 
-		// Create delivery event first to get an ID
+		// Generate access code (plain text - will be sent via email)
+		accessCode := generateAccessCode()
+
+		// Hash access code for storage (SHA256 for deterministic lookup)
+		hash := sha256.Sum256([]byte(accessCode))
+		hashedCodeStr := hex.EncodeToString(hash[:])
+
+		// Use transaction for atomicity
+		tx, err := s.repo.BeginTx(ctx)
+		if err != nil {
+			log.Printf("Failed to begin transaction: %v", err)
+			continue
+		}
+
+		// Create delivery event
 		deliveryEvent := &models.DeliveryEvent{
 			ID:          uuid.New().String(),
 			UserID:      user.ID,
@@ -505,19 +519,11 @@ func (s *Scheduler) deliverSecrets(ctx context.Context, user *models.User) error
 			SentAt:      time.Now().UTC(),
 			Status:      "pending",
 		}
-		if err := s.repo.CreateDeliveryEvent(ctx, deliveryEvent); err != nil {
+		if err := tx.CreateDeliveryEvent(ctx, deliveryEvent); err != nil {
 			log.Printf("Failed to create delivery event: %v", err)
+			tx.Rollback()
 			continue
 		}
-
-		// Generate and hash access code
-		accessCode := generateAccessCode()
-		hashedCode, err := crypto.HashPassword(accessCode, nil)
-		if err != nil {
-			log.Printf("Failed to hash access code: %v", err)
-			continue
-		}
-		hashedCodeStr := base64.StdEncoding.EncodeToString(hashedCode)
 
 		// Store access code securely with TTL
 		accessCodeModel := &models.AccessCode{
@@ -531,16 +537,19 @@ func (s *Scheduler) deliverSecrets(ctx context.Context, user *models.User) error
 			MaxAttempts:     s.config.AccessCodeMaxAttempts,
 		}
 
-		if err := s.repo.CreateAccessCode(ctx, accessCodeModel); err != nil {
+		if err := tx.CreateAccessCode(ctx, accessCodeModel); err != nil {
 			log.Printf("Failed to store access code for recipient %s: %v", recipient.ID, err)
-			// Update delivery event to failed
-			deliveryEvent.Status = "failed"
-			deliveryEvent.ErrorMessage = fmt.Sprintf("Failed to store access code: %v", err)
-			s.repo.UpdateDeliveryEvent(ctx, deliveryEvent)
+			tx.Rollback()
 			continue
 		}
 
-		// Send delivery email
+		// Commit transaction before sending email
+		if err := tx.Commit(); err != nil {
+			log.Printf("Failed to commit transaction: %v", err)
+			continue
+		}
+
+		// Send delivery email (outside transaction - email is best-effort)
 		if err := s.emailClient.SendSecretDeliveryEmail(
 			recipient.Email,
 			recipient.Name,
@@ -549,7 +558,7 @@ func (s *Scheduler) deliverSecrets(ctx context.Context, user *models.User) error
 		); err != nil {
 			log.Printf("Failed to send delivery email to %s: %v", recipient.Email, err)
 
-			// Update delivery event to failed
+			// Update delivery event to failed (email send failed)
 			deliveryEvent.Status = "failed"
 			deliveryEvent.ErrorMessage = err.Error()
 			if updateErr := s.repo.UpdateDeliveryEvent(ctx, deliveryEvent); updateErr != nil {

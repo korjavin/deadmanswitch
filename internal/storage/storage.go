@@ -105,7 +105,6 @@ type Repository interface {
 
 	// AccessCode operations
 	CreateAccessCode(ctx context.Context, code *models.AccessCode) error
-	GetAccessCodeByCode(ctx context.Context, code string) (*models.AccessCode, error)
 	VerifyAccessCode(ctx context.Context, code string) (*models.AccessCode, error)
 	MarkAccessCodeAsUsed(ctx context.Context, id string) error
 	IncrementAccessCodeAttempts(ctx context.Context, id string) error
