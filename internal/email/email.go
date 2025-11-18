@@ -126,26 +126,123 @@ func (c *Client) SendEmailSimple(to []string, subject, body string, isHTML bool)
 }
 
 // SendPingEmail sends a ping email to a user with a verification link
-func (c *Client) SendPingEmail(email string, name string, verificationCode string) error {
+func (c *Client) SendPingEmail(email string, name string, verificationCode string, urgency string) error {
 	baseURL := fmt.Sprintf("https://%s", c.config.BaseDomain)
 	verificationURL := fmt.Sprintf("%s/verify/%s", baseURL, verificationCode)
 
-	subject := "Action Required: Dead Man's Switch Check-In"
-	body := fmt.Sprintf(`
+	subject := c.getSubjectByUrgency(urgency)
+	body := c.getBodyByUrgency(name, verificationURL, urgency)
+
+	return c.SendEmail(&MessageOptions{
+		To:      []string{email},
+		Subject: subject,
+		Body:    body,
+		IsHTML:  true,
+	})
+}
+
+// getSubjectByUrgency returns an urgency-appropriate subject line
+func (c *Client) getSubjectByUrgency(urgency string) string {
+	switch urgency {
+	case "final_warning":
+		return "🚨 URGENT: Final Check-In Required - Dead Man's Switch"
+	case "urgent":
+		return "⚠️ IMPORTANT: Check-In Required Soon - Dead Man's Switch"
+	default:
+		return "✅ Routine Check-In - Dead Man's Switch"
+	}
+}
+
+// getBodyByUrgency returns an urgency-appropriate email body
+func (c *Client) getBodyByUrgency(name, verificationURL, urgency string) string {
+	switch urgency {
+	case "final_warning":
+		return fmt.Sprintf(`
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Action Required: Dead Man's Switch Check-In</title>
+    <title>URGENT: Final Check-In Required</title>
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
-        <h2 style="color: #343a40;">Dead Man's Switch: Action Required</h2>
+    <div style="background-color: #dc3545; color: white; padding: 20px; border-radius: 5px; margin-bottom: 20px; text-align: center;">
+        <h2 style="color: white; margin: 0;">🚨 FINAL WARNING - IMMEDIATE ACTION REQUIRED 🚨</h2>
+    </div>
+
+    <div style="border: 3px solid #dc3545; padding: 20px; margin: 20px 0; border-radius: 5px;">
+        <h3 style="color: #dc3545; margin-top: 0;">Your Dead Man's Switch Will Trigger Soon!</h3>
+        <p>Hello %s,</p>
+        <p>You have <strong>less than 12 hours</strong> to respond to this check-in.</p>
+        <p><strong style="color: #dc3545;">If you do not check in, your secrets will be automatically delivered to your designated recipients.</strong></p>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="%s" style="background-color: #dc3545; color: white; padding: 15px 30px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 18px;">CHECK IN NOW</a>
+    </div>
+
+    <p>If you can't click the button, copy and paste this URL into your browser:</p>
+    <p style="word-break: break-all; background-color: #f8f9fa; padding: 10px; border-radius: 4px;">%s</p>
+
+    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #6c757d;">
+        <p>This is an automated message from your self-hosted Dead Man's Switch service.</p>
+        <p>If you did not set up this service, please disregard this email.</p>
+    </div>
+</body>
+</html>
+`, name, verificationURL, verificationURL)
+
+	case "urgent":
+		return fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>IMPORTANT: Check-In Required Soon</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background-color: #ffc107; color: #000; padding: 20px; border-radius: 5px; margin-bottom: 20px; text-align: center;">
+        <h2 style="color: #000; margin: 0;">⚠️ URGENT CHECK-IN REQUIRED ⚠️</h2>
+    </div>
+
+    <div style="border: 2px solid #ffc107; padding: 20px; margin: 20px 0; border-radius: 5px;">
+        <p>Hello %s,</p>
+        <p>Your deadline is approaching soon (12-24 hours remaining).</p>
+        <p><strong>Please confirm you're still active to prevent your Dead Man's Switch from triggering.</strong></p>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="%s" style="background-color: #ffc107; color: #000; padding: 15px 30px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 16px;">I'm OK - Confirm</a>
+    </div>
+
+    <p><strong>Important:</strong> If you don't respond, your pre-configured secrets will be automatically sent to your designated recipients.</p>
+
+    <p>If you can't click the button, copy and paste this URL into your browser:</p>
+    <p style="word-break: break-all; background-color: #f8f9fa; padding: 10px; border-radius: 4px;">%s</p>
+
+    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #6c757d;">
+        <p>This is an automated message from your self-hosted Dead Man's Switch service.</p>
+        <p>If you did not set up this service, please disregard this email.</p>
+    </div>
+</body>
+</html>
+`, name, verificationURL, verificationURL)
+
+	default: // normal
+		return fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Routine Check-In - Dead Man's Switch</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background-color: #28a745; color: white; padding: 20px; border-radius: 5px; margin-bottom: 20px; text-align: center;">
+        <h2 style="color: white; margin: 0;">✅ Routine Check-In</h2>
     </div>
 
     <p>Hello %s,</p>
 
-    <p>This is an automated check-in request from your Dead Man's Switch service.</p>
+    <p>This is your regular check-in request from your Dead Man's Switch service.</p>
 
     <p><strong>Action Required:</strong> Please confirm you're okay by clicking the button below within your configured deadline.</p>
 
@@ -165,13 +262,7 @@ func (c *Client) SendPingEmail(email string, name string, verificationCode strin
 </body>
 </html>
 `, name, verificationURL, verificationURL)
-
-	return c.SendEmail(&MessageOptions{
-		To:      []string{email},
-		Subject: subject,
-		Body:    body,
-		IsHTML:  true,
-	})
+	}
 }
 
 // SendSecretDeliveryEmail sends an email with access to a user's secrets

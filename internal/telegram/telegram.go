@@ -237,7 +237,7 @@ func (b *Bot) handleCallbackQuery(ctx context.Context, query *tgbotapi.CallbackQ
 }
 
 // SendPingMessage sends a ping message to a user
-func (b *Bot) SendPingMessage(ctx context.Context, user *models.User, pingID string) error {
+func (b *Bot) SendPingMessage(ctx context.Context, user *models.User, pingID string, urgency string) error {
 	if user.TelegramID == "" {
 		return fmt.Errorf("user has no associated Telegram ID")
 	}
@@ -248,18 +248,18 @@ func (b *Bot) SendPingMessage(ctx context.Context, user *models.User, pingID str
 	}
 
 	// Create inline keyboard with verification button
+	buttonText := "I'm OK - Confirm"
+	if urgency == "final_warning" {
+		buttonText = "I'm OK NOW - Confirm"
+	}
+
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("I'm OK - Confirm", fmt.Sprintf("verify:%s:%s", user.ID, pingID)),
+			tgbotapi.NewInlineKeyboardButtonData(buttonText, fmt.Sprintf("verify:%s:%s", user.ID, pingID)),
 		),
 	)
 
-	message := fmt.Sprintf(
-		"🔔 *Dead Man's Switch Check-In*\n\n"+
-			"Please confirm you're okay by pressing the button below.\n\n"+
-			"If you don't respond within %d days, your pre-configured secrets will be sent to your designated recipients.",
-		user.PingDeadline,
-	)
+	message := b.getMessageByUrgency(user, urgency)
 
 	msg := tgbotapi.NewMessage(chatID, message)
 	msg.ParseMode = "Markdown"
@@ -267,6 +267,35 @@ func (b *Bot) SendPingMessage(ctx context.Context, user *models.User, pingID str
 
 	_, err = b.bot.Send(msg)
 	return err
+}
+
+// getMessageByUrgency returns an urgency-appropriate Telegram message
+func (b *Bot) getMessageByUrgency(user *models.User, urgency string) string {
+	switch urgency {
+	case "final_warning":
+		return fmt.Sprintf(
+			"🚨 *FINAL WARNING* 🚨\n\n"+
+				"This is your LAST check-in reminder before your Dead Man's Switch triggers!\n\n"+
+				"You have *less than 12 hours* to respond.\n\n"+
+				"If you don't check in, your pre-configured secrets will be sent to your designated recipients.\n\n"+
+				"Click 'I'm OK NOW' to confirm you're active.",
+		)
+	case "urgent":
+		return fmt.Sprintf(
+			"⚠️ *URGENT CHECK-IN REQUIRED* ⚠️\n\n"+
+				"Your deadline is approaching soon (12-24 hours remaining).\n\n"+
+				"Please confirm you're still active to prevent your Dead Man's Switch from triggering.\n\n"+
+				"Click 'I'm OK' to check in.",
+		)
+	default: // normal
+		return fmt.Sprintf(
+			"✅ *Routine Check-In*\n\n"+
+				"Time for your regular check-in!\n\n"+
+				"Please confirm you're okay by pressing the button below.\n\n"+
+				"If you don't respond within %d days, your pre-configured secrets will be sent to your designated recipients.",
+			user.PingDeadline,
+		)
+	}
 }
 
 // Command handlers

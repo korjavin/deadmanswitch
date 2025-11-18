@@ -308,7 +308,7 @@ type MockEmailClient struct {
 	sentEmails int
 }
 
-func (m *MockEmailClient) SendPingEmail(email, name, verificationCode string) error {
+func (m *MockEmailClient) SendPingEmail(email, name, verificationCode, urgency string) error {
 	m.sentEmails++
 	return nil
 }
@@ -333,7 +333,7 @@ type MockTelegramBot struct {
 	sentMessages int
 }
 
-func (m *MockTelegramBot) SendPingMessage(ctx context.Context, user *models.User, pingID string) error {
+func (m *MockTelegramBot) SendPingMessage(ctx context.Context, user *models.User, pingID string, urgency string) error {
 	m.sentMessages++
 	return nil
 }

@@ -702,13 +702,14 @@ func (s *Scheduler) reminderTask(ctx context.Context) error {
 		}
 
 		// Determine the urgency level based on time until deadline
-		urgencyLevel := ""
+		urgencyLevel := "normal"
+		urgencyLabel := "REMINDER"
 		if timeUntilDeadline <= 12*time.Hour {
-			urgencyLevel = "FINAL WARNING"
+			urgencyLevel = "final_warning"
+			urgencyLabel = "FINAL WARNING"
 		} else if timeUntilDeadline <= 24*time.Hour {
-			urgencyLevel = "URGENT"
-		} else {
-			urgencyLevel = "REMINDER"
+			urgencyLevel = "urgent"
+			urgencyLabel = "URGENT"
 		}
 
 		// Send appropriate reminders based on user's configured methods
@@ -725,8 +726,7 @@ func (s *Scheduler) reminderTask(ctx context.Context) error {
 			if err := s.repo.CreatePingHistory(ctx, telegramPing); err != nil {
 				log.Printf("Failed to create telegram reminder history for user %s: %v", user.ID, err)
 			} else {
-				// TODO: Enhance the SendPingMessage interface to include urgency level
-				if err := s.telegramBot.SendPingMessage(ctx, user, telegramPing.ID); err != nil {
+				if err := s.telegramBot.SendPingMessage(ctx, user, telegramPing.ID, urgencyLevel); err != nil {
 					log.Printf("Failed to send Telegram reminder to user %s: %v", user.ID, err)
 				}
 			}
@@ -764,8 +764,7 @@ func (s *Scheduler) reminderTask(ctx context.Context) error {
 		}
 
 		// Send email with urgency level
-		// TODO: Enhance the SendPingEmail interface to include urgency level
-		if err := s.emailClient.SendPingEmail(user.Email, extractNameFromEmail(user.Email), verification.Code); err != nil {
+		if err := s.emailClient.SendPingEmail(user.Email, extractNameFromEmail(user.Email), verification.Code, urgencyLevel); err != nil {
 			log.Printf("Failed to send email reminder to user %s: %v", user.ID, err)
 		}
 
@@ -773,9 +772,9 @@ func (s *Scheduler) reminderTask(ctx context.Context) error {
 		auditLog := &models.AuditLog{
 			ID:        uuid.New().String(),
 			UserID:    user.ID,
-			Action:    fmt.Sprintf("%s_reminder_sent", strings.ToLower(urgencyLevel)),
+			Action:    fmt.Sprintf("%s_reminder_sent", urgencyLevel),
 			Timestamp: now,
-			Details:   fmt.Sprintf("%s reminder sent. Deadline in %s", urgencyLevel, formatDuration(timeUntilDeadline)),
+			Details:   fmt.Sprintf("%s reminder sent. Deadline in %s", urgencyLabel, formatDuration(timeUntilDeadline)),
 		}
 
 		if err := s.repo.CreateAuditLog(ctx, auditLog); err != nil {
