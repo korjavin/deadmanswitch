@@ -33,7 +33,7 @@ type TaskHandler func(ctx context.Context) error
 
 // EmailClient is an interface for email clients
 type EmailClient interface {
-	SendPingEmail(email, name, verificationCode string) error
+	SendPingEmail(email, verificationCode, urgency string) error
 	SendSecretDeliveryEmail(recipientEmail, recipientName, message, accessCode string) error
 	SendEmail(options *email.MessageOptions) error
 	SendEmailSimple(to []string, subject, body string, isHTML bool) error
@@ -351,7 +351,7 @@ func (s *Scheduler) sendEmailPing(ctx context.Context, user *models.User, ping *
 	}
 
 	// Send email
-	return s.emailClient.SendPingEmail(user.Email, extractNameFromEmail(user.Email), verification.Code)
+	return s.emailClient.SendPingEmail(user.Email, verification.Code, "normal")
 }
 
 // deadSwitchTask checks for users who have expired deadlines and sends their secrets
@@ -764,7 +764,7 @@ func (s *Scheduler) reminderTask(ctx context.Context) error {
 		}
 
 		// Send email with urgency level
-		if err := s.emailClient.SendPingEmail(user.Email, extractNameFromEmail(user.Email), verification.Code, urgencyLevel); err != nil {
+		if err := s.emailClient.SendPingEmail(user.Email, verification.Code, urgencyLevel); err != nil {
 			log.Printf("Failed to send email reminder to user %s: %v", user.ID, err)
 		}
 
@@ -821,29 +821,6 @@ func generateVerificationCode() string {
 // generateAccessCode creates a unique access code for secret delivery
 func generateAccessCode() string {
 	return uuid.New().String()
-}
-
-// extractNameFromEmail tries to extract a name from an email address
-func extractNameFromEmail(email string) string {
-	parts := strings.Split(email, "@")
-	if len(parts) < 1 {
-		return "User"
-	}
-
-	name := parts[0]
-	// Replace dots and underscores with spaces
-	name = strings.ReplaceAll(name, ".", " ")
-	name = strings.ReplaceAll(name, "_", " ")
-
-	// Capitalize the first letter of each word
-	words := strings.Split(name, " ")
-	for i, word := range words {
-		if len(word) > 0 {
-			words[i] = strings.ToUpper(word[:1]) + word[1:]
-		}
-	}
-
-	return strings.Join(words, " ")
 }
 
 // formatDuration formats a duration in a human-readable way

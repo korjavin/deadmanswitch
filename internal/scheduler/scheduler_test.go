@@ -308,7 +308,7 @@ type MockEmailClient struct {
 	sentEmails int
 }
 
-func (m *MockEmailClient) SendPingEmail(email, name, verificationCode, urgency string) error {
+func (m *MockEmailClient) SendPingEmail(email, verificationCode, urgency string) error {
 	m.sentEmails++
 	return nil
 }
@@ -677,25 +677,6 @@ func TestHelperFunctions(t *testing.T) {
 	accessCode := generateAccessCode()
 	if len(accessCode) != 36 {
 		t.Errorf("Expected access code length to be 36, got %d", len(accessCode))
-	}
-
-	// Test extractNameFromEmail
-	tests := []struct {
-		email    string
-		expected string
-	}{
-		{"john.doe@example.com", "John Doe"},
-		{"jane_smith@example.com", "Jane Smith"},
-		{"user@example.com", "User"},
-		{"first.middle.last@example.com", "First Middle Last"},
-		{"@invalid", ""},
-	}
-
-	for _, test := range tests {
-		result := extractNameFromEmail(test.email)
-		if result != test.expected {
-			t.Errorf("extractNameFromEmail(%s) = %s, expected %s", test.email, result, test.expected)
-		}
 	}
 
 	// Test formatDuration
