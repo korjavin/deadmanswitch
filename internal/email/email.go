@@ -162,7 +162,7 @@ func (c *Client) SendEmailSimple(to []string, subject, body string, isHTML bool)
 }
 
 // SendPingEmail sends a ping email to a user with a verification link
-func (c *Client) SendPingEmail(email string, name string, verificationCode string, urgency string) error {
+func (c *Client) SendPingEmail(email string, verificationCode string, urgency string) error {
 	baseURL := fmt.Sprintf("https://%s", c.config.BaseDomain)
 	verificationURL := fmt.Sprintf("%s/verify/%s", baseURL, verificationCode)
 
@@ -174,7 +174,6 @@ func (c *Client) SendPingEmail(email string, name string, verificationCode strin
 
 	// Prepare template data
 	data := map[string]interface{}{
-		"Name":            name,
 		"VerificationURL": verificationURL,
 	}
 
