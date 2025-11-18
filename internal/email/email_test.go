@@ -137,11 +137,12 @@ func (s *mockSMTPServer) getPort() int {
 func TestNewClient(t *testing.T) {
 	// Test with valid config
 	cfg := &config.Config{
-		SMTPHost:     "smtp.example.com",
-		SMTPPort:     587,
-		SMTPUsername: "user@example.com",
-		SMTPPassword: "password",
-		SMTPFrom:     "noreply@example.com",
+		SMTPHost:           "smtp.example.com",
+		SMTPPort:           587,
+		SMTPUsername:       "user@example.com",
+		SMTPPassword:       "password",
+		SMTPFrom:           "noreply@example.com",
+		EmailTemplatesPath: "../../internal/email/templates",
 	}
 
 	client, err := NewClient(cfg)
@@ -201,11 +202,12 @@ func TestNewClient(t *testing.T) {
 func TestSendEmailSimple_Validation(t *testing.T) {
 	// Create a client
 	cfg := &config.Config{
-		SMTPHost:     "smtp.example.com",
-		SMTPPort:     587,
-		SMTPUsername: "user@example.com",
-		SMTPPassword: "password",
-		SMTPFrom:     "noreply@example.com",
+		SMTPHost:           "smtp.example.com",
+		SMTPPort:           587,
+		SMTPUsername:       "user@example.com",
+		SMTPPassword:       "password",
+		SMTPFrom:           "noreply@example.com",
+		EmailTemplatesPath: "../../internal/email/templates",
 	}
 
 	client, err := NewClient(cfg)
@@ -234,11 +236,12 @@ func TestSendEmailSimple_WithMockServer(t *testing.T) {
 func TestSendEmail(t *testing.T) {
 	// Create a client
 	cfg := &config.Config{
-		SMTPHost:     "smtp.example.com",
-		SMTPPort:     587,
-		SMTPUsername: "user@example.com",
-		SMTPPassword: "password",
-		SMTPFrom:     "noreply@example.com",
+		SMTPHost:           "smtp.example.com",
+		SMTPPort:           587,
+		SMTPUsername:       "user@example.com",
+		SMTPPassword:       "password",
+		SMTPFrom:           "noreply@example.com",
+		EmailTemplatesPath: "../../internal/email/templates",
 	}
 
 	client, err := NewClient(cfg)
@@ -269,12 +272,13 @@ func TestSendEmail(t *testing.T) {
 func TestSendPingEmail(t *testing.T) {
 	// Create a client
 	cfg := &config.Config{
-		BaseDomain:   "example.com",
-		SMTPHost:     "smtp.example.com",
-		SMTPPort:     587,
-		SMTPUsername: "user@example.com",
-		SMTPPassword: "password",
-		SMTPFrom:     "noreply@example.com",
+		BaseDomain:         "example.com",
+		SMTPHost:           "smtp.example.com",
+		SMTPPort:           587,
+		SMTPUsername:       "user@example.com",
+		SMTPPassword:       "password",
+		SMTPFrom:           "noreply@example.com",
+		EmailTemplatesPath: "../../internal/email/templates",
 	}
 
 	client, err := NewClient(cfg)
@@ -303,12 +307,13 @@ func TestSendPingEmail(t *testing.T) {
 func TestSendSecretDeliveryEmail(t *testing.T) {
 	// Create a client
 	cfg := &config.Config{
-		BaseDomain:   "example.com",
-		SMTPHost:     "smtp.example.com",
-		SMTPPort:     587,
-		SMTPUsername: "user@example.com",
-		SMTPPassword: "password",
-		SMTPFrom:     "noreply@example.com",
+		BaseDomain:         "example.com",
+		SMTPHost:           "smtp.example.com",
+		SMTPPort:           587,
+		SMTPUsername:       "user@example.com",
+		SMTPPassword:       "password",
+		SMTPFrom:           "noreply@example.com",
+		EmailTemplatesPath: "../../internal/email/templates",
 	}
 
 	client, err := NewClient(cfg)

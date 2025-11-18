@@ -37,6 +37,9 @@ COPY --from=builder /app/deadmanswitch /app/
 COPY web/templates /app/web/templates
 COPY web/static /app/web/static
 
+# Copy email templates
+COPY internal/email/templates /app/internal/email/templates
+
 # Expose the application port
 EXPOSE 8080
 
