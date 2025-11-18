@@ -28,6 +28,9 @@ type Config struct {
 	// Admin email for notifications
 	AdminEmail string
 
+	// Email templates path
+	EmailTemplatesPath string
+
 	// Ping settings
 	PingFrequency time.Duration
 	PingDeadline  time.Duration
@@ -84,6 +87,12 @@ func LoadFromEnv() (*Config, error) {
 	config.SMTPFrom = os.Getenv("SMTP_FROM")
 	if config.SMTPFrom == "" && config.SMTPUsername != "" {
 		config.SMTPFrom = config.SMTPUsername
+	}
+
+	// Email templates path
+	config.EmailTemplatesPath = os.Getenv("EMAIL_TEMPLATES_PATH")
+	if config.EmailTemplatesPath == "" {
+		config.EmailTemplatesPath = "./internal/email/templates"
 	}
 
 	// Ping settings

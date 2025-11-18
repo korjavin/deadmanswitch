@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>IMPORTANT: Check-In Required Soon</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+    <div style="background-color: #ffc107; color: #000; padding: 20px; border-radius: 5px; margin-bottom: 20px; text-align: center;">
+        <h2 style="color: #000; margin: 0;">⚠️ URGENT CHECK-IN REQUIRED ⚠️</h2>
+    </div>
+
+    <div style="border: 2px solid #ffc107; padding: 20px; margin: 20px 0; border-radius: 5px;">
+        <p>Hello {{.Name}},</p>
+        <p>Your deadline is approaching soon (12-24 hours remaining).</p>
+        <p><strong>Please confirm you're still active to prevent your Dead Man's Switch from triggering.</strong></p>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+        <a href="{{.VerificationURL}}" style="background-color: #ffc107; color: #000; padding: 15px 30px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 16px;">I'm OK - Confirm</a>
+    </div>
+
+    <p><strong>Important:</strong> If you don't respond, your pre-configured secrets will be automatically sent to your designated recipients.</p>
+
+    <p>If you can't click the button, copy and paste this URL into your browser:</p>
+    <p style="word-break: break-all; background-color: #f8f9fa; padding: 10px; border-radius: 4px;">{{.VerificationURL}}</p>
+
+    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #6c757d;">
+        <p>This is an automated message from your self-hosted Dead Man's Switch service.</p>
+        <p>If you did not set up this service, please disregard this email.</p>
+    </div>
+</body>
+</html>
