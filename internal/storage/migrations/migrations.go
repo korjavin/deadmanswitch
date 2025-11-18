@@ -14,11 +14,6 @@ func RunMigrations(db *sql.DB) error {
 		return err
 	}
 
-	// Add secret questions tables
-	if err := AddSecretQuestionsTables(db); err != nil {
-		return err
-	}
-
 	// Add access codes table
 	if err := AddAccessCodesTable(db); err != nil {
 		return err

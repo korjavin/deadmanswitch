@@ -17,7 +17,6 @@ import (
 	"github.com/korjavin/deadmanswitch/internal/telegram"
 	"github.com/korjavin/deadmanswitch/internal/web/handlers"
 	authMiddleware "github.com/korjavin/deadmanswitch/internal/web/middleware"
-	"github.com/korjavin/deadmanswitch/internal/web/templates"
 	"github.com/korjavin/deadmanswitch/internal/web/utils"
 )
 
@@ -31,18 +30,17 @@ type Server struct {
 	router      *http.ServeMux
 	httpServer  *http.Server
 	handlers    struct {
-		index           *handlers.IndexHandler
-		auth            *handlers.AuthHandler
-		dashboard       *handlers.DashboardHandler
-		secrets         *handlers.SecretsHandler
-		recipients      *handlers.RecipientsHandler
-		api             *handlers.APIHandler
-		profile         *handlers.ProfileHandler
-		settings        *handlers.SettingsHandler
-		history         *handlers.HistoryHandler
-		twofa           *handlers.TwoFAHandler
-		passkey         *handlers.PasskeyHandler
-		secretQuestions *handlers.SecretQuestionsHandler
+		index      *handlers.IndexHandler
+		auth       *handlers.AuthHandler
+		dashboard  *handlers.DashboardHandler
+		secrets    *handlers.SecretsHandler
+		recipients *handlers.RecipientsHandler
+		api        *handlers.APIHandler
+		profile    *handlers.ProfileHandler
+		settings   *handlers.SettingsHandler
+		history    *handlers.HistoryHandler
+		twofa      *handlers.TwoFAHandler
+		passkey    *handlers.PasskeyHandler
 	}
 }
 
@@ -105,7 +103,6 @@ func NewServer(
 	server.handlers.history = handlers.NewHistoryHandler(repo)
 	server.handlers.twofa = handlers.NewTwoFAHandler(repo)
 	server.handlers.passkey = handlers.NewPasskeyHandler(repo, webAuthnService)
-	server.handlers.secretQuestions = handlers.NewSecretQuestionsHandler(repo, templates.NewTemplateRenderer())
 
 	// Set up routes
 	server.setupRoutes()
@@ -285,34 +282,6 @@ func (s *Server) handleRecipients(w http.ResponseWriter, r *http.Request) {
 			s.handlers.recipients.HandleUpdateRecipientSecrets(w, r)
 		}
 		return
-	}
-
-	// Handle questions management
-	if strings.HasSuffix(r.URL.Path, "/questions") {
-		switch r.Method {
-		case http.MethodGet:
-			s.handlers.secretQuestions.ShowQuestionsPage(w, r)
-		case http.MethodPost:
-			s.handlers.secretQuestions.CreateQuestions(w, r)
-		}
-		return
-	}
-
-	// Handle question operations
-	if strings.Contains(r.URL.Path, "/questions/") {
-		// Extract the question ID
-		parts := strings.Split(r.URL.Path, "/")
-		if len(parts) > 3 {
-			// Check if this is a delete request
-			if strings.HasSuffix(r.URL.Path, "/delete") {
-				s.handlers.secretQuestions.DeleteQuestion(w, r)
-				return
-			}
-
-			// Handle update question
-			s.handlers.secretQuestions.UpdateQuestion(w, r)
-			return
-		}
 	}
 
 	// Handle regular recipient operations

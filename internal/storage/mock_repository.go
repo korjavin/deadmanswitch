@@ -13,8 +13,6 @@ type MockRepository struct {
 	Secrets               []*models.Secret
 	Recipients            []*models.Recipient
 	SecretAssignments     []*models.SecretAssignment
-	SecretQuestions       []*models.SecretQuestion
-	SecretQuestionSets    []*models.SecretQuestionSet
 	Passkeys              []*models.Passkey
 	PingHistories         []*models.PingHistory
 	PingVerifications     []*models.PingVerification
@@ -33,8 +31,6 @@ func NewMockRepository() *MockRepository {
 		Secrets:               make([]*models.Secret, 0),
 		Recipients:            make([]*models.Recipient, 0),
 		SecretAssignments:     make([]*models.SecretAssignment, 0),
-		SecretQuestions:       make([]*models.SecretQuestion, 0),
-		SecretQuestionSets:    make([]*models.SecretQuestionSet, 0),
 		Passkeys:              make([]*models.Passkey, 0),
 		PingHistories:         make([]*models.PingHistory, 0),
 		PingVerifications:     make([]*models.PingVerification, 0),
