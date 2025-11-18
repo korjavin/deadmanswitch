@@ -51,21 +51,6 @@ type Repository interface {
 	ListSecretAssignmentsByUserID(ctx context.Context, userID string) ([]*models.SecretAssignment, error)
 	DeleteSecretAssignment(ctx context.Context, id string) error
 
-	// SecretQuestion operations
-	CreateSecretQuestion(ctx context.Context, question *models.SecretQuestion) error
-	GetSecretQuestion(ctx context.Context, id string) (*models.SecretQuestion, error)
-	UpdateSecretQuestion(ctx context.Context, question *models.SecretQuestion) error
-	DeleteSecretQuestion(ctx context.Context, id string) error
-	ListSecretQuestionsByAssignmentID(ctx context.Context, assignmentID string) ([]*models.SecretQuestion, error)
-
-	// SecretQuestionSet operations
-	CreateSecretQuestionSet(ctx context.Context, set *models.SecretQuestionSet) error
-	GetSecretQuestionSet(ctx context.Context, id string) (*models.SecretQuestionSet, error)
-	GetSecretQuestionSetByAssignmentID(ctx context.Context, assignmentID string) (*models.SecretQuestionSet, error)
-	UpdateSecretQuestionSet(ctx context.Context, set *models.SecretQuestionSet) error
-	DeleteSecretQuestionSet(ctx context.Context, id string) error
-	ListSecretQuestionSetsNeedingReencryption(ctx context.Context, safeMarginSeconds int64) ([]*models.SecretQuestionSet, error)
-
 	// Ping operations
 	CreatePingHistory(ctx context.Context, ping *models.PingHistory) error
 	UpdatePingHistory(ctx context.Context, ping *models.PingHistory) error

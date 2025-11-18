@@ -148,15 +148,6 @@ func (s *Scheduler) registerTasks() error {
 		Handler:    s.externalActivityTask,
 	})
 
-	// Task for re-encrypting secret questions
-	s.AddTask(&Task{
-		ID:         uuid.New().String(),
-		Name:       "ReencryptQuestionsTask",
-		Duration:   1 * time.Hour, // Re-encrypt questions hourly
-		RunOnStart: true,
-		Handler:    s.ReencryptQuestionsTask,
-	})
-
 	// Task for cleaning up expired access codes
 	s.AddTask(&Task{
 		ID:         uuid.New().String(),
