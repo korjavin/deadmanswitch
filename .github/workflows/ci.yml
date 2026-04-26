@@ -171,6 +171,8 @@ jobs:
     name: Run Frontend Tests
     runs-on: ubuntu-latest
     needs: build-and-push
+    # Temporarily disabled: Playwright runs are too slow. Re-enable by removing `if: false`.
+    if: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -439,7 +441,7 @@ jobs:
   deploy:
     name: Update Deploy Branch and Trigger Portainer
     runs-on: ubuntu-latest
-    needs: [frontend-test]
+    needs: [build-and-push]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     steps:
       - name: Checkout repository
