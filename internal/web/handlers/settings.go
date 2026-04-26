@@ -75,15 +75,15 @@ func (h *SettingsHandler) HandleUpdateDeadManSwitchSettings(w http.ResponseWrite
 	pingMethod := r.FormValue("pingMethod")
 	pingingEnabled := r.FormValue("pingingEnabled") == "on"
 
-	// Parse ping frequency
+	// Parse ping frequency. Bounds match the settings form's slider/number inputs (1–90 days).
 	pingFrequency, err := strconv.Atoi(pingFrequencyStr)
-	if err != nil || pingFrequency < 1 || pingFrequency > 30 {
+	if err != nil || pingFrequency < 1 || pingFrequency > 90 {
 		pingFrequency = 7 // Default to weekly
 	}
 
-	// Parse ping deadline
+	// Parse ping deadline. Bounds match the settings form's slider/number inputs (1–90 days).
 	pingDeadline, err := strconv.Atoi(pingDeadlineStr)
-	if err != nil || pingDeadline < 3 || pingDeadline > 30 {
+	if err != nil || pingDeadline < 1 || pingDeadline > 90 {
 		pingDeadline = 14 // Default to 2 weeks
 	}
 

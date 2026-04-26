@@ -70,34 +70,35 @@ func (h *DashboardHandler) HandleDashboard(w http.ResponseWriter, r *http.Reques
 	triggerTime := ""
 
 	if timeUntilNextCheckIn <= 0 {
-		// Check-in is due
-		if timeUntilDeadline <= 48*time.Hour && timeUntilDeadline > 0 {
-			// Less than 48 hours until deadline
-			status = "caution"
-			statusMessage = "Your check-in deadline is approaching. Please check in to keep your switch active."
-		} else if timeUntilDeadline <= 0 {
-			// Past deadline
+		// Check-in is due. Three states fan out from here:
+		// past deadline > danger; within 48h of deadline > caution-imminent;
+		// past nudge but >48h from deadline > caution-quiet.
+		if timeUntilDeadline <= 0 {
 			status = "danger"
 			statusMessage = "Your check-in deadline has passed! Your switch will trigger soon if you don't check in."
 			triggerTime = deadline.Format("Jan 2, 2006 15:04 MST")
+		} else if timeUntilDeadline <= 48*time.Hour {
+			status = "caution"
+			statusMessage = "Your check-in deadline is approaching. Please check in to keep your switch active."
+		} else {
+			status = "caution"
+			statusMessage = "We haven't heard from you in a while. A quick check-in keeps your switch quiet."
 		}
 	}
 
-	// Get recent activity logs (most recent first), then append the synthetic
-	// "Account created" row at the end so it never displaces a fresher entry
-	// in the truncated dashboard view.
+	// Get recent activity logs. The repo returns rows ORDER BY timestamp DESC,
+	// so iterate forward to pick the five newest. The synthetic "Account
+	// created" row is appended at the end so it never displaces a fresher entry.
 	activityLogs, err := h.repo.ListAuditLogsByUserID(r.Context(), user.ID)
 	activities := make([]map[string]string, 0, 6)
 
 	if err == nil && len(activityLogs) > 0 {
-		count := 0
-		for i := len(activityLogs) - 1; i >= 0 && count < 5; i-- {
+		for i := 0; i < len(activityLogs) && i < 5; i++ {
 			log := activityLogs[i]
 			activities = append(activities, map[string]string{
 				"Time":        log.Timestamp.Format("Jan 2, 2006 15:04"),
 				"Description": formatActivityDescription(log.Action, log.Details),
 			})
-			count++
 		}
 	}
 

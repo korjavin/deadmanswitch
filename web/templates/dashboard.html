@@ -10,7 +10,8 @@
   .hb-page-head .actions { display: flex; gap: 8px; }
 
   /* Status timeline strip + check-in card share one outer card */
-  .hb-status-card { padding: 0; margin-bottom: 28px; }
+  .hb-status-card { padding: 0; margin-bottom: 28px; position: relative; }
+  .hb-status-indicator { position: absolute; top: 16px; right: 16px; z-index: 1; }
   .hb-timeline-strip {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
@@ -199,7 +200,12 @@
   </div>
 
   <!-- Status timeline strip + big check-in card -->
-  <section class="card hb-status-card heartbeat {{ $variant }}" data-test="status-strip" aria-labelledby="checkInLabel">
+  <section class="card hb-status-card" data-test="status-strip" aria-labelledby="checkInLabel">
+    <div class="hb-status-indicator">
+      <span class="heartbeat {{ $variant }}" data-test="status-pulse" aria-hidden="true">
+        <span class="pulse"></span>
+      </span>
+    </div>
     <div class="hb-timeline-strip">
       <div class="hb-stat">
         <div class="label">· LAST SEEN</div>
