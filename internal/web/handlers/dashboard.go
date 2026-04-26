@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/korjavin/deadmanswitch/internal/storage"
 	"github.com/korjavin/deadmanswitch/internal/web/middleware"
@@ -81,15 +83,13 @@ func (h *DashboardHandler) HandleDashboard(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	// Get recent activity logs
+	// Get recent activity logs (most recent first), then append the synthetic
+	// "Account created" row at the end so it never displaces a fresher entry
+	// in the truncated dashboard view.
 	activityLogs, err := h.repo.ListAuditLogsByUserID(r.Context(), user.ID)
-	activities := []map[string]string{{
-		"Time":        user.CreatedAt.Format("Jan 2, 2006 15:04"),
-		"Description": "Account created",
-	}}
+	activities := make([]map[string]string, 0, 6)
 
 	if err == nil && len(activityLogs) > 0 {
-		// Add the most recent 5 activity logs
 		count := 0
 		for i := len(activityLogs) - 1; i >= 0 && count < 5; i-- {
 			log := activityLogs[i]
@@ -100,6 +100,11 @@ func (h *DashboardHandler) HandleDashboard(w http.ResponseWriter, r *http.Reques
 			count++
 		}
 	}
+
+	activities = append(activities, map[string]string{
+		"Time":        user.CreatedAt.Format("Jan 2, 2006 15:04"),
+		"Description": "Account created",
+	})
 
 	// Get the latest ping history
 	latestPing, err := h.repo.GetLatestPingByUserID(r.Context(), user.ID)
@@ -292,7 +297,11 @@ func firstNameFromUser(email string) string {
 	if local == "" {
 		return "there"
 	}
-	return strings.ToUpper(local[:1]) + local[1:]
+	r, size := utf8.DecodeRuneInString(local)
+	if r == utf8.RuneError {
+		return "there"
+	}
+	return string(unicode.ToUpper(r)) + local[size:]
 }
 
 // humanizeUntil formats a positive forward-looking duration for the

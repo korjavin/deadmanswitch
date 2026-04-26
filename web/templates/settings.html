@@ -265,7 +265,7 @@
         Two-factor is on. You'll be asked for a code from your authenticator app each time you sign in.
       </p>
       <div class="hb-action-row">
-        <button type="button" class="btn danger-btn" id="disable2fa">Disable 2FA</button>
+        <a href="/profile" class="btn danger-btn" id="disable2fa">Manage on profile →</a>
       </div>
     {{ else }}
       <div class="setup-2fa" style="margin-top: 14px; display: none;">
@@ -338,33 +338,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Delete account confirmation flow.
+    // Delete account confirmation flow. The account-delete backend isn't
+    // wired yet — the button confirms intent and surfaces a friendly notice
+    // rather than POSTing to a nonexistent route.
     var deleteAccountButton = document.getElementById('deleteAccount');
     if (deleteAccountButton) {
         deleteAccountButton.addEventListener('click', function() {
             if (!confirm('Delete your account? This cannot be undone.')) return;
             var typed = prompt('Type DELETE to confirm.');
-            if (typed === 'DELETE') {
-                var form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/account/delete';
-                document.body.appendChild(form);
-                form.submit();
-            }
-        });
-    }
-
-    // Disable 2FA confirmation.
-    var disable2faButton = document.getElementById('disable2fa');
-    if (disable2faButton) {
-        disable2faButton.addEventListener('click', function() {
-            if (!confirm('Disable two-factor authentication?')) return;
-            var input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'disable2fa';
-            input.value = 'true';
-            this.closest('form').appendChild(input);
-            this.closest('form').submit();
+            if (typed !== 'DELETE') return;
+            alert('Account deletion is not yet available from the web UI. Please contact your administrator to remove your account.');
         });
     }
 });
