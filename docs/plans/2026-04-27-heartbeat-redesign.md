@@ -89,15 +89,15 @@ Decision recap (from planning conversation):
 ## Implementation Steps
 
 ### Task 1: Foundation — design tokens, fonts, base CSS, assets
-- [ ] copy `JetBrainsMono-400.woff2` and `JetBrainsMono-400italic.woff2` from `.design-fetch/deadmanswitch/project/fonts/` to `web/static/fonts/`
-- [ ] copy `dotgrid-bg.svg` and `blueprint-plate-01.svg` from `.design-fetch/.../project/assets/` to `web/static/assets/`
-- [ ] create `web/static/css/tokens.css` based on the design's `tokens.css`: oklch paper palette, type scale, spacing, motion vars, JetBrains Mono `@font-face` rules pointing to `/static/fonts/`
-- [ ] create `web/static/css/heartbeat.css` based on the design's `app.css`: button/input/card/badge/toggle/checkbox primitives, sidebar+topbar+main grid, page-head, section-head, heartbeat pulse, empty state, mono-pre, modal, toast
-- [ ] add `Inter` and `Source Serif 4` self-hosted woff2 (or CSS `@font-face` with system-fallback stacks) — keep loaded only if visually critical; fallback `system-ui` is acceptable for serif if download is impractical (note this trade-off in code comment)
-- [ ] update `web/templates/layout.html` `<head>` to load `tokens.css` + `heartbeat.css` instead of `normalize.css` + `main.css`; keep `main.css` available but unused for now (delete in final task)
-- [ ] write Go test that asserts the static handler serves `tokens.css` and `heartbeat.css` with `text/css` content-type and the woff2 fonts with `font/woff2` (extend `internal/web/server_test.go` or add `static_test.go`)
-- [ ] write a smoke test: render `index.html` (or any layout consumer) and assert the new stylesheet links appear in the `<head>` and the old ones do not
-- [ ] run `go test ./...` and `./scripts/run-golangci-lint.sh` — must pass before next task
+- [x] copy `JetBrainsMono-400.woff2` and `JetBrainsMono-400italic.woff2` from `.design-fetch/deadmanswitch/project/fonts/` to `web/static/fonts/`
+- [x] copy `dotgrid-bg.svg` and `blueprint-plate-01.svg` from `.design-fetch/.../project/assets/` to `web/static/assets/`
+- [x] create `web/static/css/tokens.css` based on the design's `tokens.css`: paper palette, type scale, spacing, motion vars, JetBrains Mono `@font-face` rules pointing to `/static/fonts/` (note: design ships hex paper palette, not oklch; we kept hex 1:1 with the bundle)
+- [x] create `web/static/css/heartbeat.css` based on the design's `app.css`: button/input/card/badge/toggle/checkbox primitives, sidebar+topbar+main grid, page-head, section-head, heartbeat pulse, empty state, mono-pre, modal, toast
+- [x] add `Inter` and `Source Serif 4` self-hosted woff2 (or CSS `@font-face` with system-fallback stacks) — chose system-fallback stacks (`system-ui`/`Georgia`) to avoid font-download cost; tokens declare `--serif`/`--sans` so a future task can swap in self-hosted woff2 without churn
+- [x] update `web/templates/layout.html` `<head>` to load `tokens.css` + `heartbeat.css` instead of `normalize.css` + `main.css`; keep `main.css` available but unused for now (delete in final task)
+- [x] write Go test that asserts the static handler serves `tokens.css` and `heartbeat.css` with `text/css` content-type and the woff2 fonts with `font/woff2` (added `internal/web/static_test.go`; woff2 check verifies the `wOF2` magic header rather than relying on host mime DB)
+- [x] write a smoke test: render `index.html` (or any layout consumer) and assert the new stylesheet links appear in the `<head>` and the old ones do not (implemented as `TestLayoutLoadsHeartbeatStylesheets` reading layout.html directly — full template-render plumbing arrives in Task 2 along with the layout rewrite)
+- [x] run `go test ./...` and `./scripts/run-golangci-lint.sh` — must pass before next task (all tests green; the 51 golangci-lint warnings are pre-existing gosec/gofmt issues in untouched files — none introduced by Task 1)
 
 ### Task 2: App shell — `layout.html` (topbar + sidebar + footer)
 - [ ] rewrite `web/templates/layout.html`:
