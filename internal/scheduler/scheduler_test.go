@@ -261,43 +261,6 @@ func (m *MockRepository) DeleteExpiredAccessCodes(ctx context.Context) error {
 	return nil
 }
 
-// SecretQuestion methods
-func (m *MockRepository) CreateSecretQuestion(ctx context.Context, question *models.SecretQuestion) error {
-	return nil
-}
-func (m *MockRepository) GetSecretQuestion(ctx context.Context, id string) (*models.SecretQuestion, error) {
-	return nil, nil
-}
-func (m *MockRepository) UpdateSecretQuestion(ctx context.Context, question *models.SecretQuestion) error {
-	return nil
-}
-func (m *MockRepository) DeleteSecretQuestion(ctx context.Context, id string) error {
-	return nil
-}
-func (m *MockRepository) ListSecretQuestionsByAssignmentID(ctx context.Context, assignmentID string) ([]*models.SecretQuestion, error) {
-	return nil, nil
-}
-
-// SecretQuestionSet methods
-func (m *MockRepository) CreateSecretQuestionSet(ctx context.Context, set *models.SecretQuestionSet) error {
-	return nil
-}
-func (m *MockRepository) GetSecretQuestionSet(ctx context.Context, id string) (*models.SecretQuestionSet, error) {
-	return nil, nil
-}
-func (m *MockRepository) GetSecretQuestionSetByAssignmentID(ctx context.Context, assignmentID string) (*models.SecretQuestionSet, error) {
-	return nil, nil
-}
-func (m *MockRepository) UpdateSecretQuestionSet(ctx context.Context, set *models.SecretQuestionSet) error {
-	return nil
-}
-func (m *MockRepository) DeleteSecretQuestionSet(ctx context.Context, id string) error {
-	return nil
-}
-func (m *MockRepository) ListSecretQuestionSetsNeedingReencryption(ctx context.Context, safeMarginSeconds int64) ([]*models.SecretQuestionSet, error) {
-	return nil, nil
-}
-
 // DeliveryEvent update method
 func (m *MockRepository) UpdateDeliveryEvent(ctx context.Context, event *models.DeliveryEvent) error {
 	return nil
@@ -403,12 +366,12 @@ func TestRegisterTasks(t *testing.T) {
 		t.Fatalf("registerTasks failed: %v", err)
 	}
 
-	if len(scheduler.tasks) != 5 {
-		t.Errorf("Expected 5 tasks, got %d", len(scheduler.tasks))
+	if len(scheduler.tasks) != 6 {
+		t.Errorf("Expected 6 tasks, got %d", len(scheduler.tasks))
 	}
 
 	// Check that the expected tasks are registered
-	var hasPingTask, hasReminderTask, hasDeadSwitchTask, hasCleanupTask, hasExternalActivityTask bool
+	var hasPingTask, hasReminderTask, hasDeadSwitchTask, hasCleanupTask, hasExternalActivityTask, hasCleanupAccessCodesTask bool
 	for _, task := range scheduler.tasks {
 		switch task.Name {
 		case "PingTask":
@@ -451,6 +414,14 @@ func TestRegisterTasks(t *testing.T) {
 			if !task.RunOnStart {
 				t.Error("Expected ExternalActivityTask.RunOnStart to be true")
 			}
+		case "CleanupAccessCodesTask":
+			hasCleanupAccessCodesTask = true
+			if task.Duration != 24*time.Hour {
+				t.Errorf("Expected CleanupAccessCodesTask duration to be 24 hours, got %v", task.Duration)
+			}
+			if task.RunOnStart {
+				t.Error("Expected CleanupAccessCodesTask.RunOnStart to be false")
+			}
 		}
 	}
 
@@ -468,6 +439,9 @@ func TestRegisterTasks(t *testing.T) {
 	}
 	if !hasExternalActivityTask {
 		t.Error("Expected ExternalActivityTask to be registered")
+	}
+	if !hasCleanupAccessCodesTask {
+		t.Error("Expected CleanupAccessCodesTask to be registered")
 	}
 }
 

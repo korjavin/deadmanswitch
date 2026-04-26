@@ -41,7 +41,7 @@ type EmailClient interface {
 
 // TelegramBot is an interface for telegram bots
 type TelegramBot interface {
-	SendPingMessage(ctx context.Context, user *models.User, pingID string) error
+	SendPingMessage(ctx context.Context, user *models.User, pingID string, urgency string) error
 }
 
 // Scheduler handles periodic tasks
@@ -261,7 +261,7 @@ func (s *Scheduler) pingTask(ctx context.Context) error {
 					log.Printf("Failed to create ping history for user %s: %v", user.ID, err)
 					continue
 				}
-				if err := s.telegramBot.SendPingMessage(ctx, user, ping.ID); err != nil {
+				if err := s.telegramBot.SendPingMessage(ctx, user, ping.ID, ""); err != nil {
 					log.Printf("Failed to send Telegram ping to user %s: %v", user.ID, err)
 				}
 			} else {
@@ -287,7 +287,7 @@ func (s *Scheduler) pingTask(ctx context.Context) error {
 				if err := s.repo.CreatePingHistory(ctx, telegramPing); err != nil {
 					log.Printf("Failed to create telegram ping history for user %s: %v", user.ID, err)
 				} else {
-					if err := s.telegramBot.SendPingMessage(ctx, user, telegramPing.ID); err != nil {
+					if err := s.telegramBot.SendPingMessage(ctx, user, telegramPing.ID, ""); err != nil {
 						log.Printf("Failed to send Telegram ping to user %s: %v", user.ID, err)
 					}
 				}
