@@ -165,19 +165,20 @@ Decision recap (from planning conversation):
 - [x] run `go test ./...` — must pass before next task (all green; lint baseline unchanged from Task 4 — 51 pre-existing gosec/gofmt warnings, none introduced by Task 5)
 
 ### Task 6: People — `recipients.html`, `new-recipient.html`, `manage-recipient-secrets.html`
-- [ ] rewrite `recipients.html` to mirror the envelope grid in `recipients.jsx`:
-  - `PageHead` (kicker `THE PEOPLE · YOUR CIRCLE`, title "People who matter", lede about envelopes, primary "Add someone" action)
-  - `auto-fill, minmax(320px, 1fr)` envelope card grid
-  - Each envelope: dashed-bottom flap (`TO ·` + confirmed/awaiting badge), name + relation + email body, sunken footer (`CONTAINS · {n} letters` or "nothing yet")
-  - Trailing dashed `+ Add another person` placeholder card
-  - Empty state: dashed bordered block with `users-round` icon, "Nobody yet" headline, descriptive paragraph, primary button
-- [ ] rewrite `new-recipient.html`: stepped form (step 1 name+email+relation, step 2 confirmation copy showing the email Heartbeat will send) — matches `AddRecipientModal` structure but as a full page since this is a separate route
-- [ ] rewrite `manage-recipient-secrets.html`: list letters/secrets currently assigned to a recipient with checkboxes; mono `· CONTAINS` section head; "save" primary button
-- [ ] preserve existing form fields and action URLs; restyle only
-- [ ] write Go tests: render `recipients.html` with 0 recipients (empty state) and 3 recipients (envelope grid), assert markers
-- [ ] write Go test: render `new-recipient.html`, assert step labels and form fields
-- [ ] write Go test: render `manage-recipient-secrets.html` with assigned + unassigned letters, assert checkbox states
-- [ ] run `go test ./...` — must pass before next task
+- [x] rewrite `recipients.html` to mirror the envelope grid in `recipients.jsx`:
+  - `PageHead` (kicker `· THE PEOPLE · YOUR CIRCLE`, title "People who matter", lede about envelopes, primary "Add someone" action linking to `/recipients/new`)
+  - `auto-fill, minmax(320px, 1fr)` envelope card grid (`.hb-envelope-grid`)
+  - Each envelope: dashed-bottom flap (`TO ·` + `✓ confirmed` solid badge or `awaiting reply` dashed badge), name + relation + email body, sunken `· CONTAINS` footer (`nothing yet` italic / `1 letter` / `{n} letters`)
+  - Each envelope keeps its own action row (Edit / Letters / Test / Remove) so all existing handler URLs (`/recipients/{id}`, `/recipients/{id}/secrets`, `/recipients/{id}/test`, `DELETE /recipients/{id}`) stay reachable without backend changes
+  - Trailing dashed `+ Add another person` placeholder card linking to `/recipients/new`
+  - Empty state: `class="empty"` block with inline 28px `users-round` SVG, "Nobody yet" headline, descriptive paragraph, primary button
+- [x] rewrite `new-recipient.html`: single-form layout that visually walks through two steps — step 1 (name, email, relation, contact method, telegram, notes) and step 2 (preview of the exact confirmation email Heartbeat will send) — keeps `AddRecipientModal` content while remaining a full-page form because this is a separate route. Pre-fills all values in edit mode (`Save changes` button copy) and live-updates the preview's `data-test="preview-name"` / `preview-to` spans via vanilla JS.
+- [x] rewrite `manage-recipient-secrets.html`: recipient mini-summary (`· NAME` / `· EMAIL`), `· CONTAINS · TICK TO INCLUDE` section head, `.hb-letter-list` of `<label>` rows with native checkbox + title + `· CURRENTLY INSIDE` / `· NOT YET INSIDE` sub-line; "Save assignments" primary button + Cancel ghost. When `.Data.Secrets` is empty, renders the `class="empty"` envelope-style block with a "Write your first letter" CTA pointing at `/secrets/new`.
+- [x] preserve existing form fields and action URLs; restyle only — recipients.html keeps `action="/recipients/{id}"` + `name="_method" value="DELETE"` for delete; new-recipient.html keeps `action="/recipients/new"` (or `.../{id}` in edit mode) with `name="name"`/`"email"`/`"relationship"`/`"contactMethod"`/`"telegramUsername"`/`"notes"`/`"verified"` exactly as the handler reads them; manage-recipient-secrets.html keeps `action="/recipients/{id}/secrets"` with checkbox `name="secrets"`.
+- [x] write Go tests: `TestRenderRecipients_EnvelopeGrid` covers 3 recipients with mixed pluralization (2 letters / 1 letter / nothing yet) and confirmed+awaiting badges; `TestRenderRecipients_EmptyState` covers 0 recipients (dashed envelope-style empty block, no grid markers). Both assert old Bootstrap markers (`recipient-card`, `bg-success`, `Dead Man's Switch`, etc.) are gone.
+- [x] write Go test: `TestRenderNewRecipient_Heartbeat` (add mode) asserts step labels, all preserved form field names, mono `·`-prefixed labels, and the email preview block; `TestRenderNewRecipient_EditMode` asserts pre-filled values, `selected` option markup for relationship+contactMethod, the verified checkbox, and the `Save changes` button copy.
+- [x] write Go test: `TestRenderManageRecipientSecrets_Mixed` renders a recipient with 3 letters (2 assigned + 1 unassigned) and asserts checkbox value attributes, action URL, and section markers; `TestRenderManageRecipientSecrets_EmptyLetters` covers the no-letters-yet empty state with the "Write your first letter" CTA.
+- [x] run `go test ./...` — must pass before next task (all green; lint baseline unchanged from Task 5 — 51 pre-existing gosec/gofmt warnings, none introduced by Task 6)
 
 ### Task 7: Letters — `secrets.html`, `new-secret.html`, `view-secret.html`, `manage-secret-recipients.html`
 - [ ] rewrite `secrets.html` ("Letters") to mirror `letters.jsx`:

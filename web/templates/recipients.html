@@ -1,184 +1,196 @@
 {{ template "layout.html" . }}
 
-{{ define "content" }}
-<div class="recipients-page">
-    <div class="header-actions">
-        <h1>Recipients</h1>
-        <a href="/recipients/new" class="btn btn-primary">Add New Recipient</a>
-    </div>
-
-    <div class="alert alert-info">
-        <p>Recipients are trusted contacts who will receive your secrets when your Dead Man's Switch is triggered. Make sure they have secure email access and are trustworthy.</p>
-    </div>
-
-    {{ if .Data.Recipients }}
-        <div class="card-grid">
-            {{ range .Data.Recipients }}
-                <div class="card recipient-card">
-                    <div class="card-header">
-                        <h3>{{ .Name }}</h3>
-                        <div class="recipient-actions">
-                            <a href="/recipients/{{ .ID }}" class="btn btn-sm btn-secondary">Edit</a>
-                            <form action="/recipients/{{ .ID }}" method="POST" class="inline-form">
-                                <input type="hidden" name="_method" value="DELETE">
-                                <button type="submit" class="btn btn-sm btn-danger confirm-delete">Remove</button>
-                            </form>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="recipient-info">
-                            <p><strong>Email:</strong> {{ .Email }}</p>
-                            <p><strong>Relationship:</strong> {{ .Relationship }}</p>
-                            <p><strong>Contact Method:</strong> {{ .ContactMethod }}</p>
-                            <p>
-                                <strong>Status:</strong>
-                                {{ if .IsConfirmed }}
-                                    <span class="badge bg-success">Confirmed</span>
-                                    {{ if .ConfirmedAt }}
-                                        <small class="text-muted">({{ formatDate .ConfirmedAt }})</small>
-                                    {{ end }}
-                                {{ else }}
-                                    {{ if .ConfirmationSentAt }}
-                                        <span class="badge bg-warning">Pending Confirmation</span>
-                                        <small class="text-muted">(sent {{ formatDate .ConfirmationSentAt }})</small>
-                                    {{ else }}
-                                        <span class="badge bg-secondary">Not Verified</span>
-                                    {{ end }}
-                                {{ end }}
-                            </p>
-                        </div>
-
-                        {{ if .TelegramUsername }}
-                            <p><strong>Telegram:</strong> {{ .TelegramUsername }}</p>
-                        {{ end }}
-                    </div>
-                    <div class="card-footer">
-                        <p><strong>Added:</strong> {{ formatDate .CreatedAt }}</p>
-                        <p><strong>Assigned Secrets:</strong> {{ len .AssignedSecrets }}</p>
-                        <div style="margin-top: 10px;">
-                            <a href="/recipients/{{ .ID }}/secrets" class="btn btn-sm btn-secondary">Manage Secrets</a>
-                            <a href="/recipients/{{ .ID }}/questions" class="btn btn-sm btn-secondary">Secret Questions</a>
-                            <a href="/recipients/{{ .ID }}/test" class="btn btn-sm btn-outline-secondary">Test Contact</a>
-                        </div>
-                    </div>
-                </div>
-            {{ end }}
-        </div>
-    {{ else }}
-        <div class="empty-state">
-            <div class="card">
-                <div class="card-body text-center">
-                    <h3>No Recipients Yet</h3>
-                    <p>You haven't added any recipients to your Dead Man's Switch yet.</p>
-                    <p>Add at least one trusted recipient to receive your secrets when your switch is triggered.</p>
-                    <a href="/recipients/new" class="btn btn-primary">Add First Recipient</a>
-                </div>
-            </div>
-        </div>
-    {{ end }}
-</div>
-
-{{ end }}
-
 {{ define "styles" }}
 <style>
-.recipients-page {
-    margin-bottom: 2rem;
-}
+  .hb-recipients { max-width: 1080px; }
 
-.header-actions {
+  .hb-page-head { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 16px; margin-bottom: 32px; }
+  .hb-page-head .page-head { margin-bottom: 0; }
+  .hb-page-head .actions { display: flex; gap: 8px; }
+
+  .hb-envelope-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+  }
+
+  .hb-envelope {
+    background: var(--bg-elev);
+    border: 1px solid var(--line-1);
+    box-shadow: 3px 3px 0 0 var(--line-1);
+    transition: transform 80ms var(--ease);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .hb-envelope:hover { transform: translate(-1px, -1px); }
+
+  .hb-envelope .flap {
+    border-bottom: 1px dashed var(--line-2);
+    padding: 14px 18px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-}
+  }
+  .hb-envelope .body { padding: 18px; flex: 1; }
+  .hb-envelope .body .name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .hb-envelope .body .relation {
+    font-size: 12px;
+    color: var(--fg-2);
+    margin-bottom: 4px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .hb-envelope .body .email { font-size: 12px; color: var(--fg-1); word-break: break-all; }
 
-.card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 20px;
-}
-
-.recipient-card {
-    transition: transform 0.2s ease;
-}
-
-.recipient-card:hover {
-    transform: translateY(-5px);
-}
-
-.inline-form {
-    display: inline;
-}
-
-.recipient-actions {
+  .hb-envelope .contains {
+    padding: 12px 18px;
+    background: var(--bg-1);
+    border-top: 1px solid var(--line-2);
     display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .hb-envelope .contains .count { font-size: 12px; font-weight: 500; }
+  .hb-envelope .contains .count.empty { color: var(--fg-3); font-style: italic; font-weight: 400; }
+
+  .hb-envelope .actions-row {
+    padding: 10px 18px;
+    border-top: 1px dashed var(--line-2);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+  }
+  .hb-envelope .actions-row a,
+  .hb-envelope .actions-row button {
+    color: var(--fg-1);
+    text-decoration: none;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+  .hb-envelope .actions-row a:hover,
+  .hb-envelope .actions-row button:hover { color: var(--fg-0); background: transparent; text-decoration: underline; }
+  .hb-envelope .actions-row .danger { color: var(--orange); }
+  .hb-envelope .actions-row form.inline { display: inline; margin: 0; padding: 0; }
+
+  .hb-add-card {
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     gap: 8px;
-}
-
-.recipient-info {
-    margin-bottom: 1rem;
-}
-
-.recipient-info p {
-    margin-bottom: 0.5rem;
-}
-
-.text-center {
-    text-align: center;
-}
-
-.empty-state {
-    max-width: 500px;
-    margin: 0 auto;
-    margin-top: 40px;
-}
-
-.badge {
-    display: inline-block;
-    padding: 0.25em 0.4em;
-    font-size: 75%;
-    font-weight: 700;
-    line-height: 1;
-    text-align: center;
-    white-space: nowrap;
-    vertical-align: baseline;
-    border-radius: 0.25rem;
-}
-
-.bg-success {
-    background-color: #28a745;
-    color: white;
-}
-
-.bg-warning {
-    background-color: #ffc107;
-    color: #212529;
-}
-
-.bg-secondary {
-    background-color: #6c757d;
-    color: white;
-}
-
-.text-muted {
-    color: #6c757d;
-}
+    background: transparent;
+    border: 1px dashed var(--line-2);
+    color: var(--fg-2);
+    font-family: var(--mono);
+    font-size: 13px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 80ms var(--ease), color 80ms var(--ease), border-color 80ms var(--ease);
+  }
+  .hb-add-card:hover { background: var(--bg-1); color: var(--fg-0); border-color: var(--line-1); }
 </style>
 {{ end }}
 
+{{ define "content" }}
+<div class="hb-recipients" data-test="recipients">
+  <div class="hb-page-head">
+    <div class="page-head">
+      <div class="label">· THE PEOPLE · YOUR CIRCLE</div>
+      <h1>People who matter</h1>
+      <p class="lede">Add the people you want to receive letters someday. Each one gets their own envelope — fill it with whatever you want them to know.</p>
+    </div>
+    <div class="actions">
+      <a href="/recipients/new" class="btn primary" data-test="add-recipient">
+        {{ template "icon-user-plus" . }}
+        <span>Add someone</span>
+      </a>
+    </div>
+  </div>
+
+  {{ if .Data.Recipients }}
+    <div class="hb-envelope-grid" data-test="envelope-grid">
+      {{ range .Data.Recipients }}
+        <article class="hb-envelope" data-test="envelope">
+          <div class="flap">
+            <span class="label">TO ·</span>
+            {{ if .IsConfirmed }}
+              <span class="badge" data-test="badge-confirmed">✓ confirmed</span>
+            {{ else }}
+              <span class="badge dashed" data-test="badge-awaiting">awaiting reply</span>
+            {{ end }}
+          </div>
+          <div class="body">
+            <div class="name">{{ .Name }}</div>
+            <div class="relation">{{ .Relationship }}</div>
+            <div class="email">{{ .Email }}</div>
+          </div>
+          <div class="contains">
+            <span class="label">· CONTAINS</span>
+            {{ $count := len .AssignedSecrets }}
+            {{ if eq $count 0 }}
+              <span class="count empty">nothing yet</span>
+            {{ else if eq $count 1 }}
+              <span class="count">1 letter</span>
+            {{ else }}
+              <span class="count">{{ $count }} letters</span>
+            {{ end }}
+          </div>
+          <div class="actions-row">
+            <a href="/recipients/{{ .ID }}">Edit</a>
+            <a href="/recipients/{{ .ID }}/secrets">Letters</a>
+            <a href="/recipients/{{ .ID }}/test">Test</a>
+            <form action="/recipients/{{ .ID }}" method="POST" class="inline">
+              <input type="hidden" name="_method" value="DELETE">
+              <button type="submit" class="danger confirm-delete">Remove</button>
+            </form>
+          </div>
+        </article>
+      {{ end }}
+      <a href="/recipients/new" class="hb-add-card" data-test="add-another">
+        {{ template "icon-plus" . }}
+        <span>Add another person</span>
+      </a>
+    </div>
+  {{ else }}
+    <div class="empty" data-test="recipients-empty">
+      <div style="margin-bottom: 12px; color: var(--fg-2);">{{ template "icon-users-round-lg" . }}</div>
+      <h3>Nobody yet</h3>
+      <p>Add the first person — someone you'd want to receive a letter from you. They'll get a quick &ldquo;hello, please confirm your email&rdquo; message. Nothing more, until the time comes.</p>
+      <a href="/recipients/new" class="btn primary">Add your first person</a>
+    </div>
+  {{ end }}
+</div>
+{{ end }}
+
+{{ define "icon-user-plus" }}<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>{{ end }}
+
+{{ define "icon-plus" }}<svg class="icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>{{ end }}
+
+{{ define "icon-users-round-lg" }}<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 21a8 8 0 00-16 0"/><path d="M14 7a5 5 0 11-10 0 5 5 0 0110 0z"/><path d="M21 21v-2a4 4 0 00-3-3.85"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>{{ end }}
+
 {{ define "scripts" }}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Confirm deletion of recipients
-    const deleteButtons = document.querySelectorAll('.confirm-delete');
-    deleteButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            if (!confirm('Are you sure you want to remove this recipient? Any secret assignments will also be removed.')) {
-                e.preventDefault();
-            }
-        });
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.confirm-delete').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      if (!confirm('Remove this person? Their envelope and any letters become unassigned.')) {
+        e.preventDefault();
+      }
     });
+  });
 });
 </script>
 {{ end }}
