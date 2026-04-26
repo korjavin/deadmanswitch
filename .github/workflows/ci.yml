@@ -8,9 +8,9 @@ on:
   # Optionally enable manual workflow trigger
   workflow_dispatch:
 
-# Add permissions needed for GitHub container registry
+# Add permissions needed for GitHub container registry and deploy branch updates
 permissions:
-  contents: read
+  contents: write
   packages: write
   actions: read
 
@@ -145,6 +145,7 @@ jobs:
           tags: |
             type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
             type=sha,format=short
+            type=sha,prefix=,format=long,enable=${{ github.ref == format('refs/heads/{0}', 'master') }}
             type=ref,event=tag
 
       - name: Login to GitHub Container Registry
@@ -434,3 +435,36 @@ jobs:
             *.png
             test-results/
           retention-days: 7
+
+  deploy:
+    name: Update Deploy Branch and Trigger Portainer
+    runs-on: ubuntu-latest
+    needs: [frontend-test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Update docker-compose.yml on deploy branch
+        env:
+          GITHUB_REPO_OWNER: ${{ github.repository_owner }}
+          GITHUB_COMMIT_SHA: ${{ github.sha }}
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
+          git checkout -B deploy
+
+          IMAGE_BASE="ghcr.io/${GITHUB_REPO_OWNER}/deadmanswitch"
+          sed -i "s|image: ${IMAGE_BASE}:.*|image: ${IMAGE_BASE}:${GITHUB_COMMIT_SHA}|g" docker-compose.yml
+
+          git add docker-compose.yml
+          git commit -m "ci: Update image tag to ${GITHUB_COMMIT_SHA}" || echo "No changes to commit"
+          git push origin deploy --force
+
+      - name: Trigger Portainer Redeploy Webhook
+        uses: distributhor/workflow-webhook@2381f0e9c7b6bf061fb1405bd0804b8706116369 # v3.0.8
+        with:
+          webhook_url: ${{ secrets.PORTAINER_REDEPLOY_HOOK }}
+          webhook_secret: "trigger"

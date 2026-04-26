@@ -1,15 +1,32 @@
-version: '3'
+version: "3.8"
+
+# Local development overrides (auto-loaded by `docker compose up`).
+# Builds the image locally, exposes port 8082, and uses a private network
+# instead of the external Traefik network used in production.
 
 services:
   deadmanswitch:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: deadmanswitch:dev
+    container_name: deadmanswitch-dev
     ports:
-      - "8082:8080"
+      - "${PORT:-8082}:8080"
+    labels: !override
+      - "traefik.enable=false"
+    networks: !override
+      - default
     environment:
-      - BASE_DOMAIN=localhost:8082
-      - DEBUG=true
-      # For testing, we'll use a simple configuration without email verification
+      - BASE_DOMAIN=${BASE_DOMAIN:-localhost:8082}
+      - DEBUG=${DEBUG:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
       - SMTP_HOST=
       - SMTP_PORT=
       - SMTP_USERNAME=
       - SMTP_PASSWORD=
       - SMTP_FROM=test@example.com
+
+networks:
+  default:
+    name: deadmanswitch_dev

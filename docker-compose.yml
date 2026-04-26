@@ -1,35 +1,40 @@
-version: '3'
+version: "3.8"
 
 services:
   deadmanswitch:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "${PORT:-8082}:8080"
+    # The image tag will be replaced by GitHub Actions workflow in the deploy branch
+    image: ghcr.io/korjavin/deadmanswitch:latest
+    container_name: deadmanswitch
+    networks:
+      - traefik_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK_NAME:-traefik_default}"
+      - "traefik.http.routers.deadmanswitch.rule=Host(`${HOSTNAME}`)"
+      - "traefik.http.routers.deadmanswitch.entrypoints=websecure"
+      - "traefik.http.routers.deadmanswitch.tls.certresolver=myresolver"
+      - "traefik.http.services.deadmanswitch.loadbalancer.server.port=8080"
     volumes:
-      - ${DATA_DIR:-./data}:/app/data
+      - ./data:/app/data
     environment:
-      # Required environment variables
-      - BASE_DOMAIN=${BASE_DOMAIN:-localhost:8082}
+      - BASE_DOMAIN=${BASE_DOMAIN}
       - TG_BOT_TOKEN=${TG_BOT_TOKEN:-}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@example.com}
-
-      # Database settings
       - DBPath=${DB_PATH:-/app/data/deadmanswitch.db}
-
-      # SMTP settings
       - SMTP_HOST=${SMTP_HOST:-}
       - SMTP_PORT=${SMTP_PORT:-587}
       - SMTP_USERNAME=${SMTP_USERNAME:-}
       - SMTP_PASSWORD=${SMTP_PASSWORD:-}
       - SMTP_FROM=${SMTP_FROM:-}
-
-      # Ping settings
       - PING_FREQUENCY=${PING_FREQUENCY:-1}
       - PING_DEADLINE=${PING_DEADLINE:-7}
-
-      # Debug settings
+      - ACCESS_CODE_EXPIRATION_DAYS=${ACCESS_CODE_EXPIRATION_DAYS:-30}
+      - ACCESS_CODE_MAX_ATTEMPTS=${ACCESS_CODE_MAX_ATTEMPTS:-5}
       - DEBUG=${DEBUG:-false}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     restart: unless-stopped
+
+networks:
+  traefik_network:
+    external: true
+    name: ${TRAEFIK_NETWORK_NAME:-traefik_default}

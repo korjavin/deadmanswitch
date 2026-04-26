@@ -1,47 +1,36 @@
 FROM golang:1.24-alpine AS builder
 
-# Install Git for dependency downloads
 RUN apk add --no-cache git
 
-# Set working directory
 WORKDIR /app
 
-# Copy go.mod and go.sum files
 COPY go.mod go.sum ./
-
-# Download dependencies
 RUN go mod download
 
-# Copy the source code
 COPY . .
 
-# Build the application with CGO disabled
 RUN CGO_ENABLED=0 GOOS=linux go build -a -o deadmanswitch ./cmd/server
 
-# Create runtime image
 FROM alpine:latest
 
-# Install ca-certificates and timezone data
-RUN apk --no-cache add ca-certificates tzdata
+RUN apk --no-cache add ca-certificates tzdata su-exec
 
-# Create app directory
 WORKDIR /app
 
-# Create data directory for SQLite database
-RUN mkdir -p /app/data && chmod 755 /app/data
+RUN mkdir -p /app/data
 
-# Copy binary from builder
 COPY --from=builder /app/deadmanswitch /app/
+COPY --from=builder /app/web/templates /app/web/templates
+COPY --from=builder /app/web/static /app/web/static
+COPY --from=builder /app/internal/email/templates /app/internal/email/templates
+COPY entrypoint.sh /entrypoint.sh
 
-# Copy web assets
-COPY web/templates /app/web/templates
-COPY web/static /app/web/static
+RUN chmod +x /entrypoint.sh && \
+    addgroup -g 1000 appuser && \
+    adduser -D -u 1000 -G appuser appuser && \
+    chown -R appuser:appuser /app
 
-# Copy email templates
-COPY internal/email/templates /app/internal/email/templates
-
-# Expose the application port
 EXPOSE 8080
 
-# Set the entry point
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["/app/deadmanswitch"]
