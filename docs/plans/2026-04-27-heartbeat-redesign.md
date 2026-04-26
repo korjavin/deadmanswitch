@@ -115,7 +115,7 @@ Decision recap (from planning conversation):
 - [x] run `go test ./...` — must pass before next task (all tests green; lint warnings unchanged from Task 1 baseline)
 
 ### Task 3: Landing — `index.html`
-- [ ] rewrite `web/templates/index.html` to mirror `landing.jsx`:
+- [x] rewrite `web/templates/index.html` to mirror `landing.jsx`:
   - Hero (left): kicker `· A QUIET KIND OF SAFETY NET` + serif h1 ("Write the things you'd want them to know if you couldn't tell them.") + lede + Begin/Already-have-account buttons + meta row (SELF-HOSTED · DATA SOVEREIGN | TIME-BOXED ENCRYPTION | OPEN SOURCE)
   - Hero (right): `HeroLetters` — three rotated envelope cards, hand-drawn dotgrid backdrop. Implement as static HTML+CSS (rotation via `transform`, three fixed envelope contents)
   - Section "Three small habits, one big peace of mind." — three-column step grid (01/02/03), monospace numbering, dashed underline
@@ -124,11 +124,11 @@ Decision recap (from planning conversation):
   - Section "On secrets, specifically" — two-column self-host vault card with mono pre showing 1Password recovery sample
   - Testimonial-as-letter (centered serif italic quote)
   - CTA ("Begin with one letter.") + serif h2
-- [ ] inline page-specific styles for envelope rotations and dotgrid radial-gradient backdrop in the `{{ define "styles" }}` block
-- [ ] update or remove now-irrelevant external links to GitHub README sections in nav (handled in Task 2 layout)
-- [ ] write Go test for `/` route: assert hero copy ("Write the things"), three step labels (01/02/03), all six channel checkmarks, three use cases (LETTER, INSTRUCTIONS, SECRETS & KEYS), testimonial, footer
-- [ ] write test for old-copy removal: assert "Secure Your Digital Legacy" hero is gone, no `🔒` emoji in feature cards
-- [ ] run `go test ./...` — must pass before next task
+- [x] inline page-specific styles for envelope rotations and dotgrid radial-gradient backdrop in the `{{ define "styles" }}` block
+- [x] update or remove now-irrelevant external links to GitHub README sections in nav (handled in Task 2 layout) — also updated `IndexHandler` title from "Dead Man's Switch" → "A quiet kind of safety net" so the rendered `<title>` reads "A quiet kind of safety net — Heartbeat"
+- [x] write Go test for `/` route: assert hero copy ("Write the things"), three step labels (01/02/03), all six channel checkmarks, three use cases (LETTER, INSTRUCTIONS, SECRETS & KEYS), testimonial, footer (added `internal/web/landing_test.go` with `TestLandingRendersHeartbeatHero`, `…ThreeStepRhythm`, `…SixChannels`, `…UseCases`, `…TestimonialAndCTA`, `…ShowsMarketingChromeAndFooter`)
+- [x] write test for old-copy removal: assert "Secure Your Digital Legacy" hero is gone, no `🔒` emoji in feature cards (added `TestLandingRemovesOldCopy` covering old hero/feature/CTA strings + 👥/⏰/📨 emoji; the `🔒` in the new vault mono-pre is intentional design copy and not a feature-card icon, so it is allowed)
+- [x] run `go test ./...` — must pass before next task (all green; lint warnings unchanged from Task 2 baseline)
 
 ### Task 4: Auth flow — `login.html`, `register.html`, `login-2fa.html`, `2fa-setup.html`, `passkeys.html`, `verify-success.html`, `confirmation.html`
 - [ ] rewrite `login.html` and `register.html` to match `auth.jsx`:
