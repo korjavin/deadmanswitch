@@ -2,363 +2,478 @@
 
 {{ define "styles" }}
 <style>
-  .dashboard-grid {
+  .hb-dashboard { max-width: 1080px; }
+
+  /* PageHead actions row */
+  .hb-page-head { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 16px; margin-bottom: 32px; }
+  .hb-page-head .page-head { margin-bottom: 0; }
+  .hb-page-head .actions { display: flex; gap: 8px; }
+
+  /* Status timeline strip + check-in card share one outer card */
+  .hb-status-card { padding: 0; margin-bottom: 28px; }
+  .hb-timeline-strip {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    grid-gap: 1.5rem;
-    margin-top: 2rem;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--line-2);
   }
-
-  .stat-card {
-    text-align: center;
-    padding: 1.5rem;
+  .hb-stat { padding: 0 20px; }
+  .hb-stat + .hb-stat { border-left: 1px solid var(--line-2); }
+  .hb-stat .label { margin-bottom: 6px; }
+  .hb-stat .value {
+    font-size: 22px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
   }
-
-  .stat-number {
-    font-size: 2.5rem;
-    font-weight: bold;
-    margin-bottom: 0.5rem;
-  }
-
-  .stat-label {
-    color: var(--gray-color);
-    font-size: 0.9rem;
+  .hb-stat .sub {
+    font-size: 11px;
+    color: var(--fg-2);
+    margin-top: 2px;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    letter-spacing: 1px;
   }
 
-  .check-in-box {
-    max-width: 500px;
-    margin: 0 auto;
-    text-align: center;
-  }
-
-  .status-indicator {
-    display: inline-block;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    margin-right: 6px;
-  }
-
-  .status-indicator.active {
-    background-color: var(--success-color);
-    box-shadow: 0 0 8px var(--success-color);
-  }
-
-  .status-indicator.caution {
-    background-color: var(--warning-color);
-    box-shadow: 0 0 8px var(--warning-color);
-  }
-
-  .status-indicator.danger {
-    background-color: var(--danger-color);
-    box-shadow: 0 0 8px var(--danger-color);
-  }
-
-  /* Status details styling */
-  .status-details {
+  .hb-checkin {
+    padding: 32px 24px;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    grid-gap: 1rem;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 32px;
+  }
+  .hb-checkin .one-tap-label {
+    color: var(--fg-0);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .hb-checkin .one-tap-sub {
+    font-size: 14px;
+    color: var(--fg-1);
+    line-height: 1.6;
+    max-width: 60ch;
   }
 
-  .status-detail-item {
-    padding: 0.75rem;
-    border-radius: 4px;
-    background-color: rgba(var(--primary-color-rgb), 0.05);
+  /* Channel cards grid */
+  .hb-channels {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 8px;
+  }
+  .hb-channel {
+    padding: 18px;
+    background: var(--bg-elev);
+    border: 1px solid var(--line-1);
+    box-shadow: 2px 2px 0 0 var(--line-1);
+  }
+  .hb-channel.linkable { cursor: pointer; transition: background 80ms var(--ease); text-decoration: none; color: inherit; display: block; }
+  .hb-channel.linkable:hover { background: var(--bg-1); }
+  .hb-channel .head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .hb-channel .ch-title { font-size: 14px; font-weight: 700; margin: 0 0 4px; }
+  .hb-channel .ch-sub { font-size: 12px; color: var(--fg-1); line-height: 1.55; margin: 0; }
+
+  /* Two-column footer (recent activity / circle) */
+  .hb-bottom {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 24px;
+    margin-top: 32px;
+  }
+  .hb-list-card { padding: 0; }
+  .hb-list-row {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line-2);
+    display: grid;
+    grid-template-columns: 20px 1fr auto;
+    gap: 14px;
+    align-items: center;
+  }
+  .hb-list-row:last-child { border-bottom: 0; }
+  .hb-list-row .row-title { font-size: 13px; font-weight: 500; }
+  .hb-list-row .row-sub {
+    font-size: 12px;
+    color: var(--fg-2);
+    margin-top: 2px;
+  }
+  .hb-list-row .row-meta {
+    font-size: 11px;
+    color: var(--fg-2);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
-  .detail-label {
-    font-size: 0.85rem;
-    color: var(--gray-color);
-    margin-bottom: 0.25rem;
+  .hb-circle-row {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line-2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .hb-circle-row:last-child { border-bottom: 0; }
+  .hb-circle-row .person-name { font-size: 13px; font-weight: 500; }
+  .hb-circle-row .person-meta {
+    font-size: 11px;
+    color: var(--fg-2);
+    margin-top: 2px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
-  .detail-value {
-    font-weight: 500;
+  .hb-circle-empty {
+    padding: 24px;
+    text-align: center;
+    color: var(--fg-2);
+    font-size: 13px;
   }
 
-  .timeline {
-    position: relative;
-    max-width: 600px;
-    margin: 2rem auto;
-    padding: 0;
+  /* Inline modal (no JS framework) */
+  .hb-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(22, 20, 15, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 32px;
   }
+  .hb-modal.open { display: flex; }
+  .hb-modal .modal { max-width: 600px; width: 100%; }
 
-  .timeline::after {
-    content: '';
-    position: absolute;
-    width: 3px;
-    background-color: var(--border-color);
-    top: 0;
-    bottom: 0;
+  /* Toast (one per page, animated in via JS) */
+  .hb-toast {
+    position: fixed;
+    bottom: 24px;
     left: 50%;
-    margin-left: -1.5px;
+    transform: translateX(-50%);
+    background: var(--fg-0);
+    color: var(--bg-0);
+    padding: 12px 20px;
+    font-size: 13px;
+    z-index: 200;
+    display: none;
+    align-items: center;
+    gap: 10px;
   }
+  .hb-toast.show { display: flex; }
 
-  .timeline-item {
-    position: relative;
-    width: 50%;
-    margin-bottom: 1.5rem;
-  }
-
-  .timeline-item:nth-child(odd) {
-    padding-right: 2rem;
-    left: 0;
-  }
-
-  .timeline-item:nth-child(even) {
-    padding-left: 2rem;
-    left: 50%;
-  }
-
-  .timeline-content {
-    padding: 1rem;
-    position: relative;
-    border-radius: 4px;
-  }
-
-  .timeline-content::after {
-    content: '';
-    position: absolute;
-    width: 12px;
-    height: 12px;
-    background-color: white;
-    border: 3px solid var(--primary-color);
-    border-radius: 50%;
-    top: calc(50% - 9px);
-  }
-
-  .timeline-item:nth-child(odd) .timeline-content::after {
-    right: -36px;
-  }
-
-  .timeline-item:nth-child(even) .timeline-content::after {
-    left: -36px;
-  }
-
-  .timeline-date {
-    color: var(--gray-color);
-    font-size: 0.85rem;
-  }
-
-  /* Card header styling */
-  .card-header {
-    background-color: rgba(var(--primary-color-rgb), 0.05);
-    padding: 0.75rem 1.25rem;
-    border-bottom: 1px solid rgba(var(--primary-color-rgb), 0.1);
-  }
-
-  .card-header h3 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 500;
+  @media (max-width: 800px) {
+    .hb-channels { grid-template-columns: 1fr; }
+    .hb-bottom { grid-template-columns: 1fr; }
+    .hb-checkin { grid-template-columns: 1fr; }
+    .hb-timeline-strip { grid-template-columns: 1fr; }
+    .hb-stat + .hb-stat { border-left: 0; border-top: 1px solid var(--line-2); padding-top: 16px; margin-top: 16px; }
   }
 </style>
 {{ end }}
 
 {{ define "content" }}
-<div class="page-header">
-  <h1>Dashboard</h1>
-  <p>Welcome back!</p>
-</div>
-
-<!-- Status Overview -->
-<div class="check-in-box card">
-  <div class="card-body">
-    {{ if eq .Data.Status "active" }}
-      <h2><span class="status-indicator active"></span> System Active</h2>
-      <p>{{ .Data.StatusMessage }}</p>
-      <p>Next check-in required: <strong>{{ .Data.NextCheckIn }}</strong></p>
-      <button id="checkInButton" class="btn btn-primary">Check In Now</button>
-    {{ else if eq .Data.Status "caution" }}
-      <h2><span class="status-indicator caution"></span> Action Required</h2>
-      <p>{{ .Data.StatusMessage }}</p>
-      <p>Check-in deadline: <strong>{{ .Data.Deadline }}</strong></p>
-      <p>Time remaining: <strong>{{ .Data.TimeRemaining }}</strong></p>
-      <button id="checkInButton" class="btn btn-warning">Check In Now</button>
-    {{ else }}
-      <h2><span class="status-indicator danger"></span> Critical Action Required</h2>
-      <p>{{ .Data.StatusMessage }}</p>
-      <p>Trigger scheduled for: <strong>{{ .Data.TriggerTime }}</strong></p>
-      <button id="checkInButton" class="btn btn-danger">Check In Now</button>
-    {{ end }}
-  </div>
-</div>
-
-<!-- Detailed Status Information -->
-<div class="card" style="margin-top: 1.5rem;">
-  <div class="card-header">
-    <h3>Check-in Status Details</h3>
-  </div>
-  <div class="card-body">
-    <div class="status-details">
-      <div class="status-detail-item">
-        <div class="detail-label">Last Activity:</div>
-        <div class="detail-value">{{ .Data.LastActivity }}</div>
-      </div>
-      <div class="status-detail-item">
-        <div class="detail-label">Next Check-in:</div>
-        <div class="detail-value">{{ .Data.NextCheckIn }}</div>
-      </div>
-      <div class="status-detail-item">
-        <div class="detail-label">Deadline:</div>
-        <div class="detail-value">{{ .Data.Deadline }}</div>
-      </div>
-      <div class="status-detail-item">
-        <div class="detail-label">Check-in Frequency:</div>
-        <div class="detail-value">Every {{ .Data.PingFrequency }} days</div>
-      </div>
-      <div class="status-detail-item">
-        <div class="detail-label">Grace Period:</div>
-        <div class="detail-value">{{ .Data.PingDeadline }} days</div>
-      </div>
-      <div class="status-detail-item">
-        <div class="detail-label">Notification Method:</div>
-        <div class="detail-value">{{ .Data.PingMethod }}</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Latest Ping Information -->
-{{ if .Data.LatestPing.Time }}
-<div class="card" style="margin-top: 1.5rem;">
-  <div class="card-header">
-    <h3>Latest Check-in Reminder</h3>
-  </div>
-  <div class="card-body">
-    <div class="status-details">
-      <div class="status-detail-item">
-        <div class="detail-label">Sent:</div>
-        <div class="detail-value">{{ .Data.LatestPing.Time }}</div>
-      </div>
-      <div class="status-detail-item">
-        <div class="detail-label">Method:</div>
-        <div class="detail-value">{{ .Data.LatestPing.Method }}</div>
-      </div>
-      <div class="status-detail-item">
-        <div class="detail-label">Status:</div>
-        <div class="detail-value">{{ .Data.LatestPing.Status }}</div>
-      </div>
-      {{ if .Data.LatestPing.RespondedAt }}
-      <div class="status-detail-item">
-        <div class="detail-label">Responded:</div>
-        <div class="detail-value">{{ .Data.LatestPing.RespondedAt }}</div>
-      </div>
+{{ $variant := .Data.StatusVariant }}
+{{ $first := "" }}{{ if .User }}{{ $first = .User.FirstName }}{{ end }}{{ if not $first }}{{ $first = "there" }}{{ end }}
+<div class="hb-dashboard" data-test="dashboard">
+  <div class="hb-page-head">
+    <div class="page-head">
+      <div class="label">TODAY · {{ .Data.TodayLabel }}</div>
+      {{ if eq $variant "ok" }}
+        <h1 data-test="status-title">You're good, {{ $first }}.</h1>
+        <p class="lede" data-test="status-lede">Next gentle nudge in {{ .Data.Timeline.NextNudge.Value }}. Nothing else to do today.</p>
+      {{ else if eq $variant "warn" }}
+        <h1 data-test="status-title">Just checking in.</h1>
+        <p class="lede" data-test="status-lede">It's been a quiet stretch. Tap below to let us know you're around.</p>
+      {{ else }}
+        <h1 data-test="status-title">Are you there?</h1>
+        <p class="lede" data-test="status-lede">If we don't hear from you soon, your letters will start to go out. There's still time.</p>
       {{ end }}
     </div>
-  </div>
-</div>
-{{ end }}
-
-<!-- Statistics -->
-<div class="dashboard-grid">
-  <div class="card stat-card">
-    <div class="stat-number">{{ .Data.Stats.TotalSecrets }}</div>
-    <div class="stat-label">Total Secrets</div>
+    <div class="actions">
+      <button type="button" class="btn ghost" id="howItWorksOpen" aria-haspopup="dialog">How this works</button>
+    </div>
   </div>
 
-  <div class="card stat-card">
-    <div class="stat-number">{{ .Data.Stats.ActiveRecipients }}</div>
-    <div class="stat-label">Recipients</div>
-  </div>
-
-  <div class="card stat-card">
-    <div class="stat-number">{{ .Data.Stats.DaysActive }} days</div>
-    <div class="stat-label">Account Active</div>
-  </div>
-</div>
-
-<!-- Recent Activity -->
-<div class="section-header">
-  <h2>Recent Activity</h2>
-</div>
-
-<div class="timeline">
-  {{ range .Data.Activities }}
-    <div class="timeline-item">
-      <div class="timeline-content card">
-        <div class="timeline-date">{{ .Time }}</div>
-        <p>{{ .Description }}</p>
+  <!-- Status timeline strip + big check-in card -->
+  <section class="card hb-status-card heartbeat-section heartbeat {{ $variant }}" data-test="status-strip" aria-labelledby="checkInLabel">
+    <div class="hb-timeline-strip">
+      <div class="hb-stat">
+        <div class="label">· LAST SEEN</div>
+        <div class="value" data-test="last-seen-value">{{ .Data.Timeline.LastSeen.Value }}</div>
+        <div class="sub">{{ .Data.Timeline.LastSeen.Sub }}</div>
+      </div>
+      <div class="hb-stat">
+        <div class="label">· NEXT NUDGE</div>
+        <div class="value">{{ .Data.Timeline.NextNudge.Value }}</div>
+        <div class="sub">{{ .Data.Timeline.NextNudge.Sub }}</div>
+      </div>
+      <div class="hb-stat">
+        <div class="label">· DELIVERY (IF SILENT)</div>
+        <div class="value">{{ .Data.Timeline.Delivery.Value }}</div>
+        <div class="sub">{{ .Data.Timeline.Delivery.Sub }}</div>
       </div>
     </div>
-  {{ end }}
+    <div class="hb-checkin">
+      <div>
+        <div class="label one-tap-label" id="checkInLabel">· ONE TAP · CONFIRMS YOU'RE HERE</div>
+        <div class="one-tap-sub">
+          You don't need to do this every day. Logging in counts.
+          {{ if .User.GitHubConnected }}Pushing code counts. {{ end }}
+          We only ask if we genuinely haven't heard from you.
+        </div>
+      </div>
+      <button type="button" id="checkInButton" class="btn primary lg" data-test="checkin-button">
+        {{ template "icon-heart" . }}
+        <span>I'm here</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Multi-channel: how we reach you -->
+  <div class="section-head">
+    <h2>How we know you're alive</h2>
+    <span class="meta">ALL ACTIVE</span>
+  </div>
+  <div class="hb-channels" data-test="channels">
+    <div class="hb-channel" data-test="channel-signin">
+      <div class="head">
+        {{ template "icon-log-in" . }}
+        <span class="badge solid">ALWAYS ON</span>
+      </div>
+      <h3 class="ch-title">Signing in</h3>
+      <p class="ch-sub">Just visiting this page counts. No action needed.</p>
+    </div>
+
+    <a href="/profile" class="hb-channel linkable" data-test="channel-github">
+      <div class="head">
+        {{ template "icon-git-branch" . }}
+        {{ if .User.GitHubConnected }}
+          <span class="badge solid">WATCHING</span>
+        {{ else }}
+          <span class="badge dashed">NOT CONNECTED</span>
+        {{ end }}
+      </div>
+      <h3 class="ch-title">GitHub activity</h3>
+      <p class="ch-sub">
+        {{ if .User.GitHubConnected }}
+          Watching @{{ .User.GitHubUsername }}. Public commits, comments, stars.
+        {{ else }}
+          Not connected — connect to skip nudges on busy weeks.
+        {{ end }}
+      </p>
+    </a>
+
+    <a href="/profile" class="hb-channel linkable" data-test="channel-telegram">
+      <div class="head">
+        {{ template "icon-send" . }}
+        {{ if .User.TelegramConnected }}
+          <span class="badge solid">@{{ .User.TelegramUsername }}</span>
+        {{ else }}
+          <span class="badge dashed">NOT CONNECTED</span>
+        {{ end }}
+      </div>
+      <h3 class="ch-title">Telegram reply</h3>
+      <p class="ch-sub">
+        {{ if .User.TelegramConnected }}
+          Reply to our bot with anything — even just &lsquo;ok&rsquo;.
+        {{ else }}
+          Connect for a one-tap reply via Telegram.
+        {{ end }}
+      </p>
+    </a>
+
+    <div class="hb-channel" data-test="channel-email">
+      <div class="head">
+        {{ template "icon-mail" . }}
+        <span class="badge dashed">{{ if .User }}{{ .User.Email }}{{ end }}</span>
+      </div>
+      <h3 class="ch-title">Email link</h3>
+      <p class="ch-sub">Click the &lsquo;still here&rsquo; button in our nudge email. Takes 2 seconds.</p>
+    </div>
+
+    <a href="/profile/passkeys" class="hb-channel linkable" data-test="channel-passkey">
+      <div class="head">
+        {{ template "icon-fingerprint" . }}
+        {{ if .User.HasPasskey }}
+          <span class="badge solid">REGISTERED</span>
+        {{ else }}
+          <span class="badge dashed">ADD ONE</span>
+        {{ end }}
+      </div>
+      <h3 class="ch-title">Passkey tap</h3>
+      <p class="ch-sub">If your nudge link is suspicious, tap your passkey to confirm in the app.</p>
+    </a>
+
+    <div class="hb-channel" data-test="channel-anywhere">
+      <div class="head">
+        {{ template "icon-qr-code" . }}
+        <span class="badge dashed">COPY LINK</span>
+      </div>
+      <h3 class="ch-title">Anywhere</h3>
+      <p class="ch-sub">Bookmark a personal check-in URL. Open it from any phone, anywhere in the world.</p>
+    </div>
+  </div>
+
+  <!-- Two-column: recent activity + your circle -->
+  <div class="hb-bottom">
+    <section data-test="recent-activity">
+      <div class="section-head">
+        <h2>Recent activity</h2>
+        <a href="/history" class="meta">VIEW ALL →</a>
+      </div>
+      <div class="card hb-list-card">
+        {{ range $i, $a := .Data.Activities }}
+          {{ if lt $i 4 }}
+            <div class="hb-list-row">
+              {{ template "icon-clock" . }}
+              <div>
+                <div class="row-title">{{ $a.Description }}</div>
+              </div>
+              <div class="row-meta">{{ $a.Time }}</div>
+            </div>
+          {{ end }}
+        {{ end }}
+      </div>
+    </section>
+
+    <section data-test="your-circle">
+      <div class="section-head">
+        <h2>Your circle</h2>
+        <a href="/recipients" class="meta">MANAGE →</a>
+      </div>
+      <div class="card hb-list-card">
+        {{ if .Data.Circle }}
+          {{ range .Data.Circle }}
+            <div class="hb-circle-row">
+              <div>
+                <div class="person-name">{{ .Name }}</div>
+                <div class="person-meta">
+                  {{ .LetterCount }} {{ if eq .LetterCount 1 }}letter{{ else }}letters{{ end }}
+                </div>
+              </div>
+              {{ if .Verified }}
+                <span class="badge">✓ confirmed</span>
+              {{ else }}
+                <span class="badge dashed">awaiting</span>
+              {{ end }}
+            </div>
+          {{ end }}
+        {{ else }}
+          <div class="hb-circle-empty" data-test="circle-empty">
+            No one in your circle yet. <a href="/recipients">Add someone →</a>
+          </div>
+        {{ end }}
+      </div>
+    </section>
+  </div>
 </div>
 
-<div style="text-align: center; margin-top: 2rem;">
-  <a href="/history" class="btn btn-outline">View Full History</a>
+<!-- Modal: how Heartbeat works -->
+<div class="hb-modal" id="howItWorksModal" role="dialog" aria-modal="true" aria-labelledby="howItWorksTitle">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="label-strong" id="howItWorksTitle">HOW HEARTBEAT WORKS</span>
+      <button type="button" class="btn icon" id="howItWorksClose" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="margin: 0 0 16px; line-height: 1.7;">
+        You write letters and instructions. We hold them, encrypted, until you go silent for too long. Here's the rhythm:
+      </p>
+      <ol style="padding-left: 20px; line-height: 1.9; color: var(--fg-1); margin: 0 0 16px;">
+        <li>Live your life. Sign in occasionally. We notice.</li>
+        <li>If you've been quiet for <b>{{ .Data.PingFrequency }} days</b>, we send a nudge — email, Telegram, however you've set it up.</li>
+        <li>Reply to anything, click a link, or just visit the site. Resets the clock.</li>
+        <li>If you're silent for <b>{{ .Data.PingDeadline }} full days</b>, we deliver the letters to the people you chose.</li>
+      </ol>
+      <div class="mono-pre">     today        {{ .Data.PingFrequency }}d         {{ .Data.PingDeadline }}d
+       ●───────────●─────────●
+       you      first      letters
+       here     nudge      delivered
+                ↓
+            (reply once
+             to reset)</div>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn primary" id="howItWorksOk">Got it</button>
+    </div>
+  </div>
 </div>
+
+<!-- Toast (used by check-in success) -->
+<div class="hb-toast" id="hbToast" role="status" aria-live="polite"></div>
 {{ end }}
+
+{{ define "icon-log-in" }}<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>{{ end }}
+{{ define "icon-git-branch" }}<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 01-9 9"/></svg>{{ end }}
+{{ define "icon-send" }}<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>{{ end }}
+{{ define "icon-fingerprint" }}<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 11a3 3 0 013 3v1a7 7 0 01-14 0"/><path d="M5 11a7 7 0 0114 0v3"/><path d="M12 7v.01"/><path d="M9 19c0-1 .2-2 .5-3"/></svg>{{ end }}
+{{ define "icon-qr-code" }}<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3"/><path d="M21 14v7"/><path d="M14 21h3"/></svg>{{ end }}
 
 {{ define "scripts" }}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  const checkInButton = document.getElementById('checkInButton');
+(function () {
+  function showToast(message) {
+    var el = document.getElementById('hbToast');
+    if (!el) return;
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(el._timer);
+    el._timer = setTimeout(function () { el.classList.remove('show'); }, 3500);
+  }
 
-  if (checkInButton) {
-    checkInButton.addEventListener('click', function() {
-      // Show loading state
-      checkInButton.disabled = true;
-      checkInButton.innerHTML = '<span class="spinner"></span> Checking in...';
+  document.addEventListener('DOMContentLoaded', function () {
+    // How-it-works modal
+    var modal = document.getElementById('howItWorksModal');
+    var openBtn = document.getElementById('howItWorksOpen');
+    var closeBtn = document.getElementById('howItWorksClose');
+    var okBtn = document.getElementById('howItWorksOk');
+    function openModal() { modal && modal.classList.add('open'); }
+    function closeModal() { modal && modal.classList.remove('open'); }
+    if (openBtn) openBtn.addEventListener('click', openModal);
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (okBtn) okBtn.addEventListener('click', closeModal);
+    if (modal) modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeModal(); });
 
-      // Call check-in API
+    // Check-in flow — preserves /api/check-in POST contract.
+    var btn = document.getElementById('checkInButton');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      btn.disabled = true;
+      var label = btn.querySelector('span');
+      var originalLabel = label ? label.textContent : btn.textContent;
+      if (label) label.textContent = 'Checking in';
+      else btn.textContent = 'Checking in';
+
       fetch('/api/check-in', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin'
       })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          // Show success message and reload page
-          const alertHTML = `
-            <div class="alert alert-success">
-              Check-in successful! Your next check-in is due by ${data.nextCheckIn}.
-              <br>Your switch will trigger on ${data.deadline} if you don't check in.
-              <button type="button" class="alert-close">&times;</button>
-            </div>
-          `;
-
-          document.querySelector('main.container').insertAdjacentHTML('afterbegin', alertHTML);
-
-          // Reload after 2 seconds
-          setTimeout(() => {
-            window.location.reload();
-          }, 2000);
-        } else {
-          // Show error
-          const alertHTML = `
-            <div class="alert alert-danger">
-              ${data.message || 'Failed to check in. Please try again.'}
-              <button type="button" class="alert-close">&times;</button>
-            </div>
-          `;
-
-          document.querySelector('main.container').insertAdjacentHTML('afterbegin', alertHTML);
-          checkInButton.disabled = false;
-          checkInButton.textContent = 'Check In Now';
-        }
-      })
-      .catch(error => {
-        console.error('Error:', error);
-        // Show error message
-        const alertHTML = `
-          <div class="alert alert-danger">
-            Network error occurred. Please try again.
-            <button type="button" class="alert-close">&times;</button>
-          </div>
-        `;
-
-        document.querySelector('main.container').insertAdjacentHTML('afterbegin', alertHTML);
-        checkInButton.disabled = false;
-        checkInButton.textContent = 'Check In Now';
-      });
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data && data.success) {
+            showToast('Got it. We see you. ❤︎');
+            setTimeout(function () { window.location.reload(); }, 1500);
+          } else {
+            showToast((data && data.message) || "Couldn't reach the server. Try again.");
+            btn.disabled = false;
+            if (label) label.textContent = originalLabel;
+            else btn.textContent = originalLabel;
+          }
+        })
+        .catch(function () {
+          showToast("Couldn't reach the server. Try again.");
+          btn.disabled = false;
+          if (label) label.textContent = originalLabel;
+          else btn.textContent = originalLabel;
+        });
     });
-  }
-});
+  });
+})();
 </script>
 {{ end }}

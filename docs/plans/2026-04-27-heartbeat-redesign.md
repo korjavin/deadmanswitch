@@ -146,23 +146,23 @@ Decision recap (from planning conversation):
 - [x] run `go test ./...` — must pass before next task (all green; lint baseline unchanged from Task 3 — 51 pre-existing gosec/gofmt warnings in untouched handler files, none introduced by Task 4)
 
 ### Task 5: Dashboard — `dashboard.html`
-- [ ] rewrite `dashboard.html` to mirror `dashboard.jsx`:
+- [x] rewrite `dashboard.html` to mirror `dashboard.jsx`:
   - `PageHead` with kicker `TODAY · <weekday, month day>`, soft-status title (`You're good, {{ .Data.User.FirstName }}.` / `Just checking in.` / `Are you there?`), lede explaining next nudge / silent stretch
   - Status timeline strip card: three columns LAST SEEN / NEXT NUDGE / DELIVERY (IF SILENT) with values + sub-date
   - Big check-in card with primary "I'm here" button (preserve existing `/api/check-in` POST flow and `checkInButton` JS hook from current `dashboard.html`)
   - Section "How we know you're alive" — six channel cards in a 3-column grid (Signing in, GitHub activity, Telegram reply, Email link, Passkey tap, Personal URL)
   - Two-column footer: Recent activity (left, last 4 items) + Your circle (right, up to 4 recipients with confirmed/awaiting badges)
   - Modal "How Heartbeat works" triggered by ghost button in PageHead actions
-- [ ] map existing `.Data` fields to the new layout:
-  - `Status` → soft variant (`ok`/`warn`/`crit`) → choose copy + heartbeat pulse class
-  - `LastActivity`, `NextCheckIn`, `Deadline` → timeline strip
-  - `Stats.TotalSecrets` / `ActiveRecipients` → could move into "Your circle" section header meta
-  - `Activities` → recent activity list (existing data shape works)
-- [ ] preserve check-in JS in `{{ define "scripts" }}` but update DOM selectors and success/error toast copy ("Got it. We see you.")
-- [ ] write Go test: render dashboard with mocked status `active`/`caution`/`danger`, assert correct soft-copy variant + correct heartbeat pulse class
-- [ ] write Go test: render dashboard with empty recipients, assert empty-state link in "Your circle"
-- [ ] write Go test: assert old alarm copy ("System Active", "Critical Action Required", `class="status-indicator"`) absent
-- [ ] run `go test ./...` — must pass before next task
+- [x] map existing `.Data` fields to the new layout — handler enriched additively (no removals) to expose `StatusVariant`, `Timeline.{LastSeen,NextNudge,Delivery}`, `Circle`, `User.{FirstName,GitHubConnected,TelegramConnected,HasPasskey}`; existing `Status`, `Activities`, `Stats`, `LatestPing`, `PingFrequency`, `PingDeadline`, etc. all preserved so backward-compat is intact:
+  - `Status` → `StatusVariant` (`ok`/`warn`/`crit`) drives both soft-copy block and `.heartbeat ok|warn|crit` pulse class on the status card
+  - `LastActivity`, `NextCheckIn`, `Deadline` → fed into `humanizeAgo`/`humanizeUntil` helpers and surfaced in the three timeline-strip cells (value + sub-date)
+  - Stats counters left in `.Data.Stats` for any future panels — section header meta for "Your circle" instead links straight to `/recipients` to match the design
+  - `Activities` → first 4 rendered in the bottom-left list card (existing `[]map[string]string` shape kept)
+- [x] preserve check-in JS in `{{ define "scripts" }}` but update DOM selectors and success/error toast copy ("Got it. We see you.") — new toast element `#hbToast` replaces the old in-page alert injection; check-in still POSTs `/api/check-in` and reloads on success
+- [x] write Go test: render dashboard with mocked status `active`/`caution`/`danger`, assert correct soft-copy variant + correct heartbeat pulse class (`TestRenderDashboard_OkVariant` / `…WarnVariant` / `…CritVariant` in `internal/web/dashboard_test.go`)
+- [x] write Go test: render dashboard with empty recipients, assert empty-state link in "Your circle" (`TestRenderDashboard_EmptyCircle` plus `TestRenderDashboard_PopulatedCircle` and `TestRenderDashboard_SingularLetter` for the populated path and pluralization)
+- [x] write Go test: assert old alarm copy ("System Active", "Critical Action Required", `class="status-indicator"`) absent (`TestRenderDashboard_RemovesOldAlarmCopy` covers those plus `Welcome back!`, `Check In Now`, `Total Secrets` and the old `check-in-box` class)
+- [x] run `go test ./...` — must pass before next task (all green; lint baseline unchanged from Task 4 — 51 pre-existing gosec/gofmt warnings, none introduced by Task 5)
 
 ### Task 6: People — `recipients.html`, `new-recipient.html`, `manage-recipient-secrets.html`
 - [ ] rewrite `recipients.html` to mirror the envelope grid in `recipients.jsx`:
