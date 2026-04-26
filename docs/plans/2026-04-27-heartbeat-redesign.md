@@ -131,19 +131,19 @@ Decision recap (from planning conversation):
 - [x] run `go test ./...` — must pass before next task (all green; lint warnings unchanged from Task 2 baseline)
 
 ### Task 4: Auth flow — `login.html`, `register.html`, `login-2fa.html`, `2fa-setup.html`, `passkeys.html`, `verify-success.html`, `confirmation.html`
-- [ ] rewrite `login.html` and `register.html` to match `auth.jsx`:
+- [x] rewrite `login.html` and `register.html` to match `auth.jsx`:
   - Centered card on paper background, `box-shadow: 4px 4px 0 0 var(--line-1)`
   - Mono labels (`· EMAIL`, `· PASSWORD`), input with `border: 1px solid var(--line-1)` and offset focus
   - Primary "Sign in" / "Begin" button full-width
   - Footer link to alternate (Sign in ↔ Begin)
-  - Add small marketing-bar at top with just the Logo so users can navigate back
-- [ ] rewrite `login-2fa.html` and `2fa-setup.html`: same card pattern, mono input for code, soft instructional copy
-- [ ] rewrite `passkeys.html`: list of registered passkeys with `· REGISTERED` mono badges + "Add a passkey" primary button; envelope-style empty state
-- [ ] rewrite `verify-success.html` and `confirmation.html`: large serif heading, mono kicker, single CTA — keep them brief, consistent with the calm tone
-- [ ] preserve all form field `name=""` attributes, action URLs, CSRF tokens, hidden inputs — backend handlers must keep working unchanged
-- [ ] write Go tests for each redesigned auth template: render with sample data, assert new structural markers and that form `action`/`method`/`name` attributes are intact
-- [ ] write test for empty-passkeys-state on `passkeys.html`
-- [ ] run `go test ./...` — must pass before next task
+  - Add small marketing-bar at top with just the Logo so users can navigate back (the unauthenticated layout's existing `marketing-bar` already supplies this — the auth pages render inside it without changes)
+- [x] rewrite `login-2fa.html` and `2fa-setup.html`: same card pattern, mono input for code (centered, large letter-spacing), soft instructional copy
+- [x] rewrite `passkeys.html`: list of registered passkeys with `· REGISTERED` mono badges + "Add a passkey" primary button; envelope-style empty state (dashed border, serif "No passkeys yet" headline)
+- [x] rewrite `verify-success.html` and `confirmation.html`: large serif heading, mono kicker, single CTA — keep them brief, consistent with the calm tone
+- [x] preserve all form field `name=""` attributes, action URLs, CSRF tokens, hidden inputs — backend handlers keep working unchanged (login keeps `name="email"`/`"password"`/`"remember"` action `/login`; register keeps `name="confirmPassword"` action `/register`; login-2fa keeps hidden `name="email"`/`"password"`/`"remember"`/`"totp_code"` action `/login`; 2fa-setup keeps `name="code"` action `/2fa/verify`; passkeys keeps DELETE form action `/profile/passkeys/{id}` with `name="_method" value="DELETE"`)
+- [x] write Go tests for each redesigned auth template: render with sample data, assert new structural markers and that form `action`/`method`/`name` attributes are intact (added `internal/web/auth_test.go` with `TestRenderLogin_Heartbeat`, `TestRenderRegister_Heartbeat`, `TestRenderLogin2FA_Heartbeat`, `TestRenderLogin2FA_RendersErrorAlert`, `TestRender2FASetup_Heartbeat`, `TestRenderPasskeys_WithEntries`, `TestRenderVerifySuccess_Heartbeat`, `TestRenderConfirmation_Heartbeat`)
+- [x] write test for empty-passkeys-state on `passkeys.html` (`TestRenderPasskeys_EmptyState` asserts `data-test="passkey-empty"` appears and `passkey-list` does not)
+- [x] run `go test ./...` — must pass before next task (all green; lint baseline unchanged from Task 3 — 51 pre-existing gosec/gofmt warnings in untouched handler files, none introduced by Task 4)
 
 ### Task 5: Dashboard — `dashboard.html`
 - [ ] rewrite `dashboard.html` to mirror `dashboard.jsx`:

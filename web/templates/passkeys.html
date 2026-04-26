@@ -1,83 +1,138 @@
 {{ template "layout.html" . }}
 
+{{ define "styles" }}
+<style>
+  .passkeys-page {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .passkeys-page .page-head { margin-bottom: 24px; }
+  .passkey-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+  .passkey-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: var(--bg-elev);
+    border: 1px solid var(--line-1);
+    box-shadow: 2px 2px 0 0 var(--line-1);
+  }
+  .passkey-row .name {
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .passkey-row .meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-2);
+    letter-spacing: 0.04em;
+    margin-top: 2px;
+  }
+  .passkey-row .grow { flex: 1; }
+  .passkey-add-card {
+    padding: 24px;
+    background: var(--bg-elev);
+    border: 1px solid var(--line-1);
+    box-shadow: 2px 2px 0 0 var(--line-1);
+  }
+  .passkey-empty {
+    text-align: center;
+    padding: 48px 24px;
+    border: 1px dashed var(--line-2);
+    background: var(--bg-elev);
+    margin-bottom: 22px;
+  }
+  .passkey-empty h3 {
+    font-family: var(--serif);
+    font-size: 22px;
+    margin: 8px 0 8px;
+  }
+  .passkey-empty p {
+    color: var(--fg-2);
+    font-size: 13px;
+    max-width: 50ch;
+    margin: 0 auto 18px;
+    line-height: 1.6;
+  }
+  .auth-status {
+    margin-top: 14px;
+    padding: 10px 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    border: 1px dashed var(--line-2);
+    background: var(--bg-1);
+  }
+  .auth-status.err { border-color: var(--orange); }
+</style>
+{{ end }}
+
 {{ define "content" }}
-<div class="container">
-    <h1>Manage Passkeys</h1>
+<div class="passkeys-page" data-test="auth-passkeys">
+  <div class="page-head">
+    <div class="label">· ACCOUNT · KEYS</div>
+    <h1>Your passkeys</h1>
+    <p class="lede">Passkeys let you sign in with Face ID, Touch ID, or a hardware key — no password to remember.</p>
+  </div>
 
-    <div class="card mb-4">
-        <div class="card-header">
-            <h2>Your Passkeys</h2>
+  {{ if .Data.Passkeys }}
+    <div class="passkey-list" data-test="passkey-list">
+      {{ range .Data.Passkeys }}
+        <div class="passkey-row">
+          <div class="grow">
+            <div class="name">{{ .Name }}</div>
+            <div class="meta">· REGISTERED · {{ .CreatedAt }} · LAST USED {{ .LastUsedAt }}</div>
+          </div>
+          <span class="badge">· REGISTERED</span>
+          <form action="/profile/passkeys/{{ .ID }}" method="POST" onsubmit="return confirm('Remove this passkey?');" style="margin: 0;">
+            <input type="hidden" name="_method" value="DELETE">
+            <button type="submit" class="btn sm ghost">Remove</button>
+          </form>
         </div>
-        <div class="card-body">
-            {{ if .Data.Passkeys }}
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Created</th>
-                                <th>Last Used</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {{ range .Data.Passkeys }}
-                                <tr>
-                                    <td>{{ .Name }}</td>
-                                    <td>{{ .CreatedAt }}</td>
-                                    <td>{{ .LastUsedAt }}</td>
-                                    <td>
-                                        <form action="/profile/passkeys/{{ .ID }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this passkey?');">
-                                            <input type="hidden" name="_method" value="DELETE">
-                                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            {{ end }}
-                        </tbody>
-                    </table>
-                </div>
-            {{ else }}
-                <div class="alert alert-info">
-                    You don't have any passkeys yet. Add one below to enable passwordless login.
-                </div>
-            {{ end }}
-        </div>
+      {{ end }}
     </div>
-
-    <div class="card">
-        <div class="card-header">
-            <h2>Add New Passkey</h2>
-        </div>
-        <div class="card-body">
-            <p>Passkeys allow you to sign in without a password using biometrics (like fingerprint or face recognition) or a security key.</p>
-
-            <form id="register-passkey-form">
-                <div class="form-group">
-                    <label for="passkey-name">Passkey Name</label>
-                    <input type="text" id="passkey-name" name="name" class="form-control" required
-                           placeholder="e.g., My Laptop, iPhone, Security Key">
-                    <small class="form-text text-muted">Give your passkey a name to help you identify it later.</small>
-                </div>
-
-                <div class="form-group mt-3">
-                    <button type="submit" class="btn btn-primary" id="register-button">
-                        <i class="fas fa-key"></i> Register New Passkey
-                    </button>
-                </div>
-            </form>
-
-            <div id="registration-status" class="mt-3" style="display: none;"></div>
-        </div>
+  {{ else }}
+    <div class="passkey-empty" data-test="passkey-empty">
+      {{ template "icon-key" . }}
+      <h3>No passkeys yet</h3>
+      <p>Add one below to enable passwordless sign-in. You can register as many as you like — one per device works well.</p>
     </div>
+  {{ end }}
 
-    <div class="mt-3">
-        <a href="/profile" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Back to Profile
-        </a>
+  <div class="passkey-add-card">
+    <div class="section-head" style="margin-top: 0;">
+      <h2>Add a passkey</h2>
     </div>
+    <p style="font-size: 13px; color: var(--fg-1); margin-top: 0;">Give it a name so you can tell your devices apart later.</p>
+
+    <form id="register-passkey-form">
+      <div class="field">
+        <div class="field-label"><span class="label">· NAME</span></div>
+        <input type="text" id="passkey-name" name="name" class="input" required
+               placeholder="e.g., MacBook, iPhone, YubiKey">
+        <div class="field-help">Just for you — recipients don't see this.</div>
+      </div>
+
+      <button type="submit" class="btn primary" id="register-button">
+        {{ template "icon-key" . }}
+        <span>Register passkey</span>
+      </button>
+    </form>
+
+    <div id="registration-status" class="auth-status" style="display: none;"></div>
+  </div>
+
+  <div style="margin-top: 18px;">
+    <a href="/profile" class="btn ghost sm">← Back to profile</a>
+  </div>
 </div>
+{{ end }}
 
+{{ define "scripts" }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const registerForm = document.getElementById('register-passkey-form');
@@ -89,21 +144,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const passkeyName = document.getElementById('passkey-name').value;
         if (!passkeyName) {
-            showStatus('error', 'Please enter a name for your passkey.');
+            showStatus('err', 'Give your passkey a name first.');
             return;
         }
 
-        // Disable the button and show loading state
         registerButton.disabled = true;
-        registerButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registering...';
+        registerButton.innerHTML = '<span>Registering…</span>';
 
         try {
-            // Begin registration
             const beginResponse = await fetch('/profile/passkeys/register/begin', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
             });
 
             if (!beginResponse.ok) {
@@ -111,8 +162,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             const credentialCreationOptions = await beginResponse.json();
-
-            // Convert base64 strings to ArrayBuffers
             credentialCreationOptions.publicKey.challenge = base64URLToArrayBuffer(credentialCreationOptions.publicKey.challenge);
 
             if (credentialCreationOptions.publicKey.user && credentialCreationOptions.publicKey.user.id) {
@@ -127,13 +176,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
-            // Create credential
-            showStatus('info', 'Please follow your browser\'s instructions to create a passkey...');
+            showStatus('ok', 'Follow your browser\'s prompt to create the passkey…');
             const credential = await navigator.credentials.create({
                 publicKey: credentialCreationOptions.publicKey
             });
 
-            // Prepare credential for sending to server
             const credentialResponse = {
                 id: credential.id,
                 rawId: arrayBufferToBase64URL(credential.rawId),
@@ -144,73 +191,47 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             };
 
-            // Finish registration
-            console.log('Sending registration data to server:', {
-                credential: credentialResponse,
-                name: passkeyName
-            });
             const finishResponse = await fetch('/profile/passkeys/register/finish', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     credential: credentialResponse,
                     name: passkeyName
                 })
             });
-            console.log('Server response status:', finishResponse.status);
 
             if (!finishResponse.ok) {
-                // Try to get error details from response
                 let errorMessage = 'Failed to complete registration';
                 try {
                     const errorData = await finishResponse.text();
-                    console.error('Server error response:', errorData);
-                    errorMessage = `Failed to complete registration: ${errorData}`;
-                } catch (e) {
-                    console.error('Could not parse error response:', e);
-                }
+                    errorMessage = 'Failed to complete registration: ' + errorData;
+                } catch (e) { /* swallow */ }
                 throw new Error(errorMessage);
             }
 
             const result = await finishResponse.json();
 
             if (result.success) {
-                showStatus('success', 'Passkey registered successfully! Refreshing page...');
-                setTimeout(() => {
-                    window.location.reload();
-                }, 2000);
+                showStatus('ok', 'Passkey registered. Refreshing…');
+                setTimeout(() => { window.location.reload(); }, 1500);
             } else {
                 throw new Error(result.message || 'Registration failed');
             }
 
         } catch (error) {
             console.error('Error registering passkey:', error);
-            showStatus('error', 'Error registering passkey: ' + error.message);
-
-            // Re-enable the button
+            showStatus('err', 'Couldn\'t register passkey: ' + error.message);
             registerButton.disabled = false;
-            registerButton.innerHTML = '<i class="fas fa-key"></i> Register New Passkey';
+            registerButton.innerHTML = '<span>Register passkey</span>';
         }
     });
 
     function showStatus(type, message) {
         statusDiv.style.display = 'block';
-        statusDiv.className = 'alert mt-3';
-
-        if (type === 'error') {
-            statusDiv.className += ' alert-danger';
-        } else if (type === 'success') {
-            statusDiv.className += ' alert-success';
-        } else {
-            statusDiv.className += ' alert-info';
-        }
-
+        statusDiv.className = 'auth-status ' + (type === 'err' ? 'err' : 'ok');
         statusDiv.textContent = message;
     }
 
-    // Helper functions for ArrayBuffer <-> Base64URL conversion
     function base64URLToArrayBuffer(base64URL) {
         const base64 = base64URL.replace(/-/g, '+').replace(/_/g, '/');
         const padLen = (4 - (base64.length % 4)) % 4;
@@ -218,22 +239,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const binary = atob(padded);
         const buffer = new ArrayBuffer(binary.length);
         const view = new Uint8Array(buffer);
-
         for (let i = 0; i < binary.length; i++) {
             view[i] = binary.charCodeAt(i);
         }
-
         return buffer;
     }
 
     function arrayBufferToBase64URL(buffer) {
         const bytes = new Uint8Array(buffer);
         let binary = '';
-
         for (let i = 0; i < bytes.byteLength; i++) {
             binary += String.fromCharCode(bytes[i]);
         }
-
         const base64 = btoa(binary);
         return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
     }

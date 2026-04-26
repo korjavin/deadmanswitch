@@ -1,90 +1,86 @@
 {{ template "layout.html" . }}
 
-{{ define "content" }}
-<div class="login-page">
-    <div class="card">
-        <div class="card-body">
-            <h1 class="card-title">Two-Factor Authentication</h1>
-            
-            {{ if .Data.Error }}
-            <div class="alert alert-danger">
-                {{ .Data.Error }}
-            </div>
-            {{ end }}
-            
-            <p>Please enter the verification code from your authenticator app.</p>
-            
-            <form action="/login" method="POST">
-                <input type="hidden" name="email" value="{{ .Data.Email }}">
-                <input type="hidden" name="password" value="{{ .Data.Password }}">
-                <input type="hidden" name="remember" value="{{ if .Data.RememberMe }}on{{ end }}">
-                
-                <div class="form-group">
-                    <label for="totp_code" class="form-label">Verification Code</label>
-                    <input type="text" name="totp_code" id="totp_code" class="form-control" 
-                           placeholder="Enter 6-digit code" required autofocus
-                           pattern="[0-9]{6}" maxlength="6">
-                    <small class="form-help">Enter the 6-digit code from your authenticator app</small>
-                </div>
-                
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary btn-block">Verify</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
+{{ define "styles" }}
 <style>
-.login-page {
-    max-width: 400px;
-    margin: 0 auto;
-    margin-top: 50px;
-}
-
-.card-title {
+  .auth-card {
+    max-width: 420px;
+    margin: 64px auto;
+    padding: 32px 28px;
+    background: var(--bg-elev);
+    border: 1px solid var(--line-1);
+    box-shadow: 4px 4px 0 0 var(--line-1);
+  }
+  .auth-kicker {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+    margin-bottom: 10px;
+  }
+  .auth-title {
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0 0 8px;
+  }
+  .auth-sub {
+    color: var(--fg-1);
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 0 0 24px;
+  }
+  .code-input {
     text-align: center;
-    margin-bottom: 20px;
-}
-
-.form-group {
-    margin-bottom: 20px;
-}
-
-.form-label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 500;
-}
-
-.form-control {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-.form-help {
-    display: block;
-    margin-top: 5px;
-    color: #666;
-}
-
-.btn-block {
-    display: block;
-    width: 100%;
-}
-
-.alert {
-    padding: 10px;
-    margin-bottom: 20px;
-    border-radius: 4px;
-}
-
-.alert-danger {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-}
+    font-family: var(--mono);
+    font-size: 24px;
+    letter-spacing: 0.4em;
+    font-weight: 700;
+    padding: 14px 12px;
+  }
+  .auth-foot {
+    margin-top: 22px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--fg-2);
+    text-align: center;
+  }
 </style>
+{{ end }}
+
+{{ define "content" }}
+<div class="auth-card" data-test="auth-login-2fa">
+  <div class="auth-kicker">· ONE MORE STEP</div>
+  <h1 class="auth-title">A second key, please</h1>
+  <p class="auth-sub">Enter the six-digit code from your authenticator app to finish signing in.</p>
+
+  {{ if .Data.Error }}
+  <div class="alert alert-danger" style="margin-bottom: 18px;">
+    <span class="label">· error</span>
+    <span class="alert-message">{{ .Data.Error }}</span>
+  </div>
+  {{ end }}
+
+  <form action="/login" method="POST">
+    <input type="hidden" name="email" value="{{ .Data.Email }}">
+    <input type="hidden" name="password" value="{{ .Data.Password }}">
+    <input type="hidden" name="remember" value="{{ if .Data.RememberMe }}on{{ end }}">
+
+    <div class="field">
+      <div class="field-label"><span class="label">· VERIFICATION CODE</span></div>
+      <input type="text" name="totp_code" id="totp_code" class="input code-input"
+             placeholder="000000" required autofocus
+             pattern="[0-9]{6}" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
+      <div class="field-help">Six digits from 1Password, Authy, Google Authenticator, etc.</div>
+    </div>
+
+    <button type="submit" class="btn primary full">Verify →</button>
+  </form>
+
+  <div class="auth-foot">
+    Lost your authenticator? <a href="/login">Start over</a>
+  </div>
+</div>
 {{ end }}

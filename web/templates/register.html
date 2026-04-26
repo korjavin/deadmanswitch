@@ -2,95 +2,133 @@
 
 {{ define "styles" }}
 <style>
-  .auth-container {
-    max-width: 480px;
-    margin: 2rem auto;
+  .auth-card {
+    max-width: 460px;
+    margin: 64px auto;
+    padding: 32px 28px;
+    background: var(--bg-elev);
+    border: 1px solid var(--line-1);
+    box-shadow: 4px 4px 0 0 var(--line-1);
   }
-
+  .auth-kicker {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+    margin-bottom: 10px;
+  }
   .auth-title {
-    text-align: center;
-    margin-bottom: 2rem;
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0 0 8px;
   }
-
-  .auth-options {
-    text-align: center;
-    margin-top: 1rem;
+  .auth-sub {
+    color: var(--fg-1);
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 0 0 24px;
   }
-
+  .password-wrap { position: relative; }
+  .password-toggle {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    padding: 4px 6px;
+  }
+  .password-toggle:hover { color: var(--fg-0); }
   .password-requirements {
-    font-size: 0.85rem;
-    color: var(--gray-color);
-    margin-top: 0.5rem;
-  }
-
-  .password-requirement {
     display: flex;
-    align-items: center;
-    margin-bottom: 0.25rem;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-3);
   }
-
-  .password-requirement.met::before {
-    content: '✓';
-    color: var(--success-color);
-    margin-right: 0.5rem;
+  .password-requirement.met { color: var(--fg-0); }
+  .password-requirement.met::before { content: '✓ '; }
+  .password-requirement.unmet::before { content: '· '; }
+  .auth-foot {
+    margin-top: 22px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--fg-2);
+    text-align: center;
   }
-
-  .password-requirement.unmet::before {
-    content: '✗';
-    color: var(--gray-color);
-    margin-right: 0.5rem;
+  .auth-foot a { color: var(--fg-0); }
+  .auth-promise {
+    margin: 18px 0 22px;
+    padding: 12px 14px;
+    border: 1px dashed var(--line-2);
+    background: var(--bg-1);
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--fg-2);
   }
+  .input.is-invalid { border-color: var(--orange); }
+  .input.is-valid { border-color: var(--line-1); }
 </style>
 {{ end }}
 
 {{ define "content" }}
-<div class="auth-container">
-  <h1 class="auth-title">Create Account</h1>
+<div class="auth-card" data-test="auth-register">
+  <div class="auth-kicker">· STEP 1 · ABOUT YOU</div>
+  <h1 class="auth-title">Create your account</h1>
+  <p class="auth-sub">We need very little from you — an email we can reach you at, and a password.</p>
 
-  <div class="card">
-    <div class="card-body">
-      <form action="/register" method="POST" id="registerForm">
-        <div class="form-group">
-          <label for="email" class="form-label">Email Address</label>
-          <input type="email" id="email" name="email" class="form-control" required autofocus>
-        </div>
-
-        <div class="form-group">
-          <label for="password" class="form-label">Password</label>
-          <div style="position: relative;">
-            <input type="password" id="password" name="password" class="form-control" required>
-            <button type="button" class="password-toggle" data-target="password" style="position: absolute; right: 10px; top: 5px; border: none; background: none; cursor: pointer;">Show</button>
-          </div>
-          <div class="password-requirements">
-            <div class="password-requirement unmet" id="req-length">At least 8 characters long</div>
-            <div class="password-requirement unmet" id="req-uppercase">Contains uppercase letter</div>
-            <div class="password-requirement unmet" id="req-lowercase">Contains lowercase letter</div>
-            <div class="password-requirement unmet" id="req-number">Contains number</div>
-            <div class="password-requirement unmet" id="req-special">Contains special character</div>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="confirmPassword" class="form-label">Confirm Password</label>
-          <div style="position: relative;">
-            <input type="password" id="confirmPassword" name="confirmPassword" class="form-control" required>
-            <button type="button" class="password-toggle" data-target="confirmPassword" style="position: absolute; right: 10px; top: 5px; border: none; background: none; cursor: pointer;">Show</button>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <div class="form-info">
-            <p class="text-muted">This is a self-hosted application. Your data remains on your server and is never shared with third parties.</p>
-          </div>
-        </div>
-
-        <button type="submit" class="btn btn-primary btn-block">Register</button>
-      </form>
+  <form action="/register" method="POST" id="registerForm">
+    <div class="field">
+      <div class="field-label"><span class="label">· EMAIL ADDRESS</span></div>
+      <input type="email" id="email" name="email" class="input" required autofocus autocomplete="email" placeholder="you@example.com">
+      <div class="field-help">This is also how we'll nudge you to confirm you're still here.</div>
     </div>
-  </div>
 
-  <div class="auth-options">
-    <a href="/login">Already have an account? Log in</a>
+    <div class="field">
+      <div class="field-label"><span class="label">· PASSWORD</span></div>
+      <div class="password-wrap">
+        <input type="password" id="password" name="password" class="input" required autocomplete="new-password" placeholder="At least 8 characters">
+        <button type="button" class="password-toggle" data-target="password">show</button>
+      </div>
+      <div class="password-requirements">
+        <span class="password-requirement unmet" id="req-length">8+ characters</span>
+        <span class="password-requirement unmet" id="req-uppercase">1 uppercase</span>
+        <span class="password-requirement unmet" id="req-lowercase">1 lowercase</span>
+        <span class="password-requirement unmet" id="req-number">1 number</span>
+        <span class="password-requirement unmet" id="req-special">1 symbol</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="field-label"><span class="label">· CONFIRM PASSWORD</span></div>
+      <div class="password-wrap">
+        <input type="password" id="confirmPassword" name="confirmPassword" class="input" required autocomplete="new-password" placeholder="Type it again">
+        <button type="button" class="password-toggle" data-target="confirmPassword">show</button>
+      </div>
+    </div>
+
+    <div class="auth-promise">
+      Self-hosted. Your data stays on your server. We never share or sell your email.
+    </div>
+
+    <button type="submit" class="btn primary full">Begin →</button>
+  </form>
+
+  <div class="auth-foot">
+    Have an account? <a href="/login">Sign in</a>
   </div>
 </div>
 {{ end }}
@@ -102,13 +140,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const confirmPasswordInput = document.getElementById('confirmPassword');
   const form = document.getElementById('registerForm');
 
-  // Check password requirements
   passwordInput.addEventListener('input', validatePassword);
-
-  // Check password match
   confirmPasswordInput.addEventListener('input', validatePasswordMatch);
 
-  // Form validation before submit
   form.addEventListener('submit', (e) => {
     if (!validatePassword() || !validatePasswordMatch()) {
       e.preventDefault();
@@ -116,10 +150,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  document.querySelectorAll('.password-toggle').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const target = document.getElementById(btn.getAttribute('data-target'));
+      if (!target) return;
+      if (target.type === 'password') {
+        target.type = 'text';
+        btn.textContent = 'hide';
+      } else {
+        target.type = 'password';
+        btn.textContent = 'show';
+      }
+    });
+  });
+
   function validatePassword() {
     const password = passwordInput.value;
-
-    // Validate requirements
     const requirements = {
       'req-length': password.length >= 8,
       'req-uppercase': /[A-Z]/.test(password),
@@ -129,8 +175,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     let allMet = true;
-
-    // Update UI for each requirement
     for (const [reqId, isMet] of Object.entries(requirements)) {
       const reqElement = document.getElementById(reqId);
       if (isMet) {
@@ -152,27 +196,21 @@ document.addEventListener('DOMContentLoaded', () => {
         passwordInput.classList.add('is-invalid');
       }
     }
-
     return allMet;
   }
 
   function validatePasswordMatch() {
     const password = passwordInput.value;
     const confirmPassword = confirmPasswordInput.value;
-
-    if (confirmPassword.length === 0) {
-      return false;
-    }
-
+    if (confirmPassword.length === 0) return false;
     if (password === confirmPassword) {
       confirmPasswordInput.classList.remove('is-invalid');
       confirmPasswordInput.classList.add('is-valid');
       return true;
-    } else {
-      confirmPasswordInput.classList.remove('is-valid');
-      confirmPasswordInput.classList.add('is-invalid');
-      return false;
     }
+    confirmPasswordInput.classList.remove('is-valid');
+    confirmPasswordInput.classList.add('is-invalid');
+    return false;
   }
 });
 </script>
