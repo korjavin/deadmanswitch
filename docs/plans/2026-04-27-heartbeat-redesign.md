@@ -199,14 +199,14 @@ Decision recap (from planning conversation):
 - [x] run `go test ./...` — must pass before next task (all green; lint baseline unchanged from Task 7 — 51 pre-existing gosec/gofmt warnings in handler files, none introduced by Task 8).
 
 ### Task 9: History — `history.html`
-- [ ] rewrite `history.html`:
+- [x] rewrite `history.html`:
   - `PageHead` kicker `· AUDIT TRAIL`, title "Everything we've recorded", lede explaining append-only nature
-  - Single-column timeline with mono dates on left, soft activity description on right, dashed dividers between days
-  - Event type badges (LOGIN / GITHUB / CHECKIN / NUDGE / LETTER / RECIPIENT / SETTINGS) with the design's icon set
-  - Pagination preserved (existing pattern)
-- [ ] write Go test: render with 5 sample events of mixed types, assert each badge label appears, dates render in mono with tabular-nums
-- [ ] write Go test: assert pagination controls intact
-- [ ] run `go test ./...` — must pass before next task
+  - Single-column timeline with mono dates on left, soft activity description on right, dashed dividers between rows (the design's `letters.jsx` History uses per-row dashed bottom-borders; per-day grouping isn't in the source data shape so we kept the per-row pattern from the design 1:1)
+  - Event type badges (LOGIN / GITHUB / CHECKIN / NUDGE / LETTER / RECIPIENT / SETTINGS) with the design's icon set — icon partials defined locally as `icon-history-{name}` to avoid colliding with `layout.html`/`dashboard.html`'s icon defines
+  - Pagination preserved: optional `.Data.Pagination.{Prev,Next}` block renders prev/next ghost buttons when supplied; absent when not (current handler doesn't paginate but the markup is forward-compatible for when it does)
+- [x] write Go test: render with 5 sample events of mixed types, assert each badge label appears, dates render in mono with tabular-nums (`TestRenderHistory_AllBadges` covers all 7 badge labels — LOGIN/GITHUB/CHECKIN/NUDGE/LETTER/RECIPIENT/SETTINGS — asserts `font-variant-numeric: tabular-nums`, `class="hb-history-date"`, and per-entry title+description rendering; `TestRenderHistory_HeartbeatPageHead` covers kicker/title/lede; `TestRenderHistory_RemovesOldCopy` guards against `Activity History</h1>`, `Dead Man's Switch`, `class="timeline-item"`, `class="timeline-marker`, `class="filter-controls"`, `id="activityType"`, `id="dateRange"`, `form-control`; `TestRenderHistory_EmptyState` covers the no-activities envelope-style empty block; `TestRenderHistory_UnknownTypeFallsBackToRecorded` covers the `RECORDED` default for types the handler emits as `other`)
+- [x] write Go test: assert pagination controls intact (`TestRenderHistory_PaginationControlsIntact` asserts `data-test="history-pagination"`, both `href="..."` URLs, `rel="prev"`/`rel="next"`, and the `← Older` / `Newer →` button copy when `.Data.Pagination` is supplied; `TestRenderHistory_EmptyState` and the empty-pagination path in `historyData` assert the wrapper is absent when `.Data.Pagination` is nil so we don't emit empty nav markup)
+- [x] run `go test ./...` — must pass before next task (all green; lint baseline unchanged from Task 8 — 51 pre-existing gosec/gofmt warnings in untouched handler files, none introduced by Task 9)
 
 ### Task 10: Verify acceptance criteria
 - [ ] verify all 19 templates have been redesigned and reference `heartbeat.css` (no template still pulls `main.css`)
