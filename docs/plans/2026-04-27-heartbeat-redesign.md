@@ -100,19 +100,19 @@ Decision recap (from planning conversation):
 - [x] run `go test ./...` and `./scripts/run-golangci-lint.sh` — must pass before next task (all tests green; the 51 golangci-lint warnings are pre-existing gosec/gofmt issues in untouched files — none introduced by Task 1)
 
 ### Task 2: App shell — `layout.html` (topbar + sidebar + footer)
-- [ ] rewrite `web/templates/layout.html`:
+- [x] rewrite `web/templates/layout.html`:
   - Title format: `{{ .Title }} — Heartbeat` (only the user-visible string changes)
   - Authenticated layout: `.app` grid with `.topbar` (Logo + Heartbeat status pulse + user dropdown) and `.sidebar` (nav groups: TODAY · Dashboard, PEOPLE · Recipients, LETTERS · Secrets, ACCOUNT · Settings/Profile/History)
   - Unauthenticated layout: sticky `.marketing-bar` with Logo, links (How it works / The promise / Self-host / FAQ), Sign in + Begin buttons
   - Replace 🔐 emoji brand with the SVG heartbeat-and-pulse Logo from `primitives.jsx`
   - Replace footer with the design's terse mono footer (`HEARTBEAT · MADE WITH CARE · ©2026` + Privacy/Security/GitHub/Contact)
   - Keep all template `{{ block }}` / `{{ define }}` blocks named identically so child templates don't break
-- [ ] inline the heart-pulse SVG and small icon set used by sidebar (heart, mail, users-round, settings, clock, log-out, key) — either as one shared `{{ define "icon-<name>" }}` partial or as a JS-loaded inline SVG sprite at `web/static/js/icons.js`
-- [ ] preserve `Flash` / alert rendering but restyle with mono `.label` + dashed border
-- [ ] active-nav highlighting via existing `{{ if eq .ActivePage "..." }}` checks → swap to `class="nav-item active"`
-- [ ] write Go test: render layout in both authenticated and unauthenticated states, assert sidebar absent in unauth and present in auth, assert `Heartbeat` appears in `<title>`, assert old `Dead Man's Switch` brand is gone from rendered output
-- [ ] write Go test: assert active-nav class flips correctly when `ActivePage` changes
-- [ ] run `go test ./...` — must pass before next task
+- [x] inline the heart-pulse SVG and small icon set used by sidebar (heart, mail, users-round, settings, clock, log-out, key) — chose `{{ define "icon-<name>" }}` partials inside `layout.html` so child templates can reuse them via `{{ template "icon-heart" . }}` without an extra file or JS dependency
+- [x] preserve `Flash` / alert rendering but restyle with mono `.label` + dashed border
+- [x] active-nav highlighting via existing `{{ if eq .ActivePage "..." }}` checks → swap to `class="nav-item active"`
+- [x] write Go test: render layout in both authenticated and unauthenticated states, assert sidebar absent in unauth and present in auth, assert `Heartbeat` appears in `<title>`, assert old `Dead Man's Switch` brand is gone from rendered output (added `internal/web/layout_test.go` with `TestLayoutTitleSaysHeartbeat`, `TestLayoutAuthenticatedShowsSidebar`, `TestLayoutUnauthenticatedShowsMarketing`)
+- [x] write Go test: assert active-nav class flips correctly when `ActivePage` changes (added `TestLayoutActiveNavFlips` covering all 6 sidebar pages)
+- [x] run `go test ./...` — must pass before next task (all tests green; lint warnings unchanged from Task 1 baseline)
 
 ### Task 3: Landing — `index.html`
 - [ ] rewrite `web/templates/index.html` to mirror `landing.jsx`:

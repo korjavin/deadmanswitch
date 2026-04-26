@@ -4,121 +4,168 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ .Title }} - Dead Man's Switch</title>
-  <meta name="description" content="A secure dead man's switch service for digital asset protection.">
+  <title>{{ .Title }} — Heartbeat</title>
+  <meta name="description" content="Heartbeat — a quiet kind of safety net. Self-hosted, time-boxed letters, delivered only if you go silent.">
 
-  <!-- Favicon -->
   <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
 
-  <!-- Base styles (Heartbeat redesign foundation) -->
   <link rel="stylesheet" href="/static/css/tokens.css">
   <link rel="stylesheet" href="/static/css/heartbeat.css">
 
-  <!-- Page-specific styles -->
   {{ block "styles" . }}{{ end }}
 </head>
 <body>
-  <!-- Navbar -->
-  <nav class="navbar">
-    <div class="container">
-      <a href="/" class="navbar-brand">
-        <span class="brand-icon">🔐</span>
-        <span class="brand-text">Dead Man's Switch</span>
-      </a>
-
-      <input type="checkbox" id="navbar-toggle-checkbox">
-      <label for="navbar-toggle-checkbox" class="navbar-toggle">
-        <span></span>
-        <span></span>
-        <span></span>
-      </label>
-
-      <div class="navbar-menu">
-        {{ if .IsAuthenticated }}
-          <a href="/dashboard" class="navbar-item {{ if eq .ActivePage "dashboard" }}active{{ end }}">Dashboard</a>
-          <a href="/secrets" class="navbar-item {{ if eq .ActivePage "secrets" }}active{{ end }}">Secrets</a>
-          <a href="/recipients" class="navbar-item {{ if eq .ActivePage "recipients" }}active{{ end }}">Recipients</a>
-          <a href="/history" class="navbar-item {{ if eq .ActivePage "history" }}active{{ end }}">History</a>
-          <div class="navbar-right">
-            <div class="dropdown">
-              <button class="dropdown-toggle">
-                {{ .Data.User.Email }} <span class="caret"></span>
-              </button>
-              <div class="dropdown-menu">
-                <a href="/profile" class="dropdown-item">Profile</a>
-                <a href="/settings" class="dropdown-item">Settings</a>
-                <div class="dropdown-divider"></div>
-                <a href="/logout" class="dropdown-item">Logout</a>
-              </div>
-            </div>
-          </div>
-        {{ else }}
-          <a href="https://github.com/korjavin/deadmanswitch#key-features" class="navbar-item {{ if eq .ActivePage "features" }}active{{ end }}">Features</a>
-          <a href="https://github.com/korjavin/deadmanswitch#what-is-a-dead-mans-switch" class="navbar-item {{ if eq .ActivePage "about" }}active{{ end }}">About</a>
-          <div class="navbar-right">
-            <a href="/login" class="navbar-item {{ if eq .ActivePage "login" }}active{{ end }}">Login</a>
-            <a href="/register" class="navbar-item {{ if eq .ActivePage "register" }}active{{ end }}">Register</a>
-          </div>
-        {{ end }}
+{{ if .IsAuthenticated }}
+  <div class="app">
+    <header class="topbar">
+      <a href="/dashboard" class="brand-link" aria-label="Heartbeat home">{{ template "brand-logo" . }}</a>
+      <div class="topbar-spacer" style="flex:1"></div>
+      <div class="heartbeat ok" aria-live="polite" title="Heartbeat status">
+        <span class="pulse" aria-hidden="true"></span>
+        <span class="heartbeat-label">HEARTBEAT · OK</span>
       </div>
-    </div>
-  </nav>
+      <div class="dropdown user-menu">
+        <button class="dropdown-toggle btn ghost sm" type="button" aria-haspopup="true">
+          <span class="user-email">{{ if .User }}{{ .User.Email }}{{ end }}</span>
+          <span class="caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="dropdown-menu" role="menu">
+          <a href="/profile" class="dropdown-item" role="menuitem">· Profile</a>
+          <a href="/settings" class="dropdown-item" role="menuitem">· Settings</a>
+          <a href="/history" class="dropdown-item" role="menuitem">· History</a>
+          <div class="dropdown-divider"></div>
+          <a href="/logout" class="dropdown-item" role="menuitem">· Sign out</a>
+        </div>
+      </div>
+    </header>
 
-  <!-- Alert messages -->
-  {{ if .Flash }}
-    <div class="container" style="margin-top: 1rem;">
-      {{ range $type, $message := .Flash }}
-        <div class="alert alert-{{ $type }}">
-          {{ $message }}
-          <button type="button" class="alert-close">&times;</button>
+    <nav class="sidebar" aria-label="Primary">
+      <div class="nav-group">
+        <div class="nav-group-label">· TODAY</div>
+        <a href="/dashboard" class="nav-item{{ if eq .ActivePage "dashboard" }} active{{ end }}">
+          {{ template "icon-heart" . }}
+          <span>Dashboard</span>
+        </a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">· PEOPLE</div>
+        <a href="/recipients" class="nav-item{{ if eq .ActivePage "recipients" }} active{{ end }}">
+          {{ template "icon-users-round" . }}
+          <span>Your circle</span>
+        </a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">· LETTERS</div>
+        <a href="/secrets" class="nav-item{{ if eq .ActivePage "secrets" }} active{{ end }}">
+          {{ template "icon-mail" . }}
+          <span>Letters</span>
+        </a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-label">· ACCOUNT</div>
+        <a href="/settings" class="nav-item{{ if eq .ActivePage "settings" }} active{{ end }}">
+          {{ template "icon-settings" . }}
+          <span>Settings</span>
+        </a>
+        <a href="/profile" class="nav-item{{ if eq .ActivePage "profile" }} active{{ end }}">
+          {{ template "icon-key" . }}
+          <span>Profile</span>
+        </a>
+        <a href="/history" class="nav-item{{ if eq .ActivePage "history" }} active{{ end }}">
+          {{ template "icon-clock" . }}
+          <span>History</span>
+        </a>
+        <a href="/logout" class="nav-item">
+          {{ template "icon-log-out" . }}
+          <span>Sign out</span>
+        </a>
+      </div>
+    </nav>
+
+    <main class="main">
+      {{ if .Flash }}
+        <div class="flash-stack">
+          {{ range $type, $message := .Flash }}
+            <div class="alert alert-{{ $type }}">
+              <span class="label">· {{ $type }}</span>
+              <span class="alert-message">{{ $message }}</span>
+              <button type="button" class="alert-close" aria-label="Dismiss">×</button>
+            </div>
+          {{ end }}
         </div>
       {{ end }}
-    </div>
-  {{ end }}
-
-  <!-- Main content -->
-  <main class="container">
-    {{ block "content" . }}{{ end }}
-  </main>
-
-  <!-- Footer -->
-  <footer>
-    <div class="container">
-      <div style="display: flex; flex-wrap: wrap; justify-content: space-between;">
-        <div style="margin-bottom: 1rem;">
-          <h3>Dead Man's Switch</h3>
-          <p>Secure digital asset protection</p>
-          <p>A free, self-hosted solution for your most sensitive data</p>
-        </div>
-
-        <div style="margin-bottom: 1rem;">
-          <h4>Resources</h4>
-          <ul style="list-style: none; padding: 0;">
-            <li><a href="https://github.com/korjavin/deadmanswitch/blob/master/README.md" target="_blank">Documentation</a></li>
-            <li><a href="https://github.com/korjavin/deadmanswitch/blob/master/docs/faq.md" target="_blank">FAQ</a></li>
-          </ul>
-        </div>
-
-        <div style="margin-bottom: 1rem;">
-          <h4>Connect</h4>
-          <ul style="list-style: none; padding: 0;">
-            <li><a href="https://github.com/korjavin" target="_blank">GitHub</a></li>
-            <li><a href="https://github.com/sponsors/korjavin" target="_blank">Sponsor</a></li>
-          </ul>
-        </div>
+      {{ block "content" . }}{{ end }}
+    </main>
+  </div>
+{{ else }}
+  <div class="marketing">
+    <header class="marketing-bar">
+      <a href="/" class="brand-link" aria-label="Heartbeat home">{{ template "brand-logo" . }}</a>
+      <nav class="marketing-nav" aria-label="Marketing">
+        <a href="/#how-it-works" class="marketing-link{{ if eq .ActivePage "how" }} active{{ end }}">How it works</a>
+        <a href="/#the-promise" class="marketing-link{{ if eq .ActivePage "promise" }} active{{ end }}">The promise</a>
+        <a href="/#self-host" class="marketing-link{{ if eq .ActivePage "self-host" }} active{{ end }}">Self-host</a>
+        <a href="/#faq" class="marketing-link{{ if eq .ActivePage "faq" }} active{{ end }}">FAQ</a>
+      </nav>
+      <div class="marketing-actions">
+        <a href="/login" class="btn sm ghost{{ if eq .ActivePage "login" }} active{{ end }}">Sign in</a>
+        <a href="/register" class="btn sm primary{{ if eq .ActivePage "register" }} active{{ end }}">Begin</a>
       </div>
+    </header>
 
-      <div style="margin-top: 2rem; text-align: center; color: var(--light-gray);">
-        <p>&copy; 2025 Dead Man's Switch. All rights reserved.</p>
-      </div>
-    </div>
-  </footer>
+    <main class="marketing-main">
+      {{ if .Flash }}
+        <div class="flash-stack" style="max-width: 960px; margin: 16px auto;">
+          {{ range $type, $message := .Flash }}
+            <div class="alert alert-{{ $type }}">
+              <span class="label">· {{ $type }}</span>
+              <span class="alert-message">{{ $message }}</span>
+              <button type="button" class="alert-close" aria-label="Dismiss">×</button>
+            </div>
+          {{ end }}
+        </div>
+      {{ end }}
+      {{ block "content" . }}{{ end }}
+    </main>
 
-  <!-- Base scripts -->
+    <footer class="marketing-footer">
+      <div class="footer-line">HEARTBEAT · MADE WITH CARE · ©2026</div>
+      <nav class="footer-nav" aria-label="Footer">
+        <a href="/#privacy">Privacy</a>
+        <a href="/#security">Security</a>
+        <a href="https://github.com/korjavin/deadmanswitch" target="_blank" rel="noopener">GitHub</a>
+        <a href="mailto:hello@heartbeat.local">Contact</a>
+      </nav>
+    </footer>
+  </div>
+{{ end }}
+
   <script src="/static/js/main.js"></script>
-
-  <!-- Page-specific scripts -->
   {{ block "scripts" . }}{{ end }}
 </body>
 </html>
 {{ end }}
+
+{{ define "brand-logo" }}
+<span class="brand">
+  <svg class="brand-mark" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M12 21s-7-4.5-7-11a4 4 0 017-2.65A4 4 0 0119 10c0 6.5-7 11-7 11z" />
+    <path d="M5 12h3l1.5-3 3 6L15 12h4" />
+  </svg>
+  <span class="brand-text">heartbeat<span class="brand-dot">.</span></span>
+</span>
+{{ end }}
+
+{{ define "icon-heart" }}<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-4.5-7-11a4 4 0 017-2.65A4 4 0 0119 10c0 6.5-7 11-7 11z"/></svg>{{ end }}
+
+{{ define "icon-mail" }}<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18v12H3z"/><path d="M3 6l9 7 9-7"/></svg>{{ end }}
+
+{{ define "icon-users-round" }}<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 21a8 8 0 00-16 0"/><path d="M14 7a5 5 0 11-10 0 5 5 0 0110 0z"/><path d="M21 21v-2a4 4 0 00-3-3.85"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>{{ end }}
+
+{{ define "icon-settings" }}<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>{{ end }}
+
+{{ define "icon-key" }}<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-9.6 9.6"/><path d="M16 16a4 4 0 11-7.07-7.07A4 4 0 0116 16z"/><path d="M18 6l3 3"/><path d="M16 8l3 3"/></svg>{{ end }}
+
+{{ define "icon-clock" }}<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>{{ end }}
+
+{{ define "icon-log-out" }}<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>{{ end }}

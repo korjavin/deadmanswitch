@@ -384,6 +384,8 @@ a:hover { background: var(--fg-0); color: var(--bg-0); text-decoration: none; }
 .marketing {
   min-height: 100vh;
   background: var(--bg-0);
+  display: flex;
+  flex-direction: column;
 }
 .marketing-bar {
   position: sticky;
@@ -394,7 +396,103 @@ a:hover { background: var(--fg-0); color: var(--bg-0); text-decoration: none; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 20px;
   z-index: 5;
+}
+.marketing-nav {
+  display: flex;
+  gap: 24px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-1);
+}
+.marketing-nav .marketing-link {
+  text-decoration: none;
+  color: var(--fg-1);
+}
+.marketing-nav .marketing-link:hover { background: var(--fg-0); color: var(--bg-0); }
+.marketing-nav .marketing-link.active { color: var(--fg-0); border-bottom: 1px dashed var(--line-1); }
+.marketing-actions { display: flex; gap: 8px; align-items: center; }
+.marketing-main { flex: 1; }
+.marketing-footer {
+  border-top: 1px solid var(--line-1);
+  padding: 28px 32px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+  background: var(--bg-1);
+}
+.marketing-footer .footer-line { font-weight: 500; color: var(--fg-1); }
+.marketing-footer .footer-nav { display: flex; gap: 18px; }
+.marketing-footer a { color: var(--fg-2); text-decoration: none; }
+.marketing-footer a:hover { background: var(--fg-0); color: var(--bg-0); }
+
+/* ─────────── Brand / topbar pieces ─────────── */
+.brand-link { text-decoration: none; color: var(--fg-0); display: inline-flex; }
+.brand-link:hover { background: transparent; color: var(--fg-0); }
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.02em;
+}
+.brand-mark { color: var(--fg-0); }
+.brand-text { color: var(--fg-0); }
+.brand-dot { color: var(--fg-2); }
+
+.topbar .heartbeat-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-1);
+}
+
+/* User dropdown */
+.dropdown { position: relative; display: inline-block; }
+.dropdown-toggle .caret { color: var(--fg-2); font-size: 10px; }
+.dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 180px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line-1);
+  box-shadow: 4px 4px 0 0 var(--line-1);
+  display: none;
+  z-index: 20;
+  padding: 6px 0;
+}
+.dropdown:hover .dropdown-menu,
+.dropdown.open .dropdown-menu,
+.dropdown:focus-within .dropdown-menu { display: block; }
+.dropdown-item {
+  display: block;
+  padding: 6px 16px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--fg-1);
+  text-decoration: none;
+}
+.dropdown-item:hover { background: var(--fg-0); color: var(--bg-0); }
+.dropdown-divider { border-top: 1px dashed var(--line-2); margin: 6px 0; }
+
+.user-menu .user-email {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ─────────── Misc ─────────── */
