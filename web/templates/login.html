@@ -107,10 +107,6 @@
     <span>Sign in with passkey</span>
   </button>
 
-  <div class="field" style="margin-top: 14px; margin-bottom: 0;">
-    <div class="field-label"><span class="label">· EMAIL FOR PASSKEY</span></div>
-    <input type="email" id="passkey-email" class="input" autocomplete="email" placeholder="you@example.com">
-  </div>
   <div id="passkey-status" class="auth-status" style="display: none;"></div>
 
   <div class="auth-divider">OR PASSWORD</div>
@@ -118,7 +114,7 @@
   <form action="/login" method="POST">
     <div class="field">
       <div class="field-label"><span class="label">· EMAIL</span></div>
-      <input type="email" id="email" name="email" class="input" required autocomplete="email" placeholder="you@example.com">
+      <input type="email" id="email" name="email" class="input" required autocomplete="username webauthn" placeholder="you@example.com">
     </div>
 
     <div class="field">
@@ -150,82 +146,110 @@
 
 {{ define "scripts" }}
 <script>
+function base64URLToArrayBuffer(base64URL) {
+    const base64 = base64URL.replace(/-/g, '+').replace(/_/g, '/');
+    const padLen = (4 - (base64.length % 4)) % 4;
+    const padded = base64 + '='.repeat(padLen);
+    const binary = atob(padded);
+    const buffer = new ArrayBuffer(binary.length);
+    const view = new Uint8Array(buffer);
+    for (let i = 0; i < binary.length; i++) {
+        view[i] = binary.charCodeAt(i);
+    }
+    return buffer;
+}
+
+function arrayBufferToBase64URL(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+function serializeAssertion(credential) {
+    return {
+        id: credential.id,
+        rawId: arrayBufferToBase64URL(credential.rawId),
+        type: credential.type,
+        response: {
+            clientDataJSON: arrayBufferToBase64URL(credential.response.clientDataJSON),
+            authenticatorData: arrayBufferToBase64URL(credential.response.authenticatorData),
+            signature: arrayBufferToBase64URL(credential.response.signature),
+            userHandle: credential.response.userHandle ? arrayBufferToBase64URL(credential.response.userHandle) : null
+        }
+    };
+}
+
+async function fetchDiscoverableOptions() {
+    const beginResponse = await fetch('/login/passkey/discover/begin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}'
+    });
+    if (!beginResponse.ok) {
+        throw new Error('Failed to begin login');
+    }
+    const opts = await beginResponse.json();
+    opts.publicKey.challenge = base64URLToArrayBuffer(opts.publicKey.challenge);
+    if (opts.publicKey.allowCredentials) {
+        for (let i = 0; i < opts.publicKey.allowCredentials.length; i++) {
+            opts.publicKey.allowCredentials[i].id = base64URLToArrayBuffer(
+                opts.publicKey.allowCredentials[i].id
+            );
+        }
+    }
+    return opts;
+}
+
+async function finishDiscoverableLogin(credential) {
+    const finishResponse = await fetch('/login/passkey/discover/finish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential: serializeAssertion(credential) })
+    });
+    if (!finishResponse.ok) {
+        throw new Error('Failed to complete login');
+    }
+    const result = await finishResponse.json();
+    if (!result.success) {
+        throw new Error(result.message || 'Login failed');
+    }
+    return result;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const passkeyLoginButton = document.getElementById('passkey-login-button');
-    const passkeyEmailInput = document.getElementById('passkey-email');
     const statusDiv = document.getElementById('passkey-status');
 
-    passkeyLoginButton.addEventListener('click', async function() {
-        const email = passkeyEmailInput.value;
-        if (!email) {
-            showStatus('err', 'Please enter your email address.');
-            return;
-        }
+    function showStatus(type, message) {
+        statusDiv.style.display = 'block';
+        statusDiv.className = 'auth-status ' + (type === 'err' ? 'err' : 'ok');
+        statusDiv.textContent = message;
+    }
 
+    passkeyLoginButton.addEventListener('click', async function() {
         passkeyLoginButton.disabled = true;
         passkeyLoginButton.innerHTML = 'Signing in…';
 
         try {
-            const beginResponse = await fetch('/login/passkey/begin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: email })
-            });
-
-            if (!beginResponse.ok) {
-                throw new Error('Failed to begin login');
-            }
-
-            const credentialRequestOptions = await beginResponse.json();
-            credentialRequestOptions.publicKey.challenge = base64URLToArrayBuffer(credentialRequestOptions.publicKey.challenge);
-
-            if (credentialRequestOptions.publicKey.allowCredentials) {
-                for (let i = 0; i < credentialRequestOptions.publicKey.allowCredentials.length; i++) {
-                    credentialRequestOptions.publicKey.allowCredentials[i].id = base64URLToArrayBuffer(
-                        credentialRequestOptions.publicKey.allowCredentials[i].id
-                    );
-                }
-            }
-
+            const credentialRequestOptions = await fetchDiscoverableOptions();
             showStatus('ok', 'Follow your browser\'s prompt to sign in with your passkey…');
             const credential = await navigator.credentials.get({
                 publicKey: credentialRequestOptions.publicKey
             });
-
-            const credentialResponse = {
-                id: credential.id,
-                rawId: arrayBufferToBase64URL(credential.rawId),
-                type: credential.type,
-                response: {
-                    clientDataJSON: arrayBufferToBase64URL(credential.response.clientDataJSON),
-                    authenticatorData: arrayBufferToBase64URL(credential.response.authenticatorData),
-                    signature: arrayBufferToBase64URL(credential.response.signature),
-                    userHandle: credential.response.userHandle ? arrayBufferToBase64URL(credential.response.userHandle) : null
-                }
-            };
-
-            const finishResponse = await fetch('/login/passkey/finish', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ credential: credentialResponse, email: email })
-            });
-
-            if (!finishResponse.ok) {
-                throw new Error('Failed to complete login');
-            }
-
-            const result = await finishResponse.json();
-
-            if (result.success) {
-                showStatus('ok', 'Signed in. Redirecting…');
-                window.location.href = result.redirect || '/dashboard';
-            } else {
-                throw new Error(result.message || 'Login failed');
-            }
-
+            const result = await finishDiscoverableLogin(credential);
+            showStatus('ok', 'Signed in. Redirecting…');
+            window.location.href = result.redirect || '/dashboard';
         } catch (error) {
             console.error('Error logging in with passkey:', error);
-            showStatus('err', 'Couldn\'t sign in with passkey: ' + error.message);
+            if (error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) {
+                statusDiv.style.display = 'none';
+            } else {
+                showStatus('err', 'Couldn\'t sign in with passkey: ' + error.message);
+            }
             passkeyLoginButton.disabled = false;
             passkeyLoginButton.innerHTML = '<span>Sign in with passkey</span>';
         }
@@ -245,34 +269,29 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    function showStatus(type, message) {
-        statusDiv.style.display = 'block';
-        statusDiv.className = 'auth-status ' + (type === 'err' ? 'err' : 'ok');
-        statusDiv.textContent = message;
-    }
-
-    function base64URLToArrayBuffer(base64URL) {
-        const base64 = base64URL.replace(/-/g, '+').replace(/_/g, '/');
-        const padLen = (4 - (base64.length % 4)) % 4;
-        const padded = base64 + '='.repeat(padLen);
-        const binary = atob(padded);
-        const buffer = new ArrayBuffer(binary.length);
-        const view = new Uint8Array(buffer);
-        for (let i = 0; i < binary.length; i++) {
-            view[i] = binary.charCodeAt(i);
+    (async function tryConditionalMediation() {
+        if (typeof PublicKeyCredential === 'undefined' ||
+            typeof PublicKeyCredential.isConditionalMediationAvailable !== 'function') {
+            return;
         }
-        return buffer;
-    }
-
-    function arrayBufferToBase64URL(buffer) {
-        const bytes = new Uint8Array(buffer);
-        let binary = '';
-        for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
+        try {
+            const available = await PublicKeyCredential.isConditionalMediationAvailable();
+            if (!available) return;
+            const opts = await fetchDiscoverableOptions();
+            const credential = await navigator.credentials.get({
+                publicKey: opts.publicKey,
+                mediation: 'conditional'
+            });
+            if (!credential) return;
+            const result = await finishDiscoverableLogin(credential);
+            window.location.href = result.redirect || '/dashboard';
+        } catch (error) {
+            if (error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) {
+                return;
+            }
+            console.warn('Conditional UI passkey login failed:', error);
         }
-        const base64 = btoa(binary);
-        return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-    }
+    })();
 });
 </script>
 {{ end }}

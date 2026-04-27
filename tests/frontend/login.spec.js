@@ -175,6 +175,41 @@ test.describe('Authentication and User Menu Tests', () => {
     console.log('Test completed successfully.');
   });
 
+  test('passkey login button is visible without an email and the email input opts into webauthn autofill', async ({ page }) => {
+    await page.goto('/login');
+    await page.waitForLoadState('networkidle');
+
+    const passkeyButton = page.locator('#passkey-login-button');
+    await expect(passkeyButton).toBeVisible();
+    await expect(passkeyButton).toBeEnabled();
+
+    // The standalone "email for passkey" input must be gone.
+    await expect(page.locator('#passkey-email')).toHaveCount(0);
+
+    // The password-form email input opts into the WebAuthn autofill hint.
+    const emailInput = page.locator('input[name="email"]');
+    await expect(emailInput).toHaveAttribute('autocomplete', 'username webauthn');
+  });
+
+  test('POST /login/passkey/discover/begin returns options with no allowCredentials', async ({ request }) => {
+    const response = await request.post('/login/passkey/discover/begin', {
+      headers: { 'Content-Type': 'application/json' },
+      data: {},
+    });
+    expect(response.status()).toBe(200);
+
+    const body = await response.json();
+    expect(body).toHaveProperty('publicKey');
+    expect(body.publicKey).toHaveProperty('challenge');
+    expect(typeof body.publicKey.challenge).toBe('string');
+    expect(body.publicKey.challenge.length).toBeGreaterThan(0);
+
+    if (body.publicKey.allowCredentials !== undefined) {
+      expect(Array.isArray(body.publicKey.allowCredentials)).toBe(true);
+      expect(body.publicKey.allowCredentials.length).toBe(0);
+    }
+  });
+
   test('should redirect to login page after logout', async ({ page }) => {
     console.log('Starting test: should redirect to login page after logout');
 
