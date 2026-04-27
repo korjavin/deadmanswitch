@@ -479,6 +479,33 @@ func TestFinishDiscoverableLoginConsumesSession(t *testing.T) {
 	}
 }
 
+// errReader is an io.ReadCloser that always fails on Read; used to drive the
+// io.ReadAll error branch in FinishDiscoverableLogin.
+type errReader struct{}
+
+func (errReader) Read(_ []byte) (int, error) { return 0, errReadFailed }
+func (errReader) Close() error               { return nil }
+
+var errReadFailed = &readErr{msg: "synthetic read failure"}
+
+type readErr struct{ msg string }
+
+func (e *readErr) Error() string { return e.msg }
+
+// TestFinishDiscoverableLoginBodyReadError verifies that when the request body
+// fails on read, the function returns an error rather than panicking.
+func TestFinishDiscoverableLoginBodyReadError(t *testing.T) {
+	service, sessionID := newTestServiceWithSession(t)
+
+	req := httptest.NewRequest("POST", "/login/passkey/discover/finish", nil)
+	req.Body = errReader{}
+	req.AddCookie(&http.Cookie{Name: "webauthn_session_id", Value: sessionID})
+
+	if _, _, err := service.FinishDiscoverableLogin(context.Background(), req); err == nil {
+		t.Fatal("expected error for failing body read, got nil")
+	}
+}
+
 // TestFinishDiscoverableLoginMalformedBody verifies a request body that is not
 // valid JSON produces an error rather than a panic.
 func TestFinishDiscoverableLoginMalformedBody(t *testing.T) {

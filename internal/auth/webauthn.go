@@ -406,10 +406,10 @@ type discoverableUser struct {
 	credentials []webauthn.Credential
 }
 
-func (d *discoverableUser) WebAuthnID() []byte                       { return d.user.WebAuthnID() }
-func (d *discoverableUser) WebAuthnName() string                     { return d.user.WebAuthnName() }
-func (d *discoverableUser) WebAuthnDisplayName() string              { return d.user.WebAuthnDisplayName() }
-func (d *discoverableUser) WebAuthnIcon() string                     { return d.user.WebAuthnIcon() }
+func (d *discoverableUser) WebAuthnID() []byte                         { return d.user.WebAuthnID() }
+func (d *discoverableUser) WebAuthnName() string                       { return d.user.WebAuthnName() }
+func (d *discoverableUser) WebAuthnDisplayName() string                { return d.user.WebAuthnDisplayName() }
+func (d *discoverableUser) WebAuthnIcon() string                       { return d.user.WebAuthnIcon() }
 func (d *discoverableUser) WebAuthnCredentials() []webauthn.Credential { return d.credentials }
 
 // FinishDiscoverableLogin completes a username-less passkey authentication.
