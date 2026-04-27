@@ -428,7 +428,16 @@ func (s *WebAuthnService) BeginDiscoverableLogin(r *http.Request, w http.Respons
 		return nil, fmt.Errorf("failed to begin discoverable login: %w", err)
 	}
 
-	sessionID := fmt.Sprintf("discover-%d", time.Now().UnixNano())
+	// Use a cryptographically-random session ID. Unlike the legacy login/register
+	// flows which prefix with user.ID, the discoverable flow has no user yet, so
+	// a UnixNano-only ID would let two simultaneous calls (the conditional-UI
+	// auto-fetch fires on every login page load) collide and overwrite each
+	// other's session data.
+	idBytes := make([]byte, 16)
+	if _, err := rand.Read(idBytes); err != nil {
+		return nil, fmt.Errorf("failed to generate session id: %w", err)
+	}
+	sessionID := "discover-" + base64.RawURLEncoding.EncodeToString(idBytes)
 
 	s.storeSession(sessionID, sessionData)
 
