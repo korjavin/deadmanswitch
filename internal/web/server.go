@@ -221,9 +221,25 @@ func (s *Server) handleMethodRouter(methods ...interface{}) http.HandlerFunc {
 	}
 }
 
+// dispatchPathID extracts the resource id from the first path segment
+// after a known prefix and exposes it to downstream handlers via
+// r.SetPathValue("id"). The /recipients/ and /secrets/ routes are
+// registered as catch-all patterns (not /recipients/{id}/...), so
+// http.ServeMux does not bind the id automatically — without this,
+// r.PathValue("id") inside the leaf handlers returns "" and they
+// respond 400 "... ID is required".
+func dispatchPathID(r *http.Request, prefix string) string {
+	rest := strings.TrimPrefix(r.URL.Path, prefix)
+	parts := strings.SplitN(rest, "/", 2)
+	if parts[0] == "" {
+		return ""
+	}
+	r.SetPathValue("id", parts[0])
+	return parts[0]
+}
+
 func (s *Server) handleSecrets(w http.ResponseWriter, r *http.Request) {
-	id := utils.GetLastURLSegment(r)
-	if id == "" {
+	if dispatchPathID(r, "/secrets/") == "" {
 		http.NotFound(w, r)
 		return
 	}
@@ -253,18 +269,13 @@ func (s *Server) handleSecrets(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleRecipients(w http.ResponseWriter, r *http.Request) {
-	// Extract the recipient ID from the URL path
-	path := strings.TrimPrefix(r.URL.Path, "/recipients/")
-	parts := strings.Split(path, "/")
-	if len(parts) == 0 || parts[0] == "" {
+	id := dispatchPathID(r, "/recipients/")
+	if id == "" {
 		http.NotFound(w, r)
 		return
 	}
 
-	// The first part is the recipient ID
-	id := parts[0]
-
-	// Set the ID in the request context so handlers can access it
+	// Also expose via the legacy context key for any handler still reading it.
 	r = r.WithContext(context.WithValue(r.Context(), authMiddleware.RecipientIDContextKey, id))
 
 	// Handle test contact request
@@ -312,6 +323,8 @@ func (s *Server) handleConfirmation(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	// Expose the code to the handler via r.PathValue("code").
+	r.SetPathValue("code", code)
 	s.handlers.recipients.HandleConfirmRecipient(w, r)
 }
 
