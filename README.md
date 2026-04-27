@@ -42,7 +42,7 @@ This project will always remain free and open source. If you find it valuable, p
 - **Flexible recipient management** - Assign different secrets to different recipients
 - **Dual verification methods** - Choose between Telegram and email for check-ins
 - **Customizable schedules** - Configure ping frequency and response deadlines
-- **Modern authentication** - Support for passwords, 2FA, and WebAuthn passkeys, including username-less passkey login (one-tap sign-in via discoverable credentials and conditional UI autofill); the email-first passkey flow remains as a fallback for older credentials
+- **Modern authentication** - Support for passwords, 2FA, and WebAuthn passkeys with username-less, one-tap sign-in via discoverable credentials and conditional UI autofill
 - **GitHub activity monitoring** - Automatically detect your GitHub activity to postpone check-ins
 - **Simple web interface** - Easily manage your secrets and recipients
 - **Self-contained Docker image** - Simple deployment with automatic HTTPS
