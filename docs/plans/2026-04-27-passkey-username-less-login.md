@@ -128,18 +128,18 @@ Dependencies identified:
 - [x] run `go test ./...` — must pass before next task
 
 ### Task 2: Add discoverable BeginLogin to WebAuthnService
-- [ ] add method `BeginDiscoverableLogin(ctx context.Context, w http.ResponseWriter) (*protocol.CredentialAssertion, error)`
+- [x] add method `BeginDiscoverableLogin(ctx context.Context, w http.ResponseWriter) (*protocol.CredentialAssertion, error)`
       to `internal/auth/webauthn.go`
-- [ ] inside, call `s.webAuthn.BeginDiscoverableLogin()` (library helper) to
+- [x] inside, call `s.webAuthn.BeginDiscoverableLogin()` (library helper) to
       get options + session data; do **not** populate `AllowedCredentials`
-- [ ] reuse the existing in-memory session storage pattern: generate session
+- [x] reuse the existing in-memory session storage pattern: generate session
       ID, store `*webauthn.SessionData`, set the `webauthn_session_id` cookie
       with the same TTL/flags as `BeginLogin` uses today
-- [ ] write a unit test asserting the returned options have an empty
+- [x] write a unit test asserting the returned options have an empty
       `allowCredentials`, a non-empty `challenge`, and the correct RPID
-- [ ] write a unit test asserting the session cookie is set on the response
+- [x] write a unit test asserting the session cookie is set on the response
       writer
-- [ ] run `go test ./...` — must pass before next task
+- [x] run `go test ./...` — must pass before next task
 
 ### Task 3: Add discoverable FinishLogin to WebAuthnService
 - [ ] add method `FinishDiscoverableLogin(ctx context.Context, r *http.Request) (*models.User, *models.Passkey, error)`

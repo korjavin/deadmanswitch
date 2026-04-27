@@ -365,6 +365,36 @@ func (s *WebAuthnService) BeginLogin(ctx context.Context, user *models.User, res
 	return options, nil
 }
 
+// BeginDiscoverableLogin starts a username-less passkey authentication using
+// client-side discoverable credentials (resident keys). No AllowedCredentials
+// are populated — the authenticator presents a chooser of every passkey scoped
+// to the relying party and returns the userHandle so the server can resolve
+// the user during FinishDiscoverableLogin.
+func (s *WebAuthnService) BeginDiscoverableLogin(ctx context.Context, w http.ResponseWriter) (*protocol.CredentialAssertion, error) {
+	options, sessionData, err := s.webAuthn.BeginDiscoverableLogin()
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin discoverable login: %w", err)
+	}
+
+	sessionID := fmt.Sprintf("discover-%d", time.Now().UnixNano())
+
+	s.mutex.Lock()
+	s.sessions[sessionID] = sessionData
+	s.mutex.Unlock()
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "webauthn_session_id",
+		Value:    sessionID,
+		Path:     "/",
+		MaxAge:   300, // 5 minutes
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+		Secure:   false, // Set to true in production with HTTPS
+	})
+
+	return options, nil
+}
+
 // FinishLogin completes the passkey authentication process
 func (s *WebAuthnService) FinishLogin(ctx context.Context, user *models.User, response *http.Request) (*models.Passkey, error) {
 	log.Printf("FinishLogin called for user")

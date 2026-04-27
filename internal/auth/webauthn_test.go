@@ -270,6 +270,102 @@ func TestBeginRegistrationNilUser(t *testing.T) {
 	}
 }
 
+// TestBeginDiscoverableLogin asserts the returned options have an empty
+// allowCredentials list, a non-empty challenge, and the configured RPID.
+func TestBeginDiscoverableLogin(t *testing.T) {
+	repo := storage.NewMockRepository()
+	config := WebAuthnConfig{
+		RPDisplayName: "Test Service",
+		RPID:          "localhost",
+		RPOrigin:      "http://localhost:8080",
+	}
+	service, err := NewWebAuthnService(config, repo)
+	if err != nil {
+		t.Fatalf("Failed to create WebAuthnService: %v", err)
+	}
+
+	rw := httptest.NewRecorder()
+	options, err := service.BeginDiscoverableLogin(context.Background(), rw)
+	if err != nil {
+		t.Fatalf("BeginDiscoverableLogin failed: %v", err)
+	}
+	if options == nil {
+		t.Fatal("Expected non-nil options")
+	}
+
+	if len(options.Response.AllowedCredentials) != 0 {
+		t.Errorf("Expected empty AllowedCredentials, got %d entries",
+			len(options.Response.AllowedCredentials))
+	}
+	if len(options.Response.Challenge) == 0 {
+		t.Error("Expected non-empty challenge")
+	}
+	if options.Response.RelyingPartyID != config.RPID {
+		t.Errorf("Expected RPID %q, got %q", config.RPID, options.Response.RelyingPartyID)
+	}
+}
+
+// TestBeginDiscoverableLoginSetsSessionCookie ensures BeginDiscoverableLogin
+// sets the webauthn_session_id cookie and stores matching session data in the
+// in-memory map.
+func TestBeginDiscoverableLoginSetsSessionCookie(t *testing.T) {
+	repo := storage.NewMockRepository()
+	config := WebAuthnConfig{
+		RPDisplayName: "Test Service",
+		RPID:          "localhost",
+		RPOrigin:      "http://localhost:8080",
+	}
+	service, err := NewWebAuthnService(config, repo)
+	if err != nil {
+		t.Fatalf("Failed to create WebAuthnService: %v", err)
+	}
+
+	rw := httptest.NewRecorder()
+	if _, err := service.BeginDiscoverableLogin(context.Background(), rw); err != nil {
+		t.Fatalf("BeginDiscoverableLogin failed: %v", err)
+	}
+
+	var sessionCookie *http.Cookie
+	for _, c := range rw.Result().Cookies() {
+		if c.Name == "webauthn_session_id" {
+			sessionCookie = c
+			break
+		}
+	}
+	if sessionCookie == nil {
+		t.Fatal("webauthn_session_id cookie not set")
+	}
+	if sessionCookie.Value == "" {
+		t.Error("Expected non-empty session cookie value")
+	}
+	if !sessionCookie.HttpOnly {
+		t.Error("Expected HttpOnly cookie")
+	}
+	if sessionCookie.SameSite != http.SameSiteStrictMode {
+		t.Errorf("Expected SameSite=Strict, got %v", sessionCookie.SameSite)
+	}
+	if sessionCookie.MaxAge != 300 {
+		t.Errorf("Expected MaxAge=300, got %d", sessionCookie.MaxAge)
+	}
+	if sessionCookie.Path != "/" {
+		t.Errorf("Expected Path=/, got %q", sessionCookie.Path)
+	}
+
+	service.mutex.Lock()
+	stored, ok := service.sessions[sessionCookie.Value]
+	service.mutex.Unlock()
+	if !ok {
+		t.Fatalf("Expected session %q to be stored in sessions map", sessionCookie.Value)
+	}
+	if stored == nil {
+		t.Fatal("Expected non-nil stored session data")
+	}
+	if len(stored.AllowedCredentialIDs) != 0 {
+		t.Errorf("Expected empty AllowedCredentialIDs in session, got %d",
+			len(stored.AllowedCredentialIDs))
+	}
+}
+
 // TestWebAuthnSessionHandling tests session creation and cookie setting
 func TestWebAuthnSessionHandling(t *testing.T) {
 	// Create mock repository
