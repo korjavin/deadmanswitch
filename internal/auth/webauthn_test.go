@@ -232,7 +232,8 @@ func TestBeginRegistrationResidentKeyPreferred(t *testing.T) {
 	}
 
 	rw := httptest.NewRecorder()
-	options, err := service.BeginRegistration(context.Background(), user, rw)
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	options, err := service.BeginRegistration(context.Background(), user, req, rw)
 	if err != nil {
 		t.Fatalf("BeginRegistration failed: %v", err)
 	}
@@ -267,7 +268,8 @@ func TestBeginRegistrationNilUser(t *testing.T) {
 	}
 
 	rw := httptest.NewRecorder()
-	if _, err := service.BeginRegistration(context.Background(), nil, rw); err == nil {
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	if _, err := service.BeginRegistration(context.Background(), nil, req, rw); err == nil {
 		t.Fatal("Expected error for nil user, got nil")
 	}
 }

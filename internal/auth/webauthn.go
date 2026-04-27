@@ -108,8 +108,10 @@ func (s *WebAuthnService) cleanupExpiredSessions() {
 	}
 }
 
-// BeginRegistration starts the passkey registration process
-func (s *WebAuthnService) BeginRegistration(ctx context.Context, user *models.User, response http.ResponseWriter) (*protocol.CredentialCreation, error) {
+// BeginRegistration starts the passkey registration process. The request is
+// used to derive the Secure cookie flag from r.TLS so the cookie is only
+// marked Secure when served over HTTPS.
+func (s *WebAuthnService) BeginRegistration(ctx context.Context, user *models.User, r *http.Request, response http.ResponseWriter) (*protocol.CredentialCreation, error) {
 	if user == nil {
 		return nil, fmt.Errorf("user is required")
 	}
@@ -164,7 +166,7 @@ func (s *WebAuthnService) BeginRegistration(ctx context.Context, user *models.Us
 		MaxAge:   300, // 5 minutes
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
-		Secure:   false, // Set to true in production with HTTPS
+		Secure:   r != nil && r.TLS != nil,
 	})
 
 	log.Printf("Stored WebAuthn session with ID: %s", sessionID)
@@ -315,104 +317,6 @@ func (s *WebAuthnService) FinishRegistration(ctx context.Context, user *models.U
 	return passkey, nil
 }
 
-// BeginLogin starts the passkey authentication process
-func (s *WebAuthnService) BeginLogin(ctx context.Context, user *models.User, response http.ResponseWriter) (*protocol.CredentialAssertion, error) {
-	log.Printf("BeginLogin called for user")
-
-	// Get passkeys directly from the database
-	passkeys, err := s.repo.ListPasskeysByUserID(ctx, user.ID)
-	if err != nil {
-		log.Printf("Error getting passkeys: %v", err)
-		return nil, fmt.Errorf("failed to get passkeys: %w", err)
-	}
-
-	log.Printf("Found %d passkeys for user", len(passkeys))
-
-	if len(passkeys) == 0 {
-		// Let's check if there are any passkeys in the database at all
-		allPasskeys, err := s.repo.ListPasskeys(ctx)
-		if err != nil {
-			log.Printf("Error listing all passkeys: %v", err)
-		} else {
-			log.Printf("Total passkeys in database: %d", len(allPasskeys))
-			// Debug logging of individual passkeys removed for security
-		}
-
-		return nil, fmt.Errorf("no passkeys found for user")
-	}
-
-	// Create allowed credentials list directly from passkeys
-	allowedCredentials := make([]protocol.CredentialDescriptor, len(passkeys))
-	for i, passkey := range passkeys {
-		// Debug logging removed for security
-
-		allowedCredentials[i] = protocol.CredentialDescriptor{
-			Type:         protocol.CredentialType("public-key"),
-			CredentialID: passkey.CredentialID,
-		}
-	}
-
-	// Log only the count of allowed credentials
-	log.Printf("Allowed credentials: %d", len(allowedCredentials))
-
-	// Create credential assertion options manually
-	challenge := make([]byte, 32)
-	if _, err := rand.Read(challenge); err != nil {
-		log.Printf("Error generating challenge: %v", err)
-		return nil, fmt.Errorf("error generating challenge: %w", err)
-	}
-
-	// Create session data
-	sessionData := &webauthn.SessionData{
-		Challenge:            base64.RawURLEncoding.EncodeToString(challenge),
-		UserID:               []byte(user.ID),
-		AllowedCredentialIDs: [][]byte{},
-		UserVerification:     protocol.VerificationRequired,
-	}
-
-	// Add allowed credential IDs to session data
-	for _, cred := range allowedCredentials {
-		sessionData.AllowedCredentialIDs = append(sessionData.AllowedCredentialIDs, cred.CredentialID)
-	}
-
-	// Create credential assertion options
-	options := &protocol.CredentialAssertion{
-		Response: protocol.PublicKeyCredentialRequestOptions{
-			Challenge:          challenge,
-			Timeout:            60000, // 60 seconds
-			RelyingPartyID:     s.webAuthn.Config.RPID,
-			AllowedCredentials: allowedCredentials,
-			UserVerification:   protocol.VerificationRequired,
-		},
-	}
-
-	// Log the options for debugging
-	log.Printf("Created credential assertion options with challenge: %v", base64.RawURLEncoding.EncodeToString(challenge))
-	log.Printf("RPID: %s", s.webAuthn.Config.RPID)
-	log.Printf("AllowCredentials: %d", len(allowedCredentials))
-
-	// Generate a unique session ID
-	sessionID := fmt.Sprintf("%s-%d", user.ID, time.Now().UnixNano())
-
-	s.cleanupExpiredSessions()
-	s.storeSession(sessionID, sessionData)
-
-	// Set a cookie with the session ID
-	http.SetCookie(response, &http.Cookie{
-		Name:     "webauthn_session_id",
-		Value:    sessionID,
-		Path:     "/",
-		MaxAge:   300, // 5 minutes
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-		Secure:   false, // Set to true in production with HTTPS
-	})
-
-	log.Printf("Stored WebAuthn login session with ID: %s", sessionID)
-
-	return options, nil
-}
-
 // BeginDiscoverableLogin starts a username-less passkey authentication using
 // client-side discoverable credentials (resident keys). No AllowedCredentials
 // are populated — the authenticator presents a chooser of every passkey scoped
@@ -553,116 +457,6 @@ func (s *WebAuthnService) FinishDiscoverableLogin(ctx context.Context, r *http.R
 	}
 
 	return resolvedUser, passkey, nil
-}
-
-// FinishLogin completes the passkey authentication process
-func (s *WebAuthnService) FinishLogin(ctx context.Context, user *models.User, response *http.Request) (*models.Passkey, error) {
-	log.Printf("FinishLogin called for user")
-
-	// Get the session ID from the cookie
-	cookie, err := response.Cookie("webauthn_session_id")
-	if err != nil {
-		log.Printf("Error getting webauthn_session_id cookie: %v", err)
-		return nil, fmt.Errorf("webauthn session cookie not found: %w", err)
-	}
-	sessionID := cookie.Value
-	log.Printf("Found WebAuthn session ID in cookie: %s", sessionID)
-
-	sessionData := s.takeSession(sessionID)
-	if sessionData == nil {
-		log.Printf("Error: webauthn session data not found for ID: %s", sessionID)
-		return nil, fmt.Errorf("webauthn session data not found for ID: %s", sessionID)
-	}
-
-	log.Printf("Session data found with challenge: %v", sessionData.Challenge)
-
-	// Create a new request with the same body for the WebAuthn library to parse
-	// This is needed because the WebAuthn library expects a specific format for the request body
-
-	// First, extract the credential data from the JSON request
-	var requestData struct {
-		Credential json.RawMessage `json:"credential"`
-		Email      string          `json:"email"`
-	}
-
-	// Create a copy of the request body for parsing
-	bodyBytes, err := io.ReadAll(response.Body)
-	if err != nil {
-		log.Printf("Error reading request body: %v", err)
-		return nil, fmt.Errorf("error reading request body: %w", err)
-	}
-	// Restore the body for further processing
-	response.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-
-	// Parse the request data
-	if err := json.Unmarshal(bodyBytes, &requestData); err != nil {
-		log.Printf("Error parsing request data: %v", err)
-		return nil, fmt.Errorf("error parsing request data: %w", err)
-	}
-
-	// Create a new request with just the credential data
-	newRequest, err := http.NewRequest("POST", "/", bytes.NewReader(requestData.Credential))
-	if err != nil {
-		log.Printf("Error creating new request: %v", err)
-		return nil, fmt.Errorf("error creating new request: %w", err)
-	}
-	newRequest.Header.Set("Content-Type", "application/json")
-
-	// Finish login with the new request
-	// First, let's try to parse the credential ID from the request
-	var parsedCredential struct {
-		ID       string          `json:"id"`
-		RawID    string          `json:"rawId"`
-		Type     string          `json:"type"`
-		Response json.RawMessage `json:"response"`
-	}
-
-	if err := json.Unmarshal(requestData.Credential, &parsedCredential); err != nil {
-		log.Printf("Error parsing credential: %v", err)
-		return nil, fmt.Errorf("error parsing credential: %w", err)
-	}
-
-	// Debug logging removed for security
-
-	// Try to get the passkey by the credential ID from the request
-	credentialID, err := base64.RawURLEncoding.DecodeString(parsedCredential.ID)
-	if err != nil {
-		log.Printf("Error decoding credential ID: %v", err)
-		return nil, fmt.Errorf("error decoding credential ID: %w", err)
-	}
-
-	// Debug logging removed for security
-
-	// Try to get the passkey by the credential ID
-	passkey, err := s.repo.GetPasskeyByCredentialID(ctx, credentialID)
-	if err != nil {
-		log.Printf("Error getting passkey by credential ID: %v", err)
-
-		// Try the standard WebAuthn flow
-		credential, err := s.webAuthn.FinishLogin(user, *sessionData, newRequest)
-		if err != nil {
-			log.Printf("Error in FinishLogin: %v", err)
-			return nil, fmt.Errorf("failed to finish login: %w", err)
-		}
-
-		// Get the passkey from the database
-		passkey, err = s.repo.GetPasskeyByCredentialID(ctx, credential.ID)
-		if err != nil {
-			log.Printf("Error getting passkey by credential ID after FinishLogin: %v", err)
-			return nil, fmt.Errorf("failed to get passkey: %w", err)
-		}
-	}
-
-	// Update the passkey with the new last used time
-	passkey.LastUsedAt = time.Now()
-
-	// Save the updated passkey to the database
-	if err := s.repo.UpdatePasskey(ctx, passkey); err != nil {
-		log.Printf("Failed to update passkey sign count: %v", err)
-		// Continue anyway, this is not critical
-	}
-
-	return passkey, nil
 }
 
 // getUserCredentials gets the WebAuthn credentials for a user

@@ -152,8 +152,6 @@ func (s *Server) setupRoutes() {
 		"GET", s.handlers.auth.HandleRegisterForm,
 		"POST", s.handlers.auth.HandleRegister,
 	))
-	r.HandleFunc("/login/passkey/begin", s.handlers.passkey.HandleBeginLogin)
-	r.HandleFunc("/login/passkey/finish", s.handlers.passkey.HandleFinishLogin)
 	r.HandleFunc("/login/passkey/discover/begin", s.handleMethodRouter(
 		"POST", s.handlers.passkey.HandleBeginDiscoverableLogin,
 	))
