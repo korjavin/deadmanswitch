@@ -519,7 +519,7 @@ func (h *PasskeyHandler) HandleFinishLogin(w http.ResponseWriter, r *http.Reques
 // empty allowCredentials list, and prompts the user to pick a discoverable
 // credential.
 func (h *PasskeyHandler) HandleBeginDiscoverableLogin(w http.ResponseWriter, r *http.Request) {
-	options, err := h.webAuthnService.BeginDiscoverableLogin(r.Context(), w)
+	options, err := h.webAuthnService.BeginDiscoverableLogin(r, w)
 	if err != nil {
 		log.Printf("Error beginning discoverable login: %v", err)
 		http.Error(w, "Error beginning discoverable login", http.StatusInternalServerError)

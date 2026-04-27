@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
@@ -286,7 +287,7 @@ func TestBeginDiscoverableLogin(t *testing.T) {
 	}
 
 	rw := httptest.NewRecorder()
-	options, err := service.BeginDiscoverableLogin(context.Background(), rw)
+	options, err := service.BeginDiscoverableLogin(httptest.NewRequest("POST", "/login/passkey/discover/begin", nil), rw)
 	if err != nil {
 		t.Fatalf("BeginDiscoverableLogin failed: %v", err)
 	}
@@ -322,7 +323,7 @@ func TestBeginDiscoverableLoginSetsSessionCookie(t *testing.T) {
 	}
 
 	rw := httptest.NewRecorder()
-	if _, err := service.BeginDiscoverableLogin(context.Background(), rw); err != nil {
+	if _, err := service.BeginDiscoverableLogin(httptest.NewRequest("POST", "/login/passkey/discover/begin", nil), rw); err != nil {
 		t.Fatalf("BeginDiscoverableLogin failed: %v", err)
 	}
 
@@ -384,7 +385,7 @@ func newTestServiceWithSession(t *testing.T) (*WebAuthnService, string) {
 	}
 
 	rw := httptest.NewRecorder()
-	if _, err := service.BeginDiscoverableLogin(context.Background(), rw); err != nil {
+	if _, err := service.BeginDiscoverableLogin(httptest.NewRequest("POST", "/login/passkey/discover/begin", nil), rw); err != nil {
 		t.Fatalf("BeginDiscoverableLogin failed: %v", err)
 	}
 	var sessionID string
@@ -555,6 +556,76 @@ func TestFinishDiscoverableLoginInvalidAssertion(t *testing.T) {
 	}
 	if user != nil || passkey != nil {
 		t.Errorf("expected nil user and passkey on error, got user=%v passkey=%v", user, passkey)
+	}
+}
+
+// TestDiscoverableUserAdapter verifies the discoverableUser wrapper passes
+// through identity methods to the embedded *models.User and exposes the
+// preloaded credentials slice. Without these direct assertions the wrapper is
+// only exercised indirectly by paths that need a real authenticator response.
+func TestDiscoverableUserAdapter(t *testing.T) {
+	user := &models.User{ID: "user-42", Email: "alice@example.com"}
+	creds := []webauthn.Credential{
+		{ID: []byte("cred-a"), PublicKey: []byte("pk-a")},
+		{ID: []byte("cred-b"), PublicKey: []byte("pk-b")},
+	}
+	d := &discoverableUser{User: user, credentials: creds}
+
+	if got := d.WebAuthnID(); string(got) != user.ID {
+		t.Errorf("WebAuthnID = %q, want %q", string(got), user.ID)
+	}
+	if got := d.WebAuthnName(); got != user.Email {
+		t.Errorf("WebAuthnName = %q, want %q", got, user.Email)
+	}
+	if got := d.WebAuthnDisplayName(); got != user.Email {
+		t.Errorf("WebAuthnDisplayName = %q, want %q", got, user.Email)
+	}
+	if got := d.WebAuthnIcon(); got != "" {
+		t.Errorf("WebAuthnIcon = %q, want empty", got)
+	}
+	got := d.WebAuthnCredentials()
+	if len(got) != len(creds) {
+		t.Fatalf("WebAuthnCredentials returned %d creds, want %d", len(got), len(creds))
+	}
+	for i := range creds {
+		if !byteSliceEqual(got[i].ID, creds[i].ID) {
+			t.Errorf("credential[%d].ID = %v, want %v", i, got[i].ID, creds[i].ID)
+		}
+	}
+}
+
+// TestBeginDiscoverableLoginCookieSecureWithTLS asserts the webauthn_session_id
+// cookie is marked Secure when the request was received over TLS.
+func TestBeginDiscoverableLoginCookieSecureWithTLS(t *testing.T) {
+	repo := storage.NewMockRepository()
+	service, err := NewWebAuthnService(WebAuthnConfig{
+		RPDisplayName: "Test Service",
+		RPID:          "localhost",
+		RPOrigin:      "https://localhost",
+	}, repo)
+	if err != nil {
+		t.Fatalf("Failed to create WebAuthnService: %v", err)
+	}
+
+	req := httptest.NewRequest("POST", "https://localhost/login/passkey/discover/begin", nil)
+	req.TLS = &tls.ConnectionState{}
+	rw := httptest.NewRecorder()
+	if _, err := service.BeginDiscoverableLogin(req, rw); err != nil {
+		t.Fatalf("BeginDiscoverableLogin failed: %v", err)
+	}
+
+	var cookie *http.Cookie
+	for _, c := range rw.Result().Cookies() {
+		if c.Name == "webauthn_session_id" {
+			cookie = c
+			break
+		}
+	}
+	if cookie == nil {
+		t.Fatal("webauthn_session_id cookie not set")
+	}
+	if !cookie.Secure {
+		t.Error("expected Secure flag when request has TLS state")
 	}
 }
 

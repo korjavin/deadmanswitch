@@ -194,13 +194,6 @@ async function fetchDiscoverableOptions() {
     }
     const opts = await beginResponse.json();
     opts.publicKey.challenge = base64URLToArrayBuffer(opts.publicKey.challenge);
-    if (opts.publicKey.allowCredentials) {
-        for (let i = 0; i < opts.publicKey.allowCredentials.length; i++) {
-            opts.publicKey.allowCredentials[i].id = base64URLToArrayBuffer(
-                opts.publicKey.allowCredentials[i].id
-            );
-        }
-    }
     return opts;
 }
 
@@ -224,6 +217,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const passkeyLoginButton = document.getElementById('passkey-login-button');
     const statusDiv = document.getElementById('passkey-status');
 
+    // Tracks the in-flight conditional-UI request so the explicit-click handler
+    // can cancel it before issuing its own /discover/begin call. Without this,
+    // both flows write to the same webauthn_session_id cookie and the second
+    // begin call orphans the first session, producing a confusing
+    // "session data not found" error.
+    let conditionalAbort = null;
+
     function showStatus(type, message) {
         statusDiv.style.display = 'block';
         statusDiv.className = 'auth-status ' + (type === 'err' ? 'err' : 'ok');
@@ -231,6 +231,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     passkeyLoginButton.addEventListener('click', async function() {
+        if (conditionalAbort) {
+            conditionalAbort.abort();
+            conditionalAbort = null;
+        }
         passkeyLoginButton.disabled = true;
         passkeyLoginButton.innerHTML = 'Signing in…';
 
@@ -277,10 +281,12 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const available = await PublicKeyCredential.isConditionalMediationAvailable();
             if (!available) return;
+            conditionalAbort = new AbortController();
             const opts = await fetchDiscoverableOptions();
             const credential = await navigator.credentials.get({
                 publicKey: opts.publicKey,
-                mediation: 'conditional'
+                mediation: 'conditional',
+                signal: conditionalAbort.signal
             });
             if (!credential) return;
             const result = await finishDiscoverableLogin(credential);
@@ -290,6 +296,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             console.warn('Conditional UI passkey login failed:', error);
+        } finally {
+            conditionalAbort = null;
         }
     })();
 });

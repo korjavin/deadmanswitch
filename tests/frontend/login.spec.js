@@ -204,10 +204,7 @@ test.describe('Authentication and User Menu Tests', () => {
     expect(typeof body.publicKey.challenge).toBe('string');
     expect(body.publicKey.challenge.length).toBeGreaterThan(0);
 
-    if (body.publicKey.allowCredentials !== undefined) {
-      expect(Array.isArray(body.publicKey.allowCredentials)).toBe(true);
-      expect(body.publicKey.allowCredentials.length).toBe(0);
-    }
+    expect(body.publicKey.allowCredentials ?? []).toEqual([]);
   });
 
   test('should redirect to login page after logout', async ({ page }) => {

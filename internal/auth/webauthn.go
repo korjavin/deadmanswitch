@@ -369,8 +369,9 @@ func (s *WebAuthnService) BeginLogin(ctx context.Context, user *models.User, res
 // client-side discoverable credentials (resident keys). No AllowedCredentials
 // are populated — the authenticator presents a chooser of every passkey scoped
 // to the relying party and returns the userHandle so the server can resolve
-// the user during FinishDiscoverableLogin.
-func (s *WebAuthnService) BeginDiscoverableLogin(ctx context.Context, w http.ResponseWriter) (*protocol.CredentialAssertion, error) {
+// the user during FinishDiscoverableLogin. The request is used to derive the
+// Secure cookie flag from r.TLS.
+func (s *WebAuthnService) BeginDiscoverableLogin(r *http.Request, w http.ResponseWriter) (*protocol.CredentialAssertion, error) {
 	options, sessionData, err := s.webAuthn.BeginDiscoverableLogin()
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin discoverable login: %w", err)
@@ -389,7 +390,7 @@ func (s *WebAuthnService) BeginDiscoverableLogin(ctx context.Context, w http.Res
 		MaxAge:   300, // 5 minutes
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
-		Secure:   false, // Set to true in production with HTTPS
+		Secure:   r != nil && r.TLS != nil,
 	})
 
 	return options, nil
@@ -400,16 +401,13 @@ func (s *WebAuthnService) BeginDiscoverableLogin(ctx context.Context, w http.Res
 // The base *models.User intentionally returns no credentials from
 // WebAuthnCredentials(); the discoverable login flow loads them on demand from
 // the repository and attaches them here so the library can verify the
-// signature.
+// signature. WebAuthnID/Name/DisplayName/Icon are inherited from the embedded
+// user; only WebAuthnCredentials is overridden.
 type discoverableUser struct {
-	user        *models.User
+	*models.User
 	credentials []webauthn.Credential
 }
 
-func (d *discoverableUser) WebAuthnID() []byte                         { return d.user.WebAuthnID() }
-func (d *discoverableUser) WebAuthnName() string                       { return d.user.WebAuthnName() }
-func (d *discoverableUser) WebAuthnDisplayName() string                { return d.user.WebAuthnDisplayName() }
-func (d *discoverableUser) WebAuthnIcon() string                       { return d.user.WebAuthnIcon() }
 func (d *discoverableUser) WebAuthnCredentials() []webauthn.Credential { return d.credentials }
 
 // FinishDiscoverableLogin completes a username-less passkey authentication.
@@ -467,8 +465,19 @@ func (s *WebAuthnService) FinishDiscoverableLogin(ctx context.Context, r *http.R
 			return nil, fmt.Errorf("failed to load credentials for user %q: %w", userID, err)
 		}
 		resolvedUser = u
-		return &discoverableUser{user: u, credentials: creds}, nil
+		return &discoverableUser{User: u, credentials: creds}, nil
 	}
+
+	// Note: the library compares credential.Flags.BackupEligible with the
+	// flag bits parsed from the authenticator response. Our Passkey model
+	// does not currently persist Flags, so getUserCredentials returns
+	// zero-valued Flags. For cloud-synced platform passkeys (iCloud
+	// Keychain, Google Password Manager, 1Password, etc.) the response
+	// will set BackupEligible=1 and the library will reject login with
+	// "BackupEligible flag inconsistency detected during login validation".
+	// Discovered during code review; verification is part of the post-
+	// completion smoke test on real devices and will be addressed by a
+	// follow-up that adds Flags persistence to the passkey schema.
 
 	credential, err := s.webAuthn.FinishDiscoverableLogin(handler, *sessionData, newRequest)
 	if err != nil {

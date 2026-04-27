@@ -160,7 +160,17 @@ func TestHandleFinishDiscoverableLoginInvalidCredential(t *testing.T) {
 	}
 
 	// The session must have been consumed even though the assertion was bogus.
-	if _, _, err := service.FinishDiscoverableLogin(beginReq.Context(), finishReq); err == nil {
-		t.Error("expected session to be consumed after first FinishDiscoverableLogin call")
+	// Build a fresh request (the previous finishReq's body has been drained) so
+	// the failure is unambiguously the deleted session rather than EOF on the
+	// body read.
+	replayReq := httptest.NewRequest("POST", "/login/passkey/discover/finish",
+		strings.NewReader(`{"credential":{"id":"","type":"public-key"}}`))
+	replayReq.AddCookie(sessionCookie)
+	_, _, err := service.FinishDiscoverableLogin(replayReq.Context(), replayReq)
+	if err == nil {
+		t.Fatal("expected session to be consumed after first FinishDiscoverableLogin call")
+	}
+	if !strings.Contains(err.Error(), "session data not found") {
+		t.Errorf("expected error to mention session-not-found, got %v", err)
 	}
 }
