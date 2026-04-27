@@ -237,8 +237,12 @@ func TestRenderSettings_DangerZone(t *testing.T) {
 	if !strings.Contains(out, `· DANGER ZONE`) {
 		t.Error("settings.html missing DANGER ZONE label")
 	}
-	if !strings.Contains(out, `Delete my account`) {
-		t.Error("settings.html missing delete account button")
+	if !strings.Contains(out, `data-test="delete-account-notice"`) {
+		t.Error("settings.html missing delete-account notice (backend route doesn't exist yet)")
+	}
+	// No actionable delete control should be present until a backend route is wired.
+	if strings.Contains(out, `id="deleteAccount"`) {
+		t.Error("settings.html should not expose a deleteAccount button while /account/delete is unwired")
 	}
 }
 

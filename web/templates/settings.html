@@ -287,7 +287,9 @@
     <p style="font-size: 13px; color: var(--fg-1); margin: 12px 0; line-height: 1.6;">
       Deleting your account erases all letters, recipients, and your encrypted vault. Your circle won't be notified — they'll simply never hear anything.
     </p>
-    <button type="button" class="btn danger-btn" id="deleteAccount">Delete my account…</button>
+    <p data-test="delete-account-notice" style="font-size: 13px; color: var(--fg-1); margin: 12px 0 0; line-height: 1.6;">
+      Account deletion isn't available from the web UI yet. Ask your administrator to remove your account.
+    </p>
   </div>
 </div>
 {{ end }}
@@ -338,18 +340,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Delete account confirmation flow. The account-delete backend isn't
-    // wired yet — the button confirms intent and surfaces a friendly notice
-    // rather than POSTing to a nonexistent route.
-    var deleteAccountButton = document.getElementById('deleteAccount');
-    if (deleteAccountButton) {
-        deleteAccountButton.addEventListener('click', function() {
-            if (!confirm('Delete your account? This cannot be undone.')) return;
-            var typed = prompt('Type DELETE to confirm.');
-            if (typed !== 'DELETE') return;
-            alert('Account deletion is not yet available from the web UI. Please contact your administrator to remove your account.');
-        });
-    }
 });
 </script>
 {{ end }}
