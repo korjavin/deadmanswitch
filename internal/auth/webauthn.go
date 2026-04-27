@@ -39,6 +39,13 @@ type sessionEntry struct {
 // in-memory map before it's swept. It matches the cookie MaxAge of 5 minutes.
 const sessionTTL = 5 * time.Minute
 
+// maxAssertionBodyBytes caps the JSON envelope read by FinishDiscoverableLogin.
+// The endpoint is anonymous and public (the conditional-UI IIFE on /login fires
+// it on every page load), so an unbounded io.ReadAll would let a single client
+// stream gigabytes into memory before the JSON parser fails. A real WebAuthn
+// assertion is ~1-2 KiB; 64 KiB leaves generous headroom.
+const maxAssertionBodyBytes = 64 * 1024
+
 // WebAuthnService handles WebAuthn operations
 type WebAuthnService struct {
 	webAuthn *webauthn.WebAuthn
@@ -397,9 +404,12 @@ func (s *WebAuthnService) FinishDiscoverableLogin(ctx context.Context, r *http.R
 		return nil, nil, fmt.Errorf("webauthn session data not found for ID: %s", sessionID)
 	}
 
-	bodyBytes, err := io.ReadAll(r.Body)
+	bodyBytes, err := io.ReadAll(io.LimitReader(r.Body, maxAssertionBodyBytes+1))
 	if err != nil {
 		return nil, nil, fmt.Errorf("error reading request body: %w", err)
+	}
+	if len(bodyBytes) > maxAssertionBodyBytes {
+		return nil, nil, fmt.Errorf("request body exceeds maximum allowed size of %d bytes", maxAssertionBodyBytes)
 	}
 	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
 

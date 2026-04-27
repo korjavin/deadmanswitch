@@ -656,6 +656,31 @@ func TestFinishDiscoverableLoginBodyReadError(t *testing.T) {
 	}
 }
 
+// TestFinishDiscoverableLoginRejectsOversizedBody verifies that a request body
+// larger than maxAssertionBodyBytes is rejected without being fully buffered.
+// The endpoint is anonymous and public (conditional-UI fires it on every login
+// page load), so an unbounded io.ReadAll would be a DoS vector.
+func TestFinishDiscoverableLoginRejectsOversizedBody(t *testing.T) {
+	service, sessionID := newTestServiceWithSession(t)
+
+	// Build a body that exceeds maxAssertionBodyBytes by padding the credential
+	// JSON wrapper with filler. The exact JSON shape doesn't matter — the size
+	// check runs before unmarshal.
+	padding := strings.Repeat("a", maxAssertionBodyBytes+1)
+	body := `{"credential":{},"_pad":"` + padding + `"}`
+	req := httptest.NewRequest("POST", "/login/passkey/discover/finish",
+		strings.NewReader(body))
+	req.AddCookie(&http.Cookie{Name: "webauthn_discover_session_id", Value: sessionID})
+
+	_, _, err := service.FinishDiscoverableLogin(context.Background(), req)
+	if err == nil {
+		t.Fatal("expected error for oversized body, got nil")
+	}
+	if !strings.Contains(err.Error(), "exceeds maximum") {
+		t.Errorf("expected size-limit error, got %v", err)
+	}
+}
+
 // TestFinishDiscoverableLoginMalformedBody verifies a request body that is not
 // valid JSON produces an error rather than a panic.
 func TestFinishDiscoverableLoginMalformedBody(t *testing.T) {
