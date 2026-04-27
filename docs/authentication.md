@@ -39,9 +39,16 @@ WebAuthn passkeys provide a more secure and convenient authentication method usi
 
 ### How Passkeys Work
 
-1. **Registration**: When you register a passkey, your device generates a public-private key pair. The private key never leaves your device, while the public key is stored on our server.
+1. **Registration**: When you register a passkey, your device generates a public-private key pair. The private key never leaves your device, while the public key is stored on our server. New registrations request a discoverable (resident) credential when the authenticator supports it, which enables the username-less sign-in flow described below.
 
 2. **Authentication**: When you log in, our server sends a challenge to your device. Your device signs this challenge with the private key, and our server verifies the signature using the stored public key.
+
+### Sign-in Flows
+
+The application offers two passkey sign-in flows:
+
+- **Username-less sign-in (primary)** — Click *Sign in with passkey* without entering an email. The browser shows a native picker of every passkey scoped to this site, and the server identifies you from the credential's `userHandle`. The login page also enables WebAuthn *conditional UI* on the email field, so on supporting browsers your passkeys appear directly in the email autofill dropdown for one-tap sign-in. This flow uses the `POST /login/passkey/discover/begin` and `POST /login/passkey/discover/finish` endpoints and requires a discoverable credential (any passkey registered after this feature shipped, on an authenticator that supports resident keys).
+- **Email-first fallback** — If your passkey was registered before discoverable credentials were available, or your authenticator does not support resident keys, the original flow still works: enter your email, click *Sign in with passkey*, and the server returns a challenge scoped to your stored credentials. This uses the `POST /login/passkey/begin` and `POST /login/passkey/finish` endpoints.
 
 ### Security Benefits of Passkeys
 

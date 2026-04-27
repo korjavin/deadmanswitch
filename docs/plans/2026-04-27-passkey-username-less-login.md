@@ -271,11 +271,15 @@ Dependencies identified:
       a notch higher on the testable error branches.
 
 ### Task 7: [Final] Update documentation
-- [ ] update `README.md` (and any auth-related docs) to mention username-less
+- [x] update `README.md` (and any auth-related docs) to mention username-less
       passkey login as the primary flow; note that the email-first flow stays
-      as a fallback
-- [ ] add a one-line note in `CLAUDE.md` (if it has a passkeys section)
-      pointing future Claude sessions at the discoverable endpoints
+      as a fallback (README.md feature bullet expanded; `docs/authentication.md`
+      now has a "Sign-in Flows" subsection describing the username-less flow as
+      primary and the email-first flow as fallback, and the registration
+      bullet notes the new discoverable-credential preference)
+- [x] add a one-line note in `CLAUDE.md` (if it has a passkeys section)
+      pointing future Claude sessions at the discoverable endpoints (no
+      `CLAUDE.md` exists at the repo root — checkbox is N/A)
 
 ## Technical Details
 
