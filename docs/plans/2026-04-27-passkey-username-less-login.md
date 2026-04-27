@@ -114,20 +114,18 @@ Dependencies identified:
 ## Implementation Steps
 
 ### Task 1: Make new passkey registrations discoverable (resident-key preferred)
-- [ ] in `internal/auth/webauthn.go:75`, change the `BeginRegistration` call
+- [x] in `internal/auth/webauthn.go:75`, change the `BeginRegistration` call
       to pass `webauthn.WithAuthenticatorSelection(protocol.AuthenticatorSelection{
         ResidentKey: protocol.ResidentKeyRequirementPreferred,
         UserVerification: protocol.VerificationPreferred,
       })`
-- [ ] verify the existing `excludeCredentials` slice continues to be honored
-      (it is currently computed but not passed — leave as-is unless trivially
-      threadable through `webauthn.WithExclusions(...)`); document either way
-      in a one-line comment
-- [ ] write a unit test in `internal/auth/webauthn_test.go` asserting that
+- [x] verify the existing `excludeCredentials` slice continues to be honored
+      (now threaded through `webauthn.WithExclusions(...)`)
+- [x] write a unit test in `internal/auth/webauthn_test.go` asserting that
       `BeginRegistration` returns options with
       `AuthenticatorSelection.ResidentKey == "preferred"`
-- [ ] write a unit test for `BeginRegistration` error path (e.g. nil user)
-- [ ] run `go test ./...` — must pass before next task
+- [x] write a unit test for `BeginRegistration` error path (e.g. nil user)
+- [x] run `go test ./...` — must pass before next task
 
 ### Task 2: Add discoverable BeginLogin to WebAuthnService
 - [ ] add method `BeginDiscoverableLogin(ctx context.Context, w http.ResponseWriter) (*protocol.CredentialAssertion, error)`

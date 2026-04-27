@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/korjavin/deadmanswitch/internal/models"
 	"github.com/korjavin/deadmanswitch/internal/storage"
@@ -206,6 +207,67 @@ func byteSliceEqual(a, b []byte) bool {
 		}
 	}
 	return true
+}
+
+// TestBeginRegistrationResidentKeyPreferred ensures new passkey enrollments
+// request a discoverable (resident-key) credential so the username-less login
+// flow can find them via userHandle.
+func TestBeginRegistrationResidentKeyPreferred(t *testing.T) {
+	repo := storage.NewMockRepository()
+	config := WebAuthnConfig{
+		RPDisplayName: "Test Service",
+		RPID:          "localhost",
+		RPOrigin:      "http://localhost:8080",
+	}
+	service, err := NewWebAuthnService(config, repo)
+	if err != nil {
+		t.Fatalf("Failed to create WebAuthnService: %v", err)
+	}
+
+	user := &models.User{
+		ID:    "user123",
+		Email: "test@example.com",
+	}
+
+	rw := httptest.NewRecorder()
+	options, err := service.BeginRegistration(context.Background(), user, rw)
+	if err != nil {
+		t.Fatalf("BeginRegistration failed: %v", err)
+	}
+	if options == nil {
+		t.Fatal("Expected non-nil options")
+	}
+
+	got := options.Response.AuthenticatorSelection.ResidentKey
+	if got != protocol.ResidentKeyRequirementPreferred {
+		t.Errorf("Expected ResidentKey %q, got %q",
+			protocol.ResidentKeyRequirementPreferred, got)
+	}
+	if options.Response.AuthenticatorSelection.UserVerification != protocol.VerificationPreferred {
+		t.Errorf("Expected UserVerification %q, got %q",
+			protocol.VerificationPreferred,
+			options.Response.AuthenticatorSelection.UserVerification)
+	}
+}
+
+// TestBeginRegistrationNilUser ensures BeginRegistration returns an error
+// rather than panicking when called with a nil user.
+func TestBeginRegistrationNilUser(t *testing.T) {
+	repo := storage.NewMockRepository()
+	config := WebAuthnConfig{
+		RPDisplayName: "Test Service",
+		RPID:          "localhost",
+		RPOrigin:      "http://localhost:8080",
+	}
+	service, err := NewWebAuthnService(config, repo)
+	if err != nil {
+		t.Fatalf("Failed to create WebAuthnService: %v", err)
+	}
+
+	rw := httptest.NewRecorder()
+	if _, err := service.BeginRegistration(context.Background(), nil, rw); err == nil {
+		t.Fatal("Expected error for nil user, got nil")
+	}
 }
 
 // TestWebAuthnSessionHandling tests session creation and cookie setting

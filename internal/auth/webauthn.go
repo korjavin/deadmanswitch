@@ -56,6 +56,10 @@ func NewWebAuthnService(config WebAuthnConfig, repo storage.Repository) (*WebAut
 
 // BeginRegistration starts the passkey registration process
 func (s *WebAuthnService) BeginRegistration(ctx context.Context, user *models.User, response http.ResponseWriter) (*protocol.CredentialCreation, error) {
+	if user == nil {
+		return nil, fmt.Errorf("user is required")
+	}
+
 	// Get existing credentials for the user
 	existingCredentials, err := s.getUserCredentials(ctx, user)
 	if err != nil {
@@ -71,8 +75,19 @@ func (s *WebAuthnService) BeginRegistration(ctx context.Context, user *models.Us
 		}
 	}
 
+	// Request a discoverable (resident-key) credential when the authenticator
+	// supports it so the username-less login flow can find it via userHandle.
+	authenticatorSelection := protocol.AuthenticatorSelection{
+		ResidentKey:      protocol.ResidentKeyRequirementPreferred,
+		UserVerification: protocol.VerificationPreferred,
+	}
+
 	// Create credential creation options
-	options, sessionData, err := s.webAuthn.BeginRegistration(user)
+	options, sessionData, err := s.webAuthn.BeginRegistration(
+		user,
+		webauthn.WithAuthenticatorSelection(authenticatorSelection),
+		webauthn.WithExclusions(excludeCredentials),
+	)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin registration: %w", err)
