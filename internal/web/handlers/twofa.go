@@ -92,6 +92,8 @@ func (h *TwoFAHandler) HandleSetup(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
+	data.SetHeartbeat(user)
+
 	if err := templates.RenderTemplate(w, "2fa-setup.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		log.Printf("Error rendering 2FA setup template: %v", err)
@@ -137,6 +139,8 @@ func (h *TwoFAHandler) HandleVerify(w http.ResponseWriter, r *http.Request) {
 				"TOTPSecret": user.TOTPSecret,
 			},
 		}
+
+		data.SetHeartbeat(user)
 
 		if err := templates.RenderTemplate(w, "2fa-setup.html", data); err != nil {
 			http.Error(w, "Template error", http.StatusInternalServerError)

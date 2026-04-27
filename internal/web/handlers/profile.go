@@ -107,6 +107,8 @@ func (h *ProfileHandler) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		Data:            templateData,
 	}
 
+	data.SetHeartbeat(fullUser)
+
 	if err := templates.RenderTemplate(w, "profile.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		log.Printf("Error rendering profile template: %v", err)

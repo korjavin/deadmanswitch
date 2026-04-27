@@ -108,6 +108,8 @@ func (h *RecipientsHandler) HandleListRecipients(w http.ResponseWriter, r *http.
 		},
 	}
 
+	data.SetHeartbeat(user)
+
 	if err := templates.RenderTemplate(w, "recipients.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		log.Printf("Error rendering recipients template: %v", err)
@@ -133,6 +135,8 @@ func (h *RecipientsHandler) HandleNewRecipientForm(w http.ResponseWriter, r *htt
 		},
 		Data: map[string]interface{}{},
 	}
+
+	data.SetHeartbeat(user)
 
 	if err := templates.RenderTemplate(w, "new-recipient.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
@@ -255,6 +259,8 @@ func (h *RecipientsHandler) HandleEditRecipientForm(w http.ResponseWriter, r *ht
 			"Recipient": recipientData,
 		},
 	}
+
+	data.SetHeartbeat(user)
 
 	if err := templates.RenderTemplate(w, "new-recipient.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
@@ -422,6 +428,8 @@ func (h *RecipientsHandler) HandleManageSecrets(w http.ResponseWriter, r *http.R
 			"Secrets":   secrets,
 		},
 	}
+
+	data.SetHeartbeat(user)
 
 	if err := templates.RenderTemplate(w, "manage-recipient-secrets.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)

@@ -175,6 +175,37 @@ func TestLayoutLoadsBrandLogo(t *testing.T) {
 	}
 }
 
+func TestLayoutHeartbeatVariantReflectsTemplateData(t *testing.T) {
+	cases := []struct {
+		name    string
+		variant string
+		label   string
+		wantCls string
+		wantTxt string
+	}{
+		{"default", "", "", `class="heartbeat ok"`, "HEARTBEAT · OK"},
+		{"warn", "warn", "OVERDUE", `class="heartbeat warn"`, "HEARTBEAT · OVERDUE"},
+		{"crit", "crit", "URGENT", `class="heartbeat crit"`, "HEARTBEAT · URGENT"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			out := renderLayout(t, tpl.TemplateData{
+				Title:            "X",
+				IsAuthenticated:  true,
+				User:             map[string]interface{}{"Email": "x@x"},
+				HeartbeatVariant: tc.variant,
+				HeartbeatLabel:   tc.label,
+			})
+			if !strings.Contains(out, tc.wantCls) {
+				t.Errorf("layout missing %q for variant %q", tc.wantCls, tc.variant)
+			}
+			if !strings.Contains(out, tc.wantTxt) {
+				t.Errorf("layout missing %q for label %q", tc.wantTxt, tc.label)
+			}
+		})
+	}
+}
+
 func TestLayoutFlashRendersAsMonoLabel(t *testing.T) {
 	out := renderLayout(t, tpl.TemplateData{
 		Title:           "X",

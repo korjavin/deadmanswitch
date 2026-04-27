@@ -20,9 +20,9 @@
     <header class="topbar">
       <a href="/dashboard" class="brand-link" aria-label="Heartbeat home">{{ template "brand-logo" . }}</a>
       <div class="topbar-spacer" style="flex:1"></div>
-      <div class="heartbeat ok" aria-live="polite" title="Heartbeat status">
+      <div class="heartbeat {{ or .HeartbeatVariant "ok" }}" aria-live="polite" title="Heartbeat status">
         <span class="pulse" aria-hidden="true"></span>
-        <span class="heartbeat-label">HEARTBEAT · OK</span>
+        <span class="heartbeat-label">HEARTBEAT · {{ or .HeartbeatLabel "OK" }}</span>
       </div>
       <div class="dropdown user-menu">
         <button class="dropdown-toggle btn ghost sm" type="button" aria-haspopup="true">

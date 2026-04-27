@@ -208,6 +208,8 @@ func (h *DashboardHandler) HandleDashboard(w http.ResponseWriter, r *http.Reques
 		},
 	}
 
+	data.SetHeartbeat(user)
+
 	if err := templates.RenderTemplate(w, "dashboard.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		log.Printf("Error rendering dashboard template: %v", err)

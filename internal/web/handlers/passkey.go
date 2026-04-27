@@ -74,6 +74,8 @@ func (h *PasskeyHandler) HandlePasskeyManagement(w http.ResponseWriter, r *http.
 		},
 	}
 
+	data.SetHeartbeat(user)
+
 	if err := templates.RenderTemplate(w, "passkeys.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		log.Printf("Error rendering passkeys template: %v", err)

@@ -48,6 +48,8 @@ func (h *SettingsHandler) HandleSettings(w http.ResponseWriter, r *http.Request)
 		},
 	}
 
+	data.SetHeartbeat(user)
+
 	if err := templates.RenderTemplate(w, "settings.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		log.Printf("Error rendering settings template: %v", err)

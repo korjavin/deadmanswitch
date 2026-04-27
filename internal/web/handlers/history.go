@@ -101,6 +101,8 @@ func (h *HistoryHandler) HandleHistory(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
+	data.SetHeartbeat(user)
+
 	if err := templates.RenderTemplate(w, "history.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		log.Printf("Error rendering history template: %v", err)
