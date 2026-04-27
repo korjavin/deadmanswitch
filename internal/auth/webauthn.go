@@ -131,9 +131,12 @@ func (s *WebAuthnService) BeginRegistration(ctx context.Context, user *models.Us
 
 	// Request a discoverable (resident-key) credential when the authenticator
 	// supports it so the username-less login flow can find it via userHandle.
+	// UV is required at registration to match the login policy — both legacy
+	// BeginLogin and BeginDiscoverableLogin require UV. Registering without UV
+	// would silently produce a passkey that can never authenticate.
 	authenticatorSelection := protocol.AuthenticatorSelection{
 		ResidentKey:      protocol.ResidentKeyRequirementPreferred,
-		UserVerification: protocol.VerificationPreferred,
+		UserVerification: protocol.VerificationRequired,
 	}
 
 	// Create credential creation options
@@ -530,6 +533,16 @@ func (s *WebAuthnService) FinishDiscoverableLogin(ctx context.Context, r *http.R
 	passkey, err := s.repo.GetPasskeyByCredentialID(ctx, credential.ID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to look up passkey by credential ID: %w", err)
+	}
+
+	// Defense in depth: the library validates the assertion against credentials
+	// loaded from resolvedUser, but the post-success lookup above fetches the
+	// passkey by credential_id from a non-unique index. If a duplicate
+	// credential_id ever existed for a different user, we would otherwise issue
+	// a session for resolvedUser while attributing the audit log to a different
+	// passkey owner.
+	if passkey.UserID != resolvedUser.ID {
+		return nil, nil, fmt.Errorf("passkey owner mismatch: credential_id resolves to passkey owned by another user")
 	}
 
 	passkey.LastUsedAt = time.Now()

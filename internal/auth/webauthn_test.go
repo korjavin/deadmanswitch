@@ -245,9 +245,9 @@ func TestBeginRegistrationResidentKeyPreferred(t *testing.T) {
 		t.Errorf("Expected ResidentKey %q, got %q",
 			protocol.ResidentKeyRequirementPreferred, got)
 	}
-	if options.Response.AuthenticatorSelection.UserVerification != protocol.VerificationPreferred {
+	if options.Response.AuthenticatorSelection.UserVerification != protocol.VerificationRequired {
 		t.Errorf("Expected UserVerification %q, got %q",
-			protocol.VerificationPreferred,
+			protocol.VerificationRequired,
 			options.Response.AuthenticatorSelection.UserVerification)
 	}
 }
