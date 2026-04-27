@@ -556,53 +556,6 @@ func (h *RecipientsHandler) HandleUpdateRecipientSecrets(w http.ResponseWriter, 
 	http.Redirect(w, r, "/recipients", http.StatusSeeOther)
 }
 
-// HandleTestContact handles the test contact request
-func (h *RecipientsHandler) HandleTestContact(w http.ResponseWriter, r *http.Request) {
-	// Get the authenticated user from context
-	user, ok := middleware.GetUserFromContext(r)
-	if !ok || user == nil {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	// Get the recipient ID from the URL
-	recipientID := r.PathValue("id")
-	if recipientID == "" {
-		http.Error(w, "Recipient ID is required", http.StatusBadRequest)
-		return
-	}
-
-	// Fetch the recipient from the database
-	recipient, err := h.repo.GetRecipientByID(context.Background(), recipientID)
-	if err != nil {
-		http.Error(w, "Error fetching recipient", http.StatusInternalServerError)
-		log.Printf("Error fetching recipient: %v", err)
-		return
-	}
-
-	// Verify that the recipient belongs to the user
-	if recipient.UserID != user.ID {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	// Check if email client is configured
-	if h.emailClient == nil {
-		http.Error(w, "Email client not configured", http.StatusInternalServerError)
-		log.Printf("Email client not configured, cannot send test contact")
-		return
-	}
-
-	if err := h.sendIntroEmail(r, user, recipient); err != nil {
-		http.Error(w, "Error sending test contact email", http.StatusInternalServerError)
-		log.Printf("Error sending test contact email: %v", err)
-		return
-	}
-
-	// Redirect to the recipients list page with a success message
-	http.Redirect(w, r, "/recipients?test_contact=success", http.StatusSeeOther)
-}
-
 // sendIntroEmail generates a fresh confirmation code, persists it on the
 // recipient, and emails them a one-time hello / confirmation link. Callers
 // must have already verified ownership of the recipient and that

@@ -144,7 +144,6 @@ func TestRenderRecipients_EnvelopeGrid(t *testing.T) {
 		// Per-envelope action URLs preserved
 		`href="/recipients/rec-1"`,
 		`href="/recipients/rec-1/secrets"`,
-		`href="/recipients/rec-1/test"`,
 		`action="/recipients/rec-1"`,
 		`name="_method" value="DELETE"`,
 		// Trailing add-card
@@ -162,7 +161,9 @@ func TestRenderRecipients_EnvelopeGrid(t *testing.T) {
 		t.Error("recipients.html should not show empty-state when recipients are present")
 	}
 
-	// Old Bootstrap markup must be gone.
+	// Old Bootstrap markup must be gone, and the per-envelope "Test" link
+	// has been removed entirely — the only way to send the optional hello
+	// is via the create-time send_intro checkbox in new-recipient.html.
 	mustNotContain := []string{
 		`No Recipients Yet`,
 		`Add First Recipient`,
@@ -171,6 +172,8 @@ func TestRenderRecipients_EnvelopeGrid(t *testing.T) {
 		`bg-success`,
 		`bg-warning`,
 		`Dead Man's Switch`,
+		`/test"`,
+		`>Test<`,
 	}
 	for _, s := range mustNotContain {
 		if strings.Contains(out, s) {

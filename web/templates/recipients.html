@@ -153,7 +153,6 @@
           <div class="actions-row">
             <a href="/recipients/{{ .ID }}">Edit</a>
             <a href="/recipients/{{ .ID }}/secrets">Letters</a>
-            <a href="/recipients/{{ .ID }}/test">Test</a>
             <form action="/recipients/{{ .ID }}" method="POST" class="inline">
               <input type="hidden" name="_method" value="DELETE">
               <button type="submit" class="danger confirm-delete">Remove</button>

@@ -28,8 +28,14 @@ func TestDispatchPathID(t *testing.T) {
 			wantSet: true,
 		},
 		{
-			name:    "recipient test action",
-			path:    "/recipients/abc-123/test",
+			// The /test action was removed (the only thing it did was
+			// re-send the hello email; that's now create-time-only via
+			// the send_intro checkbox). The URL no longer routes
+			// anywhere meaningful, but path extraction must keep
+			// returning the id segment so any unintended hit falls
+			// through to the edit handler safely.
+			name:    "trailing segment ignored — id is still first segment",
+			path:    "/recipients/abc-123/whatever",
 			prefix:  "/recipients/",
 			wantID:  "abc-123",
 			wantSet: true,

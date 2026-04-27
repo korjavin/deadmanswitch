@@ -278,12 +278,6 @@ func (s *Server) handleRecipients(w http.ResponseWriter, r *http.Request) {
 	// Also expose via the legacy context key for any handler still reading it.
 	r = r.WithContext(context.WithValue(r.Context(), authMiddleware.RecipientIDContextKey, id))
 
-	// Handle test contact request
-	if strings.HasSuffix(r.URL.Path, "/test") {
-		s.handlers.recipients.HandleTestContact(w, r)
-		return
-	}
-
 	// Handle secrets management
 	if strings.HasSuffix(r.URL.Path, "/secrets") {
 		switch r.Method {
