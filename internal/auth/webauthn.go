@@ -395,6 +395,100 @@ func (s *WebAuthnService) BeginDiscoverableLogin(ctx context.Context, w http.Res
 	return options, nil
 }
 
+// discoverableUser wraps a *models.User together with the user's WebAuthn
+// credentials so it satisfies the webauthn.User interface during validation.
+// The base *models.User intentionally returns no credentials from
+// WebAuthnCredentials(); the discoverable login flow loads them on demand from
+// the repository and attaches them here so the library can verify the
+// signature.
+type discoverableUser struct {
+	user        *models.User
+	credentials []webauthn.Credential
+}
+
+func (d *discoverableUser) WebAuthnID() []byte                       { return d.user.WebAuthnID() }
+func (d *discoverableUser) WebAuthnName() string                     { return d.user.WebAuthnName() }
+func (d *discoverableUser) WebAuthnDisplayName() string              { return d.user.WebAuthnDisplayName() }
+func (d *discoverableUser) WebAuthnIcon() string                     { return d.user.WebAuthnIcon() }
+func (d *discoverableUser) WebAuthnCredentials() []webauthn.Credential { return d.credentials }
+
+// FinishDiscoverableLogin completes a username-less passkey authentication.
+// The userHandle returned by the authenticator (== user.ID bytes) is used to
+// resolve the user; the library then verifies the signature against that
+// user's stored credentials. The session cookie is consumed regardless of
+// outcome so a stale cookie cannot be replayed.
+func (s *WebAuthnService) FinishDiscoverableLogin(ctx context.Context, r *http.Request) (*models.User, *models.Passkey, error) {
+	cookie, err := r.Cookie("webauthn_session_id")
+	if err != nil {
+		return nil, nil, fmt.Errorf("webauthn session cookie not found: %w", err)
+	}
+	sessionID := cookie.Value
+
+	s.mutex.Lock()
+	sessionData, ok := s.sessions[sessionID]
+	if !ok {
+		s.mutex.Unlock()
+		return nil, nil, fmt.Errorf("webauthn session data not found for ID: %s", sessionID)
+	}
+	delete(s.sessions, sessionID)
+	s.mutex.Unlock()
+
+	bodyBytes, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, nil, fmt.Errorf("error reading request body: %w", err)
+	}
+	r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+
+	var requestData struct {
+		Credential json.RawMessage `json:"credential"`
+	}
+	if err := json.Unmarshal(bodyBytes, &requestData); err != nil {
+		return nil, nil, fmt.Errorf("error parsing request data: %w", err)
+	}
+	if len(requestData.Credential) == 0 {
+		return nil, nil, fmt.Errorf("missing credential field in request body")
+	}
+
+	newRequest, err := http.NewRequest("POST", "/", bytes.NewReader(requestData.Credential))
+	if err != nil {
+		return nil, nil, fmt.Errorf("error creating new request: %w", err)
+	}
+	newRequest.Header.Set("Content-Type", "application/json")
+
+	var resolvedUser *models.User
+	handler := func(rawID, userHandle []byte) (webauthn.User, error) {
+		userID := string(userHandle)
+		u, err := s.repo.GetUserByID(ctx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("user not found for handle %q: %w", userID, err)
+		}
+		creds, err := s.getUserCredentials(ctx, u)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load credentials for user %q: %w", userID, err)
+		}
+		resolvedUser = u
+		return &discoverableUser{user: u, credentials: creds}, nil
+	}
+
+	credential, err := s.webAuthn.FinishDiscoverableLogin(handler, *sessionData, newRequest)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to finish discoverable login: %w", err)
+	}
+
+	passkey, err := s.repo.GetPasskeyByCredentialID(ctx, credential.ID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to look up passkey by credential ID: %w", err)
+	}
+
+	passkey.LastUsedAt = time.Now()
+	passkey.SignCount = credential.Authenticator.SignCount
+	if err := s.repo.UpdatePasskey(ctx, passkey); err != nil {
+		log.Printf("failed to update passkey after discoverable login: %v", err)
+	}
+
+	return resolvedUser, passkey, nil
+}
+
 // FinishLogin completes the passkey authentication process
 func (s *WebAuthnService) FinishLogin(ctx context.Context, user *models.User, response *http.Request) (*models.Passkey, error) {
 	log.Printf("FinishLogin called for user")

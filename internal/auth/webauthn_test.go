@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -363,6 +364,170 @@ func TestBeginDiscoverableLoginSetsSessionCookie(t *testing.T) {
 	if len(stored.AllowedCredentialIDs) != 0 {
 		t.Errorf("Expected empty AllowedCredentialIDs in session, got %d",
 			len(stored.AllowedCredentialIDs))
+	}
+}
+
+// newTestServiceWithSession creates a WebAuthnService and stores a fresh
+// discoverable session so tests can drive FinishDiscoverableLogin past the
+// cookie/session lookup.
+func newTestServiceWithSession(t *testing.T) (*WebAuthnService, string) {
+	t.Helper()
+	repo := storage.NewMockRepository()
+	config := WebAuthnConfig{
+		RPDisplayName: "Test Service",
+		RPID:          "localhost",
+		RPOrigin:      "http://localhost:8080",
+	}
+	service, err := NewWebAuthnService(config, repo)
+	if err != nil {
+		t.Fatalf("Failed to create WebAuthnService: %v", err)
+	}
+
+	rw := httptest.NewRecorder()
+	if _, err := service.BeginDiscoverableLogin(context.Background(), rw); err != nil {
+		t.Fatalf("BeginDiscoverableLogin failed: %v", err)
+	}
+	var sessionID string
+	for _, c := range rw.Result().Cookies() {
+		if c.Name == "webauthn_session_id" {
+			sessionID = c.Value
+			break
+		}
+	}
+	if sessionID == "" {
+		t.Fatal("expected webauthn_session_id cookie to be set")
+	}
+	return service, sessionID
+}
+
+// TestFinishDiscoverableLoginMissingCookie verifies a request with no session
+// cookie returns an error and does not panic.
+func TestFinishDiscoverableLoginMissingCookie(t *testing.T) {
+	repo := storage.NewMockRepository()
+	config := WebAuthnConfig{
+		RPDisplayName: "Test Service",
+		RPID:          "localhost",
+		RPOrigin:      "http://localhost:8080",
+	}
+	service, err := NewWebAuthnService(config, repo)
+	if err != nil {
+		t.Fatalf("Failed to create WebAuthnService: %v", err)
+	}
+
+	req := httptest.NewRequest("POST", "/login/passkey/discover/finish",
+		strings.NewReader(`{"credential":{}}`))
+	user, passkey, err := service.FinishDiscoverableLogin(context.Background(), req)
+	if err == nil {
+		t.Fatal("expected error for missing session cookie, got nil")
+	}
+	if user != nil || passkey != nil {
+		t.Errorf("expected nil user and passkey on error, got user=%v passkey=%v", user, passkey)
+	}
+}
+
+// TestFinishDiscoverableLoginMissingSession verifies a request with a cookie
+// that does not match any in-memory session returns an error.
+func TestFinishDiscoverableLoginMissingSession(t *testing.T) {
+	repo := storage.NewMockRepository()
+	config := WebAuthnConfig{
+		RPDisplayName: "Test Service",
+		RPID:          "localhost",
+		RPOrigin:      "http://localhost:8080",
+	}
+	service, err := NewWebAuthnService(config, repo)
+	if err != nil {
+		t.Fatalf("Failed to create WebAuthnService: %v", err)
+	}
+
+	req := httptest.NewRequest("POST", "/login/passkey/discover/finish",
+		strings.NewReader(`{"credential":{}}`))
+	req.AddCookie(&http.Cookie{Name: "webauthn_session_id", Value: "does-not-exist"})
+
+	if _, _, err := service.FinishDiscoverableLogin(context.Background(), req); err == nil {
+		t.Fatal("expected error for missing session, got nil")
+	}
+}
+
+// TestFinishDiscoverableLoginConsumesSession verifies the session is removed
+// from the in-memory map after a single call so a stale cookie cannot be
+// replayed (even when the underlying assertion fails to parse).
+func TestFinishDiscoverableLoginConsumesSession(t *testing.T) {
+	service, sessionID := newTestServiceWithSession(t)
+
+	req := httptest.NewRequest("POST", "/login/passkey/discover/finish",
+		strings.NewReader(`{"credential":{}}`))
+	req.AddCookie(&http.Cookie{Name: "webauthn_session_id", Value: sessionID})
+
+	// First call consumes the session even though the assertion is bogus.
+	if _, _, err := service.FinishDiscoverableLogin(context.Background(), req); err == nil {
+		t.Fatal("expected error from bogus assertion, got nil")
+	}
+
+	service.mutex.Lock()
+	_, stillThere := service.sessions[sessionID]
+	service.mutex.Unlock()
+	if stillThere {
+		t.Errorf("expected session %q to be removed after FinishDiscoverableLogin", sessionID)
+	}
+
+	// Second call must fail because the session has been consumed.
+	req2 := httptest.NewRequest("POST", "/login/passkey/discover/finish",
+		strings.NewReader(`{"credential":{}}`))
+	req2.AddCookie(&http.Cookie{Name: "webauthn_session_id", Value: sessionID})
+	if _, _, err := service.FinishDiscoverableLogin(context.Background(), req2); err == nil {
+		t.Fatal("expected error on session replay, got nil")
+	}
+}
+
+// TestFinishDiscoverableLoginMalformedBody verifies a request body that is not
+// valid JSON produces an error rather than a panic.
+func TestFinishDiscoverableLoginMalformedBody(t *testing.T) {
+	service, sessionID := newTestServiceWithSession(t)
+
+	req := httptest.NewRequest("POST", "/login/passkey/discover/finish",
+		strings.NewReader("not-json"))
+	req.AddCookie(&http.Cookie{Name: "webauthn_session_id", Value: sessionID})
+
+	if _, _, err := service.FinishDiscoverableLogin(context.Background(), req); err == nil {
+		t.Fatal("expected error for malformed JSON body, got nil")
+	}
+}
+
+// TestFinishDiscoverableLoginMissingCredentialField verifies a request body
+// missing the `credential` wrapper field returns an error.
+func TestFinishDiscoverableLoginMissingCredentialField(t *testing.T) {
+	service, sessionID := newTestServiceWithSession(t)
+
+	req := httptest.NewRequest("POST", "/login/passkey/discover/finish",
+		strings.NewReader(`{}`))
+	req.AddCookie(&http.Cookie{Name: "webauthn_session_id", Value: sessionID})
+
+	if _, _, err := service.FinishDiscoverableLogin(context.Background(), req); err == nil {
+		t.Fatal("expected error for missing credential field, got nil")
+	}
+}
+
+// TestFinishDiscoverableLoginInvalidAssertion verifies that when the wrapped
+// credential JSON cannot be parsed as a WebAuthn assertion (e.g. arbitrary
+// JSON), the library returns an error and the function surfaces it. This
+// exercises the same code path a tampered or unsigned-by-the-authenticator
+// assertion would hit before reaching signature verification.
+func TestFinishDiscoverableLoginInvalidAssertion(t *testing.T) {
+	service, sessionID := newTestServiceWithSession(t)
+
+	// The wrapper field is present but the inner credential is empty/invalid;
+	// the library's ParseCredentialRequestResponse must reject this.
+	body := `{"credential":{"id":"","type":"public-key"}}`
+	req := httptest.NewRequest("POST", "/login/passkey/discover/finish",
+		strings.NewReader(body))
+	req.AddCookie(&http.Cookie{Name: "webauthn_session_id", Value: sessionID})
+
+	user, passkey, err := service.FinishDiscoverableLogin(context.Background(), req)
+	if err == nil {
+		t.Fatal("expected error for invalid assertion, got nil")
+	}
+	if user != nil || passkey != nil {
+		t.Errorf("expected nil user and passkey on error, got user=%v passkey=%v", user, passkey)
 	}
 }
 
