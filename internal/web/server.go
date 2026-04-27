@@ -154,6 +154,8 @@ func (s *Server) setupRoutes() {
 	))
 	r.HandleFunc("/login/passkey/begin", s.handlers.passkey.HandleBeginLogin)
 	r.HandleFunc("/login/passkey/finish", s.handlers.passkey.HandleFinishLogin)
+	r.HandleFunc("/login/passkey/discover/begin", s.handlers.passkey.HandleBeginDiscoverableLogin)
+	r.HandleFunc("/login/passkey/discover/finish", s.handlers.passkey.HandleFinishDiscoverableLogin)
 	r.HandleFunc("/confirm/", s.handleConfirmation)
 	r.Handle("/static/", http.StripPrefix("/static/", s.setupFileServer()))
 	r.HandleFunc("/logout", s.handlers.auth.HandleLogout)

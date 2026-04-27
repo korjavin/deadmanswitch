@@ -173,27 +173,29 @@ Dependencies identified:
 - [x] run `go test ./...` — must pass before next task
 
 ### Task 4: Add HTTP handlers and routes for discoverable login
-- [ ] in `internal/web/handlers/passkey.go`, add
+- [x] in `internal/web/handlers/passkey.go`, add
       `HandleBeginDiscoverableLogin(w, r)` that calls
       `webAuthnService.BeginDiscoverableLogin(r.Context(), w)`, marshals the
       options to JSON, returns them
-- [ ] add `HandleFinishDiscoverableLogin(w, r)` that calls
+- [x] add `HandleFinishDiscoverableLogin(w, r)` that calls
       `webAuthnService.FinishDiscoverableLogin(r.Context(), r)`, then mirrors
       the session-creation block in `HandleFinishLogin:454-507` (create
       `models.Session`, set `session_token` cookie, write audit log,
       `{"success": true, "redirect": "/dashboard"}`)
-- [ ] in `internal/web/server.go` near lines 155-156, register:
+- [x] in `internal/web/server.go` near lines 155-156, register:
         - `r.HandleFunc("/login/passkey/discover/begin", s.handlers.passkey.HandleBeginDiscoverableLogin)`
         - `r.HandleFunc("/login/passkey/discover/finish", s.handlers.passkey.HandleFinishDiscoverableLogin)`
-- [ ] write a handler unit test for `HandleBeginDiscoverableLogin` (uses
+- [x] write a handler unit test for `HandleBeginDiscoverableLogin` (uses
       `httptest.NewRecorder`, asserts 200 + JSON body shape — empty
       `allowCredentials`)
-- [ ] write a handler unit test for `HandleFinishDiscoverableLogin` happy
-      path using a stub `WebAuthnService` (or interface refactor if needed —
-      flag as ⚠️ if it requires more than a trivial extraction)
-- [ ] write a handler unit test for the failure path (invalid credential →
+- [x] ⚠️ happy-path handler test skipped — would require introducing a
+      6-method `WebAuthnService` interface in the handlers package (importing
+      `protocol.CredentialCreation`/`CredentialAssertion` etc.) just to stub
+      one call. Same precedent as Task 3's skipped happy-path test; covered
+      by manual smoke testing in Post-Completion.
+- [x] write a handler unit test for the failure path (invalid credential →
       4xx, no session cookie set)
-- [ ] run `go test ./...` — must pass before next task
+- [x] run `go test ./...` — must pass before next task
 
 ### Task 5: Update login template for username-less + conditional UI
 - [ ] in `web/templates/login.html`, remove the standalone "EMAIL FOR PASSKEY"

@@ -513,3 +513,95 @@ func (h *PasskeyHandler) HandleFinishLogin(w http.ResponseWriter, r *http.Reques
 		log.Printf("Failed to write response: %v", err)
 	}
 }
+
+// HandleBeginDiscoverableLogin starts a username-less passkey login. The
+// browser calls this with no body, receives credential request options with an
+// empty allowCredentials list, and prompts the user to pick a discoverable
+// credential.
+func (h *PasskeyHandler) HandleBeginDiscoverableLogin(w http.ResponseWriter, r *http.Request) {
+	options, err := h.webAuthnService.BeginDiscoverableLogin(r.Context(), w)
+	if err != nil {
+		log.Printf("Error beginning discoverable login: %v", err)
+		http.Error(w, "Error beginning discoverable login", http.StatusInternalServerError)
+		return
+	}
+
+	optionsJSON, err := json.Marshal(options)
+	if err != nil {
+		log.Printf("Error marshaling discoverable login options: %v", err)
+		http.Error(w, "Error marshaling options", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if _, err := w.Write(optionsJSON); err != nil {
+		log.Printf("Failed to write response: %v", err)
+	}
+}
+
+// HandleFinishDiscoverableLogin completes a username-less passkey login. The
+// userHandle returned by the authenticator is used to resolve the user; on
+// success a normal session cookie is issued and the client is told to redirect
+// to the dashboard.
+func (h *PasskeyHandler) HandleFinishDiscoverableLogin(w http.ResponseWriter, r *http.Request) {
+	user, passkey, err := h.webAuthnService.FinishDiscoverableLogin(r.Context(), r)
+	if err != nil {
+		log.Printf("Error finishing discoverable login: %v", err)
+		http.Error(w, "Error finishing discoverable login", http.StatusUnauthorized)
+		return
+	}
+
+	sessionToken := utils.GenerateSecureToken()
+	expiresAt := time.Now().Add(24 * time.Hour)
+
+	session := &models.Session{
+		ID:           utils.GenerateID(),
+		UserID:       user.ID,
+		Token:        sessionToken,
+		CreatedAt:    time.Now(),
+		ExpiresAt:    expiresAt,
+		LastActivity: time.Now(),
+		IPAddress:    r.RemoteAddr,
+		UserAgent:    r.UserAgent(),
+	}
+
+	if err := h.repo.CreateSession(r.Context(), session); err != nil {
+		log.Printf("Error creating session: %v", err)
+		http.Error(w, "Error creating session", http.StatusInternalServerError)
+		return
+	}
+
+	user.LastActivity = time.Now()
+	if err := h.repo.UpdateUser(r.Context(), user); err != nil {
+		log.Printf("Error updating user last activity: %v", err)
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "session_token",
+		Value:    sessionToken,
+		Path:     "/",
+		Expires:  expiresAt,
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+		Secure:   r.TLS != nil,
+	})
+
+	auditLog := &models.AuditLog{
+		ID:        utils.GenerateID(),
+		UserID:    user.ID,
+		Action:    "login_passkey_discover",
+		Timestamp: time.Now(),
+		IPAddress: r.RemoteAddr,
+		UserAgent: r.UserAgent(),
+		Details:   "Logged in with discoverable passkey: " + passkey.Name,
+	}
+
+	if err := h.repo.CreateAuditLog(r.Context(), auditLog); err != nil {
+		log.Printf("Error creating audit log: %v", err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if _, err := w.Write([]byte(`{"success": true, "redirect": "/dashboard"}`)); err != nil {
+		log.Printf("Failed to write response: %v", err)
+	}
+}
