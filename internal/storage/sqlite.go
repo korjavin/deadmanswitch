@@ -196,6 +196,8 @@ func (r *SQLiteRepository) initialize() error {
 		last_used_at DATETIME NOT NULL,
 		transports TEXT,
 		attestation_type TEXT,
+		backup_eligible BOOLEAN NOT NULL DEFAULT 0,
+		backup_state BOOLEAN NOT NULL DEFAULT 0,
 		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 	);
 

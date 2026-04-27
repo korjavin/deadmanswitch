@@ -39,9 +39,17 @@ WebAuthn passkeys provide a more secure and convenient authentication method usi
 
 ### How Passkeys Work
 
-1. **Registration**: When you register a passkey, your device generates a public-private key pair. The private key never leaves your device, while the public key is stored on our server.
+1. **Registration**: When you register a passkey, your device generates a public-private key pair. The private key never leaves your device, while the public key is stored on our server. New registrations request a discoverable (resident) credential when the authenticator supports it, which enables the username-less sign-in flow described below.
 
 2. **Authentication**: When you log in, our server sends a challenge to your device. Your device signs this challenge with the private key, and our server verifies the signature using the stored public key.
+
+### Sign-in Flows
+
+Sign-in uses a single username-less flow:
+
+- **Sign in with passkey** — Click *Sign in with passkey* without entering an email. The browser shows a native picker of every passkey scoped to this site, and the server identifies you from the credential's `userHandle`. The login page also enables WebAuthn *conditional UI* on the email field, so on supporting browsers your passkeys appear directly in the email autofill dropdown for one-tap sign-in. This flow uses the `POST /login/passkey/discover/begin` and `POST /login/passkey/discover/finish` endpoints and requires a discoverable credential (any passkey registered after this feature shipped, on an authenticator that supports resident keys).
+
+If you have a legacy passkey that was registered before this feature shipped and your authenticator does not support resident keys, it will not appear in the picker or autofill. Sign in with your password and re-register the passkey so the authenticator stores it as discoverable.
 
 ### Security Benefits of Passkeys
 

@@ -19,6 +19,11 @@ func RunMigrations(db *sql.DB) error {
 		return err
 	}
 
+	// Add backup_eligible/backup_state columns to passkeys
+	if err := AddPasskeyFlags(db); err != nil {
+		return err
+	}
+
 	log.Println("All migrations completed successfully")
 	return nil
 }

@@ -92,7 +92,7 @@ func (h *PasskeyHandler) HandleBeginRegistration(w http.ResponseWriter, r *http.
 	}
 
 	// Begin registration
-	options, err := h.webAuthnService.BeginRegistration(r.Context(), user, w)
+	options, err := h.webAuthnService.BeginRegistration(r.Context(), user, r, w)
 	if err != nil {
 		http.Error(w, "Error beginning registration", http.StatusInternalServerError)
 		log.Printf("Error beginning registration: %v", err)
@@ -282,180 +282,46 @@ func (h *PasskeyHandler) HandleDeletePasskey(w http.ResponseWriter, r *http.Requ
 	http.Redirect(w, r, "/profile/passkeys", http.StatusSeeOther)
 }
 
-// HandleBeginLogin handles the beginning of passkey login
-func (h *PasskeyHandler) HandleBeginLogin(w http.ResponseWriter, r *http.Request) {
-	log.Printf("HandleBeginLogin called with method: %s, content-type: %s", r.Method, r.Header.Get("Content-Type"))
-
-	// Variable to store the email
-	var email string
-
-	// Check if this is a JSON request
-	if r.Header.Get("Content-Type") == "application/json" {
-		// Create a copy of the request body for logging
-		bodyBytes, err := io.ReadAll(r.Body)
-		if err != nil {
-			log.Printf("Error reading request body: %v", err)
-			http.Error(w, "Error reading request body", http.StatusBadRequest)
-			return
-		}
-		// Restore the body for further processing
-		r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-		// Request body logging removed for security
-
-		// Parse JSON request
-		var requestData struct {
-			Email string `json:"email"`
-		}
-
-		decoder := json.NewDecoder(bytes.NewBuffer(bodyBytes))
-		if err := decoder.Decode(&requestData); err != nil {
-			log.Printf("Error decoding JSON request: %v", err)
-			http.Error(w, "Invalid JSON data", http.StatusBadRequest)
-			return
-		}
-		log.Printf("Received JSON request for passkey begin login")
-
-		// Use the email from the JSON request
-		if requestData.Email == "" {
-			log.Printf("Email is required in JSON request")
-			http.Error(w, "Email is required", http.StatusBadRequest)
-			return
-		}
-
-		// Continue with the email from JSON
-		email = requestData.Email
-	} else {
-		// Parse form data
-		if err := r.ParseForm(); err != nil {
-			log.Printf("Error parsing form data: %v", err)
-			http.Error(w, "Invalid form data", http.StatusBadRequest)
-			return
-		}
-
-		// Get the email from form
-		email = r.FormValue("email")
-		if email == "" {
-			log.Printf("Email is required in form data")
-			http.Error(w, "Email is required", http.StatusBadRequest)
-			return
-		}
-		log.Printf("Received form request for passkey begin login")
-	}
-
-	// Get the user
-	user, err := h.repo.GetUserByEmail(r.Context(), email)
+// HandleBeginDiscoverableLogin starts a username-less passkey login. The
+// browser calls this with no body, receives credential request options with an
+// empty allowCredentials list, and prompts the user to pick a discoverable
+// credential.
+func (h *PasskeyHandler) HandleBeginDiscoverableLogin(w http.ResponseWriter, r *http.Request) {
+	options, err := h.webAuthnService.BeginDiscoverableLogin(r, w)
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		log.Printf("Error beginning discoverable login: %v", err)
+		http.Error(w, "Error beginning discoverable login", http.StatusInternalServerError)
 		return
 	}
 
-	// Begin login
-	options, err := h.webAuthnService.BeginLogin(r.Context(), user, w)
-	if err != nil {
-		http.Error(w, "Error beginning login", http.StatusInternalServerError)
-		log.Printf("Error beginning login: %v", err)
-		return
-	}
-
-	// Note: In a real implementation, we would store the session data in a secure session
-	// For this demo, we'll rely on the context in the WebAuthnService
-
-	// Convert options to JSON
 	optionsJSON, err := json.Marshal(options)
 	if err != nil {
+		log.Printf("Error marshaling discoverable login options: %v", err)
 		http.Error(w, "Error marshaling options", http.StatusInternalServerError)
-		log.Printf("Error marshaling options: %v", err)
 		return
 	}
 
-	// Return options as JSON
 	w.Header().Set("Content-Type", "application/json")
 	if _, err := w.Write(optionsJSON); err != nil {
 		log.Printf("Failed to write response: %v", err)
 	}
 }
 
-// HandleFinishLogin handles the completion of passkey login
-func (h *PasskeyHandler) HandleFinishLogin(w http.ResponseWriter, r *http.Request) {
-	log.Printf("HandleFinishLogin called with method: %s, content-type: %s", r.Method, r.Header.Get("Content-Type"))
-
-	// Variable to store the email
-	var email string
-
-	// Check if this is a JSON request
-	if r.Header.Get("Content-Type") == "application/json" {
-		// Create a copy of the request body for logging
-		bodyBytes, err := io.ReadAll(r.Body)
-		if err != nil {
-			log.Printf("Error reading request body: %v", err)
-			http.Error(w, "Error reading request body", http.StatusBadRequest)
-			return
-		}
-		// Restore the body for further processing
-		r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
-		// Request body logging removed for security
-
-		// Parse JSON request
-		var requestData struct {
-			Credential json.RawMessage `json:"credential"`
-			Email      string          `json:"email"`
-		}
-
-		decoder := json.NewDecoder(bytes.NewBuffer(bodyBytes))
-		if err := decoder.Decode(&requestData); err != nil {
-			log.Printf("Error decoding JSON request: %v", err)
-			http.Error(w, "Invalid JSON data", http.StatusBadRequest)
-			return
-		}
-		log.Printf("Received JSON request for passkey login")
-
-		// Use the email from the JSON request
-		if requestData.Email == "" {
-			log.Printf("Email is required in JSON request")
-			http.Error(w, "Email is required", http.StatusBadRequest)
-			return
-		}
-
-		// Continue with the email from JSON
-		email = requestData.Email
-	} else {
-		// Parse form data
-		if err := r.ParseForm(); err != nil {
-			log.Printf("Error parsing form data: %v", err)
-			http.Error(w, "Invalid form data", http.StatusBadRequest)
-			return
-		}
-
-		// Get the email from form
-		email = r.FormValue("email")
-		if email == "" {
-			log.Printf("Email is required in form data")
-			http.Error(w, "Email is required", http.StatusBadRequest)
-			return
-		}
-		log.Printf("Received form request for passkey finish login")
-	}
-
-	// Get the user
-	user, err := h.repo.GetUserByEmail(r.Context(), email)
+// HandleFinishDiscoverableLogin completes a username-less passkey login. The
+// userHandle returned by the authenticator is used to resolve the user; on
+// success a normal session cookie is issued and the client is told to redirect
+// to the dashboard.
+func (h *PasskeyHandler) HandleFinishDiscoverableLogin(w http.ResponseWriter, r *http.Request) {
+	user, passkey, err := h.webAuthnService.FinishDiscoverableLogin(r.Context(), r)
 	if err != nil {
-		http.Error(w, "User not found", http.StatusNotFound)
+		log.Printf("Error finishing discoverable login: %v", err)
+		http.Error(w, "Error finishing discoverable login", http.StatusUnauthorized)
 		return
 	}
 
-	// Finish login
-	passkey, err := h.webAuthnService.FinishLogin(r.Context(), user, r)
-	if err != nil {
-		http.Error(w, "Error finishing login", http.StatusInternalServerError)
-		log.Printf("Error finishing login: %v", err)
-		return
-	}
-
-	// Create a new session
 	sessionToken := utils.GenerateSecureToken()
 	expiresAt := time.Now().Add(24 * time.Hour)
 
-	// Create the session in the database
 	session := &models.Session{
 		ID:           utils.GenerateID(),
 		UserID:       user.ID,
@@ -468,19 +334,16 @@ func (h *PasskeyHandler) HandleFinishLogin(w http.ResponseWriter, r *http.Reques
 	}
 
 	if err := h.repo.CreateSession(r.Context(), session); err != nil {
-		http.Error(w, "Error creating session", http.StatusInternalServerError)
 		log.Printf("Error creating session: %v", err)
+		http.Error(w, "Error creating session", http.StatusInternalServerError)
 		return
 	}
 
-	// Update the user's last activity time
 	user.LastActivity = time.Now()
 	if err := h.repo.UpdateUser(r.Context(), user); err != nil {
 		log.Printf("Error updating user last activity: %v", err)
-		// Continue anyway, this is not critical
 	}
 
-	// Set the session cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session_token",
 		Value:    sessionToken,
@@ -488,26 +351,23 @@ func (h *PasskeyHandler) HandleFinishLogin(w http.ResponseWriter, r *http.Reques
 		Expires:  expiresAt,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
-		Secure:   r.TLS != nil, // Set Secure flag if using HTTPS
+		Secure:   r.TLS != nil,
 	})
 
-	// Create an audit log entry
 	auditLog := &models.AuditLog{
 		ID:        utils.GenerateID(),
 		UserID:    user.ID,
-		Action:    "login_passkey",
+		Action:    "login_passkey_discover",
 		Timestamp: time.Now(),
 		IPAddress: r.RemoteAddr,
 		UserAgent: r.UserAgent(),
-		Details:   "Logged in with passkey: " + passkey.Name,
+		Details:   "Logged in with discoverable passkey: " + passkey.Name,
 	}
 
 	if err := h.repo.CreateAuditLog(r.Context(), auditLog); err != nil {
 		log.Printf("Error creating audit log: %v", err)
-		// Continue anyway, don't fail the whole request
 	}
 
-	// Return success
 	w.Header().Set("Content-Type", "application/json")
 	if _, err := w.Write([]byte(`{"success": true, "redirect": "/dashboard"}`)); err != nil {
 		log.Printf("Failed to write response: %v", err)

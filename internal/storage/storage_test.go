@@ -259,6 +259,8 @@ func TestSQLiteRepository_PasskeyOperations(t *testing.T) {
 		LastUsedAt:      now,
 		Transports:      []string{"internal"},
 		AttestationType: "none",
+		BackupEligible:  true,
+		BackupState:     true,
 	}
 
 	// Test CreatePasskey
@@ -279,6 +281,15 @@ func TestSQLiteRepository_PasskeyOperations(t *testing.T) {
 	}
 	if retrievedPasskey.Name != passkey.Name {
 		t.Errorf("Expected name %s, got %s", passkey.Name, retrievedPasskey.Name)
+	}
+	// BackupEligible/BackupState round-trip — go-webauthn rejects login when
+	// the stored BackupEligible disagrees with the assertion, so cloud-synced
+	// passkeys depend on these columns being persisted correctly.
+	if !retrievedPasskey.BackupEligible {
+		t.Error("expected BackupEligible to round-trip as true")
+	}
+	if !retrievedPasskey.BackupState {
+		t.Error("expected BackupState to round-trip as true")
 	}
 
 	// Test GetPasskeyByCredentialID
