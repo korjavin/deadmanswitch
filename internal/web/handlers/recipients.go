@@ -196,6 +196,22 @@ func (h *RecipientsHandler) HandleCreateRecipient(w http.ResponseWriter, r *http
 		// Continue anyway, don't fail the whole request
 	}
 
+	// Optional opt-in hello: only sent if the user explicitly checked the
+	// "Send this hello now" box on the new-recipient form. Default is off —
+	// recipients sit in the circle silently until the user asks us to reach
+	// out (either via this checkbox or the "Test" button on the list view).
+	if r.FormValue("send_intro") == "on" && h.emailClient != nil {
+		if err := h.sendIntroEmail(r, user, recipient); err != nil {
+			// Don't fail the create — the recipient is already saved. Surface
+			// it via a query-string flash so the list page can display it.
+			log.Printf("send_intro requested but failed for %s: %v", recipient.Email, err)
+			http.Redirect(w, r, "/recipients?intro=failed", http.StatusSeeOther)
+			return
+		}
+		http.Redirect(w, r, "/recipients?intro=sent", http.StatusSeeOther)
+		return
+	}
+
 	// Redirect to the recipients list page
 	http.Redirect(w, r, "/recipients", http.StatusSeeOther)
 }
@@ -577,15 +593,26 @@ func (h *RecipientsHandler) HandleTestContact(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Generate a confirmation code
-	confirmationCode, err := generateConfirmationCode()
-	if err != nil {
-		http.Error(w, "Error generating confirmation code", http.StatusInternalServerError)
-		log.Printf("Error generating confirmation code: %v", err)
+	if err := h.sendIntroEmail(r, user, recipient); err != nil {
+		http.Error(w, "Error sending test contact email", http.StatusInternalServerError)
+		log.Printf("Error sending test contact email: %v", err)
 		return
 	}
 
-	// Update the recipient with the confirmation code
+	// Redirect to the recipients list page with a success message
+	http.Redirect(w, r, "/recipients?test_contact=success", http.StatusSeeOther)
+}
+
+// sendIntroEmail generates a fresh confirmation code, persists it on the
+// recipient, and emails them a one-time hello / confirmation link. Callers
+// must have already verified ownership of the recipient and that
+// h.emailClient is non-nil. The audit-log entry is best-effort.
+func (h *RecipientsHandler) sendIntroEmail(r *http.Request, user *models.User, recipient *models.Recipient) error {
+	confirmationCode, err := generateConfirmationCode()
+	if err != nil {
+		return fmt.Errorf("generate confirmation code: %w", err)
+	}
+
 	now := time.Now().UTC()
 	recipient.ConfirmationCode = confirmationCode
 	recipient.ConfirmationSentAt = &now
@@ -593,20 +620,15 @@ func (h *RecipientsHandler) HandleTestContact(w http.ResponseWriter, r *http.Req
 	recipient.ConfirmedAt = nil
 
 	if err := h.repo.UpdateRecipient(context.Background(), recipient); err != nil {
-		http.Error(w, "Error updating recipient", http.StatusInternalServerError)
-		log.Printf("Error updating recipient with confirmation code: %v", err)
-		return
+		return fmt.Errorf("persist confirmation code: %w", err)
 	}
 
-	// Construct the confirmation URL
 	scheme := "http"
 	if r.TLS != nil {
 		scheme = "https"
 	}
-	host := r.Host
-	confirmationURL := fmt.Sprintf("%s://%s/confirm/%s", scheme, host, confirmationCode)
+	confirmationURL := fmt.Sprintf("%s://%s/confirm/%s", scheme, r.Host, confirmationCode)
 
-	// Construct the email message
 	subject := "Dead Man's Switch - Contact Confirmation"
 	message := fmt.Sprintf(`
 		<html>
@@ -624,30 +646,23 @@ func (h *RecipientsHandler) HandleTestContact(w http.ResponseWriter, r *http.Req
 		</html>
 	`, recipient.Name, user.Email, confirmationURL, user.Email)
 
-	// Send the email
 	if err := h.emailClient.SendEmailSimple([]string{recipient.Email}, subject, message, true); err != nil {
-		http.Error(w, "Error sending test contact email", http.StatusInternalServerError)
-		log.Printf("Error sending test contact email: %v", err)
-		return
+		return fmt.Errorf("send email: %w", err)
 	}
 
-	log.Printf("Test contact sent to recipient: %s (%s)", recipient.Name, recipient.Email)
+	log.Printf("Sent intro/confirmation email to recipient: %s (%s)", recipient.Name, recipient.Email)
 
-	// Create an audit log entry
 	auditLog := &models.AuditLog{
 		UserID:    user.ID,
 		Action:    "test_contact_recipient",
 		Timestamp: time.Now(),
 		Details:   "Sent test contact to recipient: " + recipient.Name,
 	}
-
 	if err := h.repo.CreateAuditLog(context.Background(), auditLog); err != nil {
 		log.Printf("Error creating audit log: %v", err)
-		// Continue anyway, don't fail the whole request
+		// best-effort; do not fail the caller
 	}
-
-	// Redirect to the recipients list page with a success message
-	http.Redirect(w, r, "/recipients?test_contact=success", http.StatusSeeOther)
+	return nil
 }
 
 // generateConfirmationCode generates a random confirmation code

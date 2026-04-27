@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	tpl "github.com/korjavin/deadmanswitch/internal/web/templates"
 )
@@ -43,6 +44,7 @@ func authedUser() map[string]interface{} {
 // ---------------------------------------------------------------------------
 
 func TestRenderRecipients_EnvelopeGrid(t *testing.T) {
+	sentAt := time.Now().Add(-2 * time.Hour)
 	recipients := []map[string]interface{}{
 		{
 			"ID":            "rec-1",
@@ -57,13 +59,29 @@ func TestRenderRecipients_EnvelopeGrid(t *testing.T) {
 			},
 		},
 		{
-			"ID":              "rec-2",
-			"Name":            "Jamie Lee",
-			"Email":           "jamie@example.com",
-			"Relationship":    "Best friend",
-			"ContactMethod":   "email",
-			"IsConfirmed":     false,
-			"AssignedSecrets": []map[string]interface{}{},
+			// In-circle: just added, no hello sent — should NOT show
+			// "awaiting reply" because we're not actually waiting on them.
+			"ID":                 "rec-2",
+			"Name":               "Jamie Lee",
+			"Email":              "jamie@example.com",
+			"Relationship":       "Best friend",
+			"ContactMethod":      "email",
+			"IsConfirmed":        false,
+			"ConfirmationSentAt": nil,
+			"AssignedSecrets":    []map[string]interface{}{},
+		},
+		{
+			// Hello was sent (via Test button or send_intro checkbox)
+			// but they haven't clicked the link yet — this is the only
+			// state where "awaiting reply" is honest.
+			"ID":                 "rec-4",
+			"Name":               "Priya Mehta",
+			"Email":              "priya@example.com",
+			"Relationship":       "Friend",
+			"ContactMethod":      "email",
+			"IsConfirmed":        false,
+			"ConfirmationSentAt": &sentAt,
+			"AssignedSecrets":    []map[string]interface{}{},
 		},
 		{
 			"ID":            "rec-3",
@@ -106,11 +124,18 @@ func TestRenderRecipients_EnvelopeGrid(t *testing.T) {
 		`Best friend`,
 		`jamie@example.com`,
 		`Robin Park`,
-		// Confirmation badges
+		// Confirmation badges — tri-state:
+		//   confirmed (IsConfirmed=true) → "✓ confirmed"
+		//   awaiting (ConfirmationSentAt set, not yet confirmed) → "awaiting reply"
+		//   in-circle (no hello sent yet) → "in circle"
 		`data-test="badge-confirmed"`,
 		`✓ confirmed`,
 		`data-test="badge-awaiting"`,
 		`awaiting reply`,
+		`data-test="badge-in-circle"`,
+		`in circle`,
+		// Priya is the awaiting-reply recipient; Jamie is the in-circle one.
+		`Priya Mehta`,
 		// CONTAINS counts (mixed pluralization)
 		`· CONTAINS`,
 		`2 letters`,
@@ -208,7 +233,12 @@ func TestRenderNewRecipient_Heartbeat(t *testing.T) {
 		`data-test="step-1"`,
 		`data-test="step-2"`,
 		`Who they are`,
-		`What we'll send them`,
+		// Step 2 is now opt-in: heading, label, and checkbox all reflect that.
+		`Say hello (optional)`,
+		`· STEP 2 · SAY HELLO? (OPTIONAL)`,
+		`name="send_intro"`,
+		`data-test="send-intro"`,
+		`Off by default`,
 		// Form preserves backend contract
 		`action="/recipients/new"`,
 		`method="POST"`,
@@ -224,12 +254,12 @@ func TestRenderNewRecipient_Heartbeat(t *testing.T) {
 		`· THEIR EMAIL`,
 		`· WHO THEY ARE TO YOU`,
 		`· REACH THEM ALSO BY`,
-		// Email preview block
+		// Email preview block (still rendered so user knows what would be sent)
 		`data-test="preview"`,
 		`From: heartbeat`,
 		`Yes, this is my email →`,
-		// Submit button copy
-		`Send invitation`,
+		// Submit button copy — adding to circle, not invoking an email send.
+		`Add to circle`,
 	}
 	for _, s := range mustContain {
 		if !strings.Contains(out, s) {
@@ -237,16 +267,32 @@ func TestRenderNewRecipient_Heartbeat(t *testing.T) {
 		}
 	}
 
-	// Old Bootstrap markup gone
+	// Old Bootstrap markup gone, and the misleading copy that implied
+	// adding a recipient automatically sends them an email is gone too.
 	mustNotContain := []string{
 		`form-control`,
 		`form-check-input`,
 		`Add Recipient</h1>`,
 		`Edit Recipient</h1>`,
+		`Send invitation`,
+		`What we'll send them`,
+		`STEP 2 · WHAT WE'LL SEND THEM`,
 	}
 	for _, s := range mustNotContain {
 		if strings.Contains(out, s) {
 			t.Errorf("new-recipient.html still contains old markup %q", s)
+		}
+	}
+
+	// send_intro checkbox must default to unchecked — the whole point of
+	// this rework is that we don't send anything to the recipient unless
+	// the user explicitly opts in.
+	if strings.Contains(out, `name="send_intro"`) && strings.Contains(out, `checked`) {
+		// Coarse but cheap: scan the input element and assert no checked attr.
+		for _, line := range strings.Split(out, "\n") {
+			if strings.Contains(line, `name="send_intro"`) && strings.Contains(line, `checked`) {
+				t.Errorf("send_intro checkbox must NOT default to checked: %s", strings.TrimSpace(line))
+			}
 		}
 	}
 }

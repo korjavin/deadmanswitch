@@ -128,8 +128,10 @@
             <span class="label">TO ·</span>
             {{ if .IsConfirmed }}
               <span class="badge" data-test="badge-confirmed">✓ confirmed</span>
-            {{ else }}
+            {{ else if .ConfirmationSentAt }}
               <span class="badge dashed" data-test="badge-awaiting">awaiting reply</span>
+            {{ else }}
+              <span class="badge dashed" data-test="badge-in-circle">in circle</span>
             {{ end }}
           </div>
           <div class="body">

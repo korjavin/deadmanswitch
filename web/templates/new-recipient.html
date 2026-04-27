@@ -110,7 +110,7 @@
     <span class="sep" aria-hidden="true"></span>
     <div class="hb-step" data-test="step-2">
       <span class="num">2</span>
-      <span class="name">What we'll send them</span>
+      <span class="name">Say hello (optional)</span>
     </div>
   </div>
 
@@ -131,7 +131,7 @@
           <input type="email" name="email" id="email" class="input" required
                  value="{{ if $editing }}{{ $editing.Email }}{{ end }}"
                  placeholder="them@example.com">
-          <div class="field-help">They'll get one short confirmation email — and nothing else, until the time comes.</div>
+          <div class="field-help">By default, we won't contact them. Letters only go out if you go silent.</div>
         </div>
 
         <div class="hb-form-row cols-2">
@@ -176,10 +176,10 @@
       <hr class="divider dashed">
 
       <div class="hb-section" data-test="section-preview">
-        <div class="heading">· STEP 2 · WHAT WE'LL SEND THEM</div>
+        <div class="heading">· STEP 2 · SAY HELLO? (OPTIONAL)</div>
 
         <p style="margin: 0 0 14px; color: var(--fg-1); font-size: 13px;">
-          Here's exactly what they will receive in their inbox today:
+          By default we don't contact them at all. If you'd like, you can send a one-time hello so they know you've added them — they'll see exactly this:
         </p>
 
         <div class="hb-preview-card" data-test="preview">
@@ -198,8 +198,11 @@
           <span class="demo-btn">Yes, this is my email →</span>
         </div>
 
-        <div class="field-help" style="margin-top: 14px;">
-          They won't see any letter content. Only that you've thought of them.
+        <div class="field" style="margin-top: 16px;">
+          <label for="send_intro" style="display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px;">
+            <input type="checkbox" id="send_intro" name="send_intro" data-test="send-intro">
+            <span>Send this hello now. Off by default — you can always send it later from the list.</span>
+          </label>
         </div>
       </div>
 
@@ -213,7 +216,7 @@
 
       <div class="hb-form-actions">
         <button type="submit" class="btn primary">
-          {{ if $editing }}Save changes{{ else }}Send invitation{{ end }}
+          {{ if $editing }}Save changes{{ else }}Add to circle{{ end }}
         </button>
         <a href="/recipients" class="btn ghost">Cancel</a>
       </div>
