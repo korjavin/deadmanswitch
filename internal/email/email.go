@@ -197,11 +197,11 @@ func (c *Client) SendPingEmail(email string, verificationCode string, urgency st
 func (c *Client) getSubjectByUrgency(urgency string) string {
 	switch urgency {
 	case "final_warning":
-		return "🚨 URGENT: Final Check-In Required - Dead Man's Switch"
+		return "Heartbeat — last call before your letters go out"
 	case "urgent":
-		return "⚠️ IMPORTANT: Check-In Required Soon - Dead Man's Switch"
+		return "Heartbeat — please tap in soon"
 	default:
-		return "✅ Routine Check-In - Dead Man's Switch"
+		return "Heartbeat — just checking you're around"
 	}
 }
 

@@ -221,7 +221,7 @@ func (b *Bot) handleCallbackQuery(ctx context.Context, query *tgbotapi.CallbackQ
 
 		// Send confirmation message
 		if err := b.editMessageText(query.Message.Chat.ID, query.Message.MessageID,
-			"✅ Thank you for confirming your status. Your Dead Man's Switch has been reset."); err != nil {
+			"✅ Got it. We see you. Your Heartbeat clock is reset."); err != nil {
 			log.Printf("Failed to edit message: %v", err)
 		}
 		if err := b.answerCallbackQuery(query.ID, "Verification successful"); err != nil {
@@ -274,18 +274,15 @@ func (b *Bot) getMessageByUrgency(user *models.User, urgency string) string {
 	switch urgency {
 	case "final_warning":
 		return fmt.Sprintf(
-			"🚨 *FINAL WARNING* 🚨\n\n" +
-				"This is your LAST check-in reminder before your Dead Man's Switch triggers!\n\n" +
-				"You have *less than 12 hours* to respond.\n\n" +
-				"If you don't check in, your pre-configured secrets will be sent to your designated recipients.\n\n" +
-				"Click 'I'm OK NOW' to confirm you're active.",
+			"*Heartbeat — last call*\n\n" +
+				"It's been a long quiet stretch. You have *less than 12 hours* before your letters start going out to the people you chose.\n\n" +
+				"Tap 'I'm here' to reset the clock.",
 		)
 	case "urgent":
 		return fmt.Sprintf(
-			"⚠️ *URGENT CHECK-IN REQUIRED* ⚠️\n\n" +
-				"Your deadline is approaching soon (12-24 hours remaining).\n\n" +
-				"Please confirm you're still active to prevent your Dead Man's Switch from triggering.\n\n" +
-				"Click 'I'm OK' to check in.",
+			"*Heartbeat — please tap in*\n\n" +
+				"It's been a quiet stretch — 12 to 24 hours left before your letters go out.\n\n" +
+				"Tap 'I'm here' to let us know you're around.",
 		)
 	default: // normal
 		return fmt.Sprintf(
@@ -310,13 +307,13 @@ func (b *Bot) handleStart(ctx context.Context, message *tgbotapi.Message, args s
 	switch err {
 	case nil:
 		// User exists
-		response = fmt.Sprintf("Welcome back, %s! Your Dead Man's Switch is active. Type /status to see your current settings.", message.From.FirstName)
+		response = fmt.Sprintf("Welcome back, %s. Your Heartbeat is ticking. Type /status to see your settings.", message.From.FirstName)
 	case storage.ErrNotFound:
 		// New user
 		response = fmt.Sprintf(
-			"Welcome to Dead Man's Switch, %s!\n\n"+
-				"This bot helps ensure your sensitive information is only shared if you're unable to respond to regular check-ins.\n\n"+
-				"To connect this bot to your account, please visit https://%s and use the code:\n\n"+
+			"Welcome to Heartbeat, %s.\n\n"+
+				"This bot is one of the gentle ways we'll know you're still around. It only nudges you if we genuinely haven't heard from you.\n\n"+
+				"To connect it to your account, visit https://%s and use the code:\n\n"+
 				"%s\n\n"+
 				"Or use the /connect command with your email: /connect your@email.com",
 			message.From.FirstName, b.config.BaseDomain, tgID,
@@ -331,7 +328,7 @@ func (b *Bot) handleStart(ctx context.Context, message *tgbotapi.Message, args s
 
 func (b *Bot) handleHelp(ctx context.Context, message *tgbotapi.Message, args string) error {
 	helpText := `
-*Dead Man's Switch Bot Commands*
+*Heartbeat — bot commands*
 
 /start - Start the bot and get initial instructions
 /help - Show this help message
@@ -380,7 +377,7 @@ func (b *Bot) handleStatus(ctx context.Context, message *tgbotapi.Message, args 
 
 	// Prepare status message
 	statusText := fmt.Sprintf(
-		"*Your Dead Man's Switch Status*\n\n"+
+		"*Your Heartbeat status*\n\n"+
 			"Email: %s\n"+
 			"Ping Frequency: Every %d days\n"+
 			"Response Deadline: %d days\n"+

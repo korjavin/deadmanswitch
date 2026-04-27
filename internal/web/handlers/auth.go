@@ -315,9 +315,9 @@ func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 
 	// Send welcome email
 	if h.emailClient != nil {
-		welcomeMessage := "Welcome to Dead Man's Switch! Your account has been created successfully."
+		welcomeMessage := "Welcome to Heartbeat — a quiet kind of safety net. Your account is ready."
 
-		if err := h.emailClient.SendEmailSimple([]string{email}, "Welcome to Dead Man's Switch", welcomeMessage, false); err != nil {
+		if err := h.emailClient.SendEmailSimple([]string{email}, "Welcome to Heartbeat", welcomeMessage, false); err != nil {
 			log.Printf("Error sending welcome email: %v", err)
 			// Continue anyway, this is not critical
 		} else {

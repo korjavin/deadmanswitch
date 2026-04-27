@@ -1,7 +1,7 @@
 {
   "name": "deadmanswitch-frontend-tests",
   "version": "1.0.0",
-  "description": "Frontend tests for Dead Man's Switch",
+  "description": "Frontend tests for Heartbeat (deadmanswitch)",
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed"

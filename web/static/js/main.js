@@ -1,5 +1,5 @@
 /**
- * Dead Man's Switch - Main JavaScript
+ * Heartbeat - Main JavaScript
  */
 
 document.addEventListener('DOMContentLoaded', () => {

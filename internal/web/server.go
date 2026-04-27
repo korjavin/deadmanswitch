@@ -80,7 +80,7 @@ func NewServer(
 	}
 
 	webAuthnConfig := auth.WebAuthnConfig{
-		RPDisplayName: "Dead Man's Switch",
+		RPDisplayName: "Heartbeat",
 		RPID:          cfg.BaseDomain,
 		RPOrigin:      origin,
 	}

@@ -629,19 +629,18 @@ func (h *RecipientsHandler) sendIntroEmail(r *http.Request, user *models.User, r
 	}
 	confirmationURL := fmt.Sprintf("%s://%s/confirm/%s", scheme, r.Host, confirmationCode)
 
-	subject := "Dead Man's Switch - Contact Confirmation"
+	subject := "Heartbeat — please confirm your email"
 	message := fmt.Sprintf(`
 		<html>
 		<body>
-			<h2>Dead Man's Switch - Contact Confirmation</h2>
+			<h2>Heartbeat — please confirm your email</h2>
 			<p>Hello %s,</p>
-			<p>You have been added as a contact by %s to be reached if something happens to them.</p>
-			<p>This is just a test message to confirm that your contact information is correct.</p>
-			<p>If you wish to confirm that you received this message, please click on the link below:</p>
-			<p><a href="%s">Confirm Receipt</a></p>
-			<p>This confirmation link will be valid for 7 days.</p>
+			<p>%s has added you to their circle on Heartbeat — a small service that holds onto a letter from them, encrypted, in case they ever go silent for too long.</p>
+			<p>You don't need to do anything except tap the link below so we know we have your right email. We won't contact you again unless that day actually comes.</p>
+			<p><a href="%s">Yes, this is my email →</a></p>
+			<p>This confirmation link is valid for 7 days.</p>
 			<p>If you have any questions, please contact %s directly.</p>
-			<p>Thank you,<br>Dead Man's Switch</p>
+			<p>Thank you,<br>Heartbeat</p>
 		</body>
 		</html>
 	`, recipient.Name, user.Email, confirmationURL, user.Email)
@@ -742,15 +741,14 @@ func (h *RecipientsHandler) HandleConfirmRecipient(w http.ResponseWriter, r *htt
 		// Continue anyway, don't fail the whole request
 	} else if h.emailClient != nil {
 		// Send notification email to the user
-		subject := "Dead Man's Switch - Contact Confirmed"
+		subject := "Heartbeat — your contact is confirmed"
 		message := fmt.Sprintf(`
 			<html>
 			<body>
-				<h2>Dead Man's Switch - Contact Confirmed</h2>
+				<h2>Heartbeat — your contact is confirmed</h2>
 				<p>Hello,</p>
-				<p>Your contact %s (%s) has confirmed receipt of your test message.</p>
-				<p>This contact is now marked as confirmed in your Dead Man's Switch account.</p>
-				<p>Thank you,<br>Dead Man's Switch</p>
+				<p>%s (%s) confirmed their email address. They're now marked as confirmed in your circle.</p>
+				<p>Thank you,<br>Heartbeat</p>
 			</body>
 			</html>
 		`, recipient.Name, recipient.Email)
