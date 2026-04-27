@@ -222,8 +222,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // can cancel both the /discover/begin fetch and the navigator.credentials.get
     // before issuing its own. The abort signal is wired into the fetch so a
     // late-resolving conditional begin response cannot overwrite the click
-    // handler's webauthn_session_id cookie and bind login validation to the
-    // wrong challenge.
+    // handler's webauthn_discover_session_id cookie and bind login validation
+    // to the wrong challenge.
     let conditionalAbort = null;
 
     function showStatus(type, message) {

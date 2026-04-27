@@ -452,8 +452,8 @@ func TestGetUserCredentialsRestoresFlags(t *testing.T) {
 }
 
 // TestBeginDiscoverableLoginSetsSessionCookie ensures BeginDiscoverableLogin
-// sets the webauthn_session_id cookie and stores matching session data in the
-// in-memory map.
+// sets the webauthn_discover_session_id cookie and stores matching session
+// data in the in-memory map.
 func TestBeginDiscoverableLoginSetsSessionCookie(t *testing.T) {
 	repo := storage.NewMockRepository()
 	config := WebAuthnConfig{
@@ -473,13 +473,18 @@ func TestBeginDiscoverableLoginSetsSessionCookie(t *testing.T) {
 
 	var sessionCookie *http.Cookie
 	for _, c := range rw.Result().Cookies() {
-		if c.Name == "webauthn_session_id" {
+		if c.Name == "webauthn_discover_session_id" {
 			sessionCookie = c
 			break
 		}
 	}
 	if sessionCookie == nil {
-		t.Fatal("webauthn_session_id cookie not set")
+		t.Fatal("webauthn_discover_session_id cookie not set")
+	}
+	for _, c := range rw.Result().Cookies() {
+		if c.Name == "webauthn_session_id" {
+			t.Errorf("BeginDiscoverableLogin must not set webauthn_session_id (collides with registration cookie); got %q", c.Value)
+		}
 	}
 	if sessionCookie.Value == "" {
 		t.Error("Expected non-empty session cookie value")
@@ -534,13 +539,13 @@ func newTestServiceWithSession(t *testing.T) (*WebAuthnService, string) {
 	}
 	var sessionID string
 	for _, c := range rw.Result().Cookies() {
-		if c.Name == "webauthn_session_id" {
+		if c.Name == "webauthn_discover_session_id" {
 			sessionID = c.Value
 			break
 		}
 	}
 	if sessionID == "" {
-		t.Fatal("expected webauthn_session_id cookie to be set")
+		t.Fatal("expected webauthn_discover_session_id cookie to be set")
 	}
 	return service, sessionID
 }
@@ -586,7 +591,7 @@ func TestFinishDiscoverableLoginMissingSession(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/login/passkey/discover/finish",
 		strings.NewReader(`{"credential":{}}`))
-	req.AddCookie(&http.Cookie{Name: "webauthn_session_id", Value: "does-not-exist"})
+	req.AddCookie(&http.Cookie{Name: "webauthn_discover_session_id", Value: "does-not-exist"})
 
 	if _, _, err := service.FinishDiscoverableLogin(context.Background(), req); err == nil {
 		t.Fatal("expected error for missing session, got nil")
@@ -601,7 +606,7 @@ func TestFinishDiscoverableLoginConsumesSession(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/login/passkey/discover/finish",
 		strings.NewReader(`{"credential":{}}`))
-	req.AddCookie(&http.Cookie{Name: "webauthn_session_id", Value: sessionID})
+	req.AddCookie(&http.Cookie{Name: "webauthn_discover_session_id", Value: sessionID})
 
 	// First call consumes the session even though the assertion is bogus.
 	if _, _, err := service.FinishDiscoverableLogin(context.Background(), req); err == nil {
@@ -618,7 +623,7 @@ func TestFinishDiscoverableLoginConsumesSession(t *testing.T) {
 	// Second call must fail because the session has been consumed.
 	req2 := httptest.NewRequest("POST", "/login/passkey/discover/finish",
 		strings.NewReader(`{"credential":{}}`))
-	req2.AddCookie(&http.Cookie{Name: "webauthn_session_id", Value: sessionID})
+	req2.AddCookie(&http.Cookie{Name: "webauthn_discover_session_id", Value: sessionID})
 	if _, _, err := service.FinishDiscoverableLogin(context.Background(), req2); err == nil {
 		t.Fatal("expected error on session replay, got nil")
 	}
@@ -644,7 +649,7 @@ func TestFinishDiscoverableLoginBodyReadError(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/login/passkey/discover/finish", nil)
 	req.Body = errReader{}
-	req.AddCookie(&http.Cookie{Name: "webauthn_session_id", Value: sessionID})
+	req.AddCookie(&http.Cookie{Name: "webauthn_discover_session_id", Value: sessionID})
 
 	if _, _, err := service.FinishDiscoverableLogin(context.Background(), req); err == nil {
 		t.Fatal("expected error for failing body read, got nil")
@@ -658,7 +663,7 @@ func TestFinishDiscoverableLoginMalformedBody(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/login/passkey/discover/finish",
 		strings.NewReader("not-json"))
-	req.AddCookie(&http.Cookie{Name: "webauthn_session_id", Value: sessionID})
+	req.AddCookie(&http.Cookie{Name: "webauthn_discover_session_id", Value: sessionID})
 
 	if _, _, err := service.FinishDiscoverableLogin(context.Background(), req); err == nil {
 		t.Fatal("expected error for malformed JSON body, got nil")
@@ -672,7 +677,7 @@ func TestFinishDiscoverableLoginMissingCredentialField(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/login/passkey/discover/finish",
 		strings.NewReader(`{}`))
-	req.AddCookie(&http.Cookie{Name: "webauthn_session_id", Value: sessionID})
+	req.AddCookie(&http.Cookie{Name: "webauthn_discover_session_id", Value: sessionID})
 
 	if _, _, err := service.FinishDiscoverableLogin(context.Background(), req); err == nil {
 		t.Fatal("expected error for missing credential field, got nil")
@@ -692,7 +697,7 @@ func TestFinishDiscoverableLoginInvalidAssertion(t *testing.T) {
 	body := `{"credential":{"id":"","type":"public-key"}}`
 	req := httptest.NewRequest("POST", "/login/passkey/discover/finish",
 		strings.NewReader(body))
-	req.AddCookie(&http.Cookie{Name: "webauthn_session_id", Value: sessionID})
+	req.AddCookie(&http.Cookie{Name: "webauthn_discover_session_id", Value: sessionID})
 
 	user, passkey, err := service.FinishDiscoverableLogin(context.Background(), req)
 	if err == nil {
@@ -738,8 +743,9 @@ func TestDiscoverableUserAdapter(t *testing.T) {
 	}
 }
 
-// TestBeginDiscoverableLoginCookieSecureWithTLS asserts the webauthn_session_id
-// cookie is marked Secure when the request was received over TLS.
+// TestBeginDiscoverableLoginCookieSecureWithTLS asserts the
+// webauthn_discover_session_id cookie is marked Secure when the request was
+// received over TLS.
 func TestBeginDiscoverableLoginCookieSecureWithTLS(t *testing.T) {
 	repo := storage.NewMockRepository()
 	service, err := NewWebAuthnService(WebAuthnConfig{
@@ -760,13 +766,13 @@ func TestBeginDiscoverableLoginCookieSecureWithTLS(t *testing.T) {
 
 	var cookie *http.Cookie
 	for _, c := range rw.Result().Cookies() {
-		if c.Name == "webauthn_session_id" {
+		if c.Name == "webauthn_discover_session_id" {
 			cookie = c
 			break
 		}
 	}
 	if cookie == nil {
-		t.Fatal("webauthn_session_id cookie not set")
+		t.Fatal("webauthn_discover_session_id cookie not set")
 	}
 	if !cookie.Secure {
 		t.Error("expected Secure flag when request has TLS state")

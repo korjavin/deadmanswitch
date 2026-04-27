@@ -32,7 +32,7 @@ func newTestPasskeyHandler(t *testing.T) (*PasskeyHandler, *auth.WebAuthnService
 
 // TestHandleBeginDiscoverableLogin verifies the begin endpoint returns 200
 // with a JSON body that has a non-empty challenge and an empty (or absent)
-// allowCredentials list, and sets the webauthn_session_id cookie.
+// allowCredentials list, and sets the webauthn_discover_session_id cookie.
 func TestHandleBeginDiscoverableLogin(t *testing.T) {
 	handler, _, _ := newTestPasskeyHandler(t)
 
@@ -71,13 +71,13 @@ func TestHandleBeginDiscoverableLogin(t *testing.T) {
 
 	var sessionCookie *http.Cookie
 	for _, c := range rr.Result().Cookies() {
-		if c.Name == "webauthn_session_id" {
+		if c.Name == "webauthn_discover_session_id" {
 			sessionCookie = c
 			break
 		}
 	}
 	if sessionCookie == nil {
-		t.Fatal("expected webauthn_session_id cookie to be set")
+		t.Fatal("expected webauthn_discover_session_id cookie to be set")
 	}
 	if sessionCookie.Value == "" {
 		t.Error("expected non-empty session cookie value")
@@ -128,13 +128,13 @@ func TestHandleFinishDiscoverableLoginInvalidCredential(t *testing.T) {
 	}
 	var sessionCookie *http.Cookie
 	for _, c := range beginRR.Result().Cookies() {
-		if c.Name == "webauthn_session_id" {
+		if c.Name == "webauthn_discover_session_id" {
 			sessionCookie = c
 			break
 		}
 	}
 	if sessionCookie == nil {
-		t.Fatal("expected webauthn_session_id cookie from priming begin")
+		t.Fatal("expected webauthn_discover_session_id cookie from priming begin")
 	}
 
 	finishReq := httptest.NewRequest("POST", "/login/passkey/discover/finish",

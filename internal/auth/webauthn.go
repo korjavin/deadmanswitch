@@ -348,8 +348,13 @@ func (s *WebAuthnService) BeginDiscoverableLogin(r *http.Request, w http.Respons
 
 	s.storeSession(sessionID, sessionData)
 
+	// Use a dedicated cookie name distinct from `webauthn_session_id` (which
+	// BeginRegistration sets). The conditional-UI IIFE on /login auto-fires
+	// this endpoint on every page load, so sharing a cookie name with the
+	// registration flow would let a /login tab stomp an in-flight passkey
+	// registration session in another tab.
 	http.SetCookie(w, &http.Cookie{
-		Name:     "webauthn_session_id",
+		Name:     "webauthn_discover_session_id",
 		Value:    sessionID,
 		Path:     "/",
 		MaxAge:   300, // 5 minutes
@@ -381,9 +386,9 @@ func (d *discoverableUser) WebAuthnCredentials() []webauthn.Credential { return 
 // user's stored credentials. The session cookie is consumed regardless of
 // outcome so a stale cookie cannot be replayed.
 func (s *WebAuthnService) FinishDiscoverableLogin(ctx context.Context, r *http.Request) (*models.User, *models.Passkey, error) {
-	cookie, err := r.Cookie("webauthn_session_id")
+	cookie, err := r.Cookie("webauthn_discover_session_id")
 	if err != nil {
-		return nil, nil, fmt.Errorf("webauthn session cookie not found: %w", err)
+		return nil, nil, fmt.Errorf("webauthn discover session cookie not found: %w", err)
 	}
 	sessionID := cookie.Value
 
