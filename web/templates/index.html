@@ -1,208 +1,567 @@
 {{ template "layout.html" . }}
 
 {{ define "content" }}
-<div class="hero">
-  <div class="hero-content">
-    <h1>Secure Your Digital Legacy</h1>
-    <p class="hero-subtitle">Our dead man's switch ensures your digital assets and sensitive information are securely transferred to trusted recipients if something happens to you.</p>
-    <div class="hero-actions">
-      <a href="/register" class="btn btn-primary btn-lg">Get Started</a>
-      <a href="#features" class="btn btn-outline btn-lg">Learn More</a>
+<div class="landing">
+
+  <section class="hero">
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <div class="label">· A QUIET KIND OF SAFETY NET</div>
+        <h1 class="hero-title">
+          Write the things<br>
+          <em>you'd want them to know</em><br>
+          if you couldn't tell them.
+        </h1>
+        <p class="hero-lede">
+          Heartbeat is a small service that watches for your absence. You write letters; we hold them, encrypted, and only deliver if you go quiet for too long. Otherwise, we're invisible. That's the entire idea.
+        </p>
+        <div class="hero-actions">
+          <a href="/register" class="btn primary lg">Begin writing →</a>
+          <a href="/login" class="btn ghost">I already have an account</a>
+        </div>
+        <div class="hero-meta">
+          <span>· SELF-HOSTED · DATA SOVEREIGN</span>
+          <span>· TIME-BOXED ENCRYPTION</span>
+          <span>· OPEN SOURCE</span>
+        </div>
+      </div>
+
+      <div class="hero-letters" aria-hidden="true">
+        <div class="hero-letters-dotgrid"></div>
+        <div class="envelope envelope-a">
+          <div class="envelope-meta">
+            <span>SEALED · 1,284 BYTES</span>
+            <span>NOT YET</span>
+          </div>
+          <div class="envelope-name">For Mom</div>
+          <div class="envelope-foot">HEARTBEAT · ENCRYPTED</div>
+        </div>
+        <div class="envelope envelope-b">
+          <div class="envelope-meta">
+            <span>SEALED · 942 BYTES</span>
+            <span>NOT YET</span>
+          </div>
+          <div class="envelope-name">For Sam</div>
+          <div class="envelope-foot">HEARTBEAT · ENCRYPTED</div>
+        </div>
+        <div class="envelope envelope-c">
+          <div class="envelope-meta">
+            <span>SEALED · 1,776 BYTES</span>
+            <span>NOT YET</span>
+          </div>
+          <div class="envelope-name">For my kids, when they're older</div>
+          <div class="envelope-foot">HEARTBEAT · ENCRYPTED</div>
+        </div>
+      </div>
     </div>
-  </div>
+  </section>
+
+  <section id="how-it-works" class="rhythm">
+    <div class="rhythm-inner">
+      <div class="label">· THE WHOLE THING</div>
+      <h2 class="rhythm-title">Three small habits, one big peace of mind.</h2>
+      <div class="rhythm-grid">
+        <div class="rhythm-step">
+          <div class="rhythm-step-num">01 · STEP</div>
+          <h3>Write your letters</h3>
+          <p>A letter for your sister. Instructions for your partner. Passwords for your accountant. Whatever you want them to have, in your own words.</p>
+        </div>
+        <div class="rhythm-step">
+          <div class="rhythm-step-num">02 · STEP</div>
+          <h3>Live your life</h3>
+          <p>Sign in occasionally. We notice — and we notice GitHub, calendar, and Telegram activity too, if you want. We only nudge when we genuinely haven't heard.</p>
+        </div>
+        <div class="rhythm-step">
+          <div class="rhythm-step-num">03 · STEP</div>
+          <h3>If we go silent</h3>
+          <p>After a long quiet stretch — with reminders along the way — your letters go to the people you chose. Until then, no one sees a thing.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="the-promise" class="channels">
+    <div class="channels-grid">
+      <div class="channels-copy">
+        <div class="label">· QUIETLY EVERYWHERE</div>
+        <h2 class="channels-title">We watch in six soft ways.</h2>
+        <p class="channels-lede">
+          Most check-in services nag you. We try not to. Just signing in counts. Pushing code counts. A reply to a Telegram bot, a tap on an email link, a passkey ping — any of these reset our clock. You'll rarely hear from us.
+        </p>
+        <ul class="channels-list">
+          <li>✓ Just signing in</li>
+          <li>✓ GitHub commits</li>
+          <li>✓ Telegram reply</li>
+          <li>✓ Email link tap</li>
+          <li>✓ Passkey check</li>
+          <li>✓ Personal URL</li>
+        </ul>
+      </div>
+
+      <div class="card sunken nudge-card">
+        <div class="label nudge-label">EXAMPLE NUDGE · DAY 31</div>
+        <div class="nudge-letter">
+          <div class="nudge-from">From: heartbeat &lt;hello@heartbeat.app&gt;</div>
+          <p>Hey Alex,</p>
+          <p>It's been a quiet month. No worries — we just wanted to make sure you're still around. Tap below to let us know.</p>
+          <span class="btn sm primary nudge-btn">I'm here →</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="usecases">
+    <div class="label">· WHAT PEOPLE WRITE</div>
+    <h2 class="usecases-title">Letters, instructions, and the keys to everything.</h2>
+    <div class="usecases-grid">
+      <article class="usecase">
+        <div class="usecase-glyph">✉</div>
+        <div class="label">· A LETTER</div>
+        <h3>For the people you love</h3>
+        <p>The thing you keep meaning to say. A long apology. A thank-you. A goodbye that doesn't feel rushed because you didn't have to write it in a hurry.</p>
+        <div class="usecase-meta">Plain prose · serif · long-form</div>
+      </article>
+      <article class="usecase">
+        <div class="usecase-glyph">☐</div>
+        <div class="label">· INSTRUCTIONS</div>
+        <h3>For when they have to figure things out</h3>
+        <p>Where the will is. Which lawyer to call. The pet's vet. How the heater works. The boring, useful sentences nobody else can write for them.</p>
+        <div class="usecase-meta">Lists · contacts · specifics</div>
+      </article>
+      <article class="usecase usecase-highlight">
+        <div class="usecase-glyph usecase-glyph-orange">⚿</div>
+        <div class="label">· SECRETS &amp; KEYS</div>
+        <h3>Passwords, vaults, recovery codes</h3>
+        <p>Your 1Password emergency kit. The crypto seed phrase. The bank login. The Google recovery codes. Encrypted at rest, only revealed if your letters are delivered.</p>
+        <div class="usecase-meta">Encrypted · monospace · zero-trust</div>
+      </article>
+    </div>
+
+    <div id="self-host" class="vault">
+      <div class="vault-copy">
+        <div class="label">· ON SECRETS, SPECIFICALLY</div>
+        <h3>Your vault, on your server, unsealed only when time runs out.</h3>
+        <p>
+          Heartbeat is self-hosted. Your secrets never sit in someone else's vault — they live on hardware you control, encrypted at rest and in transit. We use <b>time-boxed encryption</b>: keys are mathematically locked until your grace period expires, so even with full database access, no one can read your letters early. Not us. Not an admin. Not a subpoena.
+        </p>
+        <ul class="vault-list">
+          <li>✓ Self-hosted (Docker / k8s)</li>
+          <li>✓ Encrypted at rest (AES-256)</li>
+          <li>✓ Encrypted in transit (TLS 1.3)</li>
+          <li>✓ Time-boxed key release</li>
+          <li>✓ Zero-knowledge to operators</li>
+          <li>✓ Audit log, append-only</li>
+        </ul>
+      </div>
+      <pre class="mono-pre vault-pre">⚿ 1PASSWORD RECOVERY                  TO: SAM
+─────────────────────────────────────────────
+Service     : 1Password
+Email       : alex@example.com
+Master hint : the cafe in Lisbon, 2017
+Emergency   : see encrypted attachment.pdf
+─────────────────────────────────────────────
+🔒 SEALED · 2,140 BYTES · NOT YET DELIVERED</pre>
+    </div>
+  </section>
+
+  <section class="testimonial">
+    <div class="testimonial-inner">
+      <div class="label">· FROM A USER</div>
+      <p class="testimonial-quote">
+        "I used to keep a sealed envelope in my desk drawer. This is that, except I don't have to tell anyone where the drawer is. And I can rewrite it whenever I think of something else."
+      </p>
+      <div class="testimonial-byline">— MARGUERITE H. · USING HEARTBEAT FOR 2 YEARS</div>
+    </div>
+  </section>
+
+  <section class="cta">
+    <h2 class="cta-title">Begin with one letter.</h2>
+    <p class="cta-lede">Pick someone you love. Write the thing. We'll keep it safe.</p>
+    <a href="/register" class="btn primary lg">Start your first letter →</a>
+  </section>
+
 </div>
-
-<section id="features" class="section">
-  <div class="section-header">
-    <h2>How It Works</h2>
-    <p>A simple yet powerful solution to protect your digital legacy</p>
-  </div>
-
-  <div class="feature-grid">
-    <div class="feature-card">
-      <div class="feature-icon">🔒</div>
-      <h3>Store Your Secrets</h3>
-      <p>Securely encrypt and store passwords, cryptocurrency keys, important documents, and personal messages using military-grade encryption.</p>
-    </div>
-
-    <div class="feature-card">
-      <div class="feature-icon">👥</div>
-      <h3>Designate Recipients</h3>
-      <p>Choose trusted family members, friends, or colleagues who will receive your information when your switch activates.</p>
-    </div>
-
-    <div class="feature-card">
-      <div class="feature-icon">⏰</div>
-      <h3>Regular Check-ins</h3>
-      <p>Confirm you're still active with simple periodic check-ins. Choose your own schedule that works for your lifestyle.</p>
-    </div>
-
-    <div class="feature-card">
-      <div class="feature-icon">📨</div>
-      <h3>Automatic Delivery</h3>
-      <p>If you miss your check-ins, your recipients will automatically receive your information through encrypted channels.</p>
-    </div>
-  </div>
-</section>
-
-<section class="section alternate-bg">
-  <div class="section-header">
-    <h2>Security First</h2>
-    <p>Your data is protected with the highest security standards</p>
-  </div>
-
-  <div class="security-features">
-    <div class="security-item">
-      <h3>End-to-End Encryption</h3>
-      <p>Your data is encrypted on your device before being stored, ensuring that even we can't access your sensitive information.</p>
-    </div>
-
-    <div class="security-item">
-      <h3>Open Source</h3>
-      <p>Our code is transparent and peer-reviewed by security experts to ensure there are no backdoors or vulnerabilities.</p>
-    </div>
-
-    <div class="security-item">
-      <h3>No Single Point of Failure</h3>
-      <p>Multiple verification steps and authentication layers prevent accidental triggering of your switch.</p>
-    </div>
-  </div>
-</section>
-
-<section class="cta-section">
-  <div class="cta-content">
-    <h2>Ready to Secure Your Digital Future?</h2>
-    <p>Join thousands of users who trust our service to protect their most important information.</p>
-    <a href="/register" class="btn btn-primary btn-lg">Create Your Account</a>
-  </div>
-</section>
 {{ end }}
 
 {{ define "styles" }}
 <style>
-  /* Hero section */
-  .hero {
-    padding: 5rem 0;
-    text-align: center;
-    background: linear-gradient(135deg, var(--primary-color-dark), var(--primary-color));
-    color: white;
-    border-radius: 8px;
-    margin: 2rem 0;
-  }
+  .landing { color: var(--fg-0); }
+  .landing h1, .landing h2, .landing h3 { margin: 0; }
+  .landing p { margin: 0; }
 
-  .hero-content {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 0 1rem;
-  }
-
-  .hero h1 {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-  }
-
-  .hero-subtitle {
-    font-size: 1.2rem;
-    margin-bottom: 2rem;
-    opacity: 0.9;
-  }
-
-  .hero-actions {
-    display: flex;
-    justify-content: center;
-    gap: 1rem;
-    flex-wrap: wrap;
-  }
-
-  /* Feature section */
-  .section {
-    padding: 4rem 0;
-  }
-
-  .section-header {
-    text-align: center;
-    margin-bottom: 3rem;
-  }
-
-  .section-header h2 {
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .feature-grid {
+  /* ─── Hero ─── */
+  .hero { padding: 90px 40px 60px; max-width: 1280px; margin: 0 auto; }
+  .hero-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+  }
+  .hero-title {
+    font-family: var(--serif);
+    font-size: 64px;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    font-weight: 500;
+    margin-bottom: 24px;
+  }
+  .hero-title em { color: var(--fg-1); font-style: italic; }
+  .hero-copy .label { margin-bottom: 18px; }
+  .hero-lede {
+    font-size: 17px;
+    line-height: 1.65;
+    color: var(--fg-1);
+    max-width: 52ch;
+    margin-bottom: 32px;
+  }
+  .hero-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .hero-meta {
+    margin-top: 48px;
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-2);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
-  .feature-card {
+  /* Hero illustration — stacked rotated envelopes on dotgrid */
+  .hero-letters {
+    position: relative;
+    height: 480px;
+    width: 100%;
+  }
+  .hero-letters-dotgrid {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, var(--line-2) 1px, transparent 1px);
+    background-size: 20px 20px;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+  .envelope {
+    position: absolute;
+    width: 320px;
+    height: 200px;
+    top: 50%; left: 50%;
+    background: var(--bg-elev);
+    border: 1px solid var(--line-1);
+    box-shadow: 4px 4px 0 0 var(--line-1);
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-family: var(--mono);
+  }
+  .envelope-a {
+    background: #fff8f0;
+    transform: translate(calc(-50% - 40px), calc(-50% + 20px)) rotate(-6deg);
+  }
+  .envelope-b {
+    background: #f5f1e8;
+    transform: translate(calc(-50% + 30px), calc(-50% - 10px)) rotate(3deg);
+  }
+  .envelope-c {
+    background: #f9f6ed;
+    transform: translate(calc(-50% - 10px), calc(-50% + 80px)) rotate(-2deg);
+  }
+  .envelope-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--fg-2);
+    letter-spacing: 0.06em;
+  }
+  .envelope-name {
+    font-family: var(--serif);
+    font-size: 24px;
+    font-style: italic;
+    color: var(--fg-0);
+    letter-spacing: -0.01em;
+  }
+  .envelope-foot {
+    font-size: 10px;
+    color: var(--fg-3);
+    letter-spacing: 0.04em;
+    border-top: 1px dashed var(--line-2);
+    padding-top: 8px;
+  }
+
+  /* ─── 3-step rhythm ─── */
+  .rhythm {
+    border-top: 1px solid var(--line-1);
+    border-bottom: 1px solid var(--line-1);
+    background: var(--bg-1);
+    padding: 70px 40px;
+  }
+  .rhythm-inner { max-width: 1080px; margin: 0 auto; }
+  .rhythm-inner .label { margin-bottom: 12px; }
+  .rhythm-title {
+    font-family: var(--serif);
+    font-size: 40px;
+    letter-spacing: -0.02em;
+    font-weight: 500;
+    margin-bottom: 56px;
+    max-width: 20ch;
+  }
+  .rhythm-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+  .rhythm-step-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-2);
+    letter-spacing: 0.06em;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .rhythm-step h3 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 10px;
+  }
+  .rhythm-step p {
+    font-size: 14px;
+    color: var(--fg-1);
+    line-height: 1.6;
+  }
+
+  /* ─── 6 channels ─── */
+  .channels { padding: 80px 40px; max-width: 1080px; margin: 0 auto; }
+  .channels-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 64px;
+    align-items: center;
+  }
+  .channels-copy .label { margin-bottom: 12px; }
+  .channels-title {
+    font-family: var(--serif);
+    font-size: 36px;
+    letter-spacing: -0.02em;
+    font-weight: 500;
+    margin-bottom: 16px;
+  }
+  .channels-lede {
+    font-size: 15px;
+    color: var(--fg-1);
+    line-height: 1.7;
+    margin-bottom: 24px;
+  }
+  .channels-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 24px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--fg-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .nudge-card { padding: 28px; }
+  .nudge-label { margin-bottom: 16px; }
+  .nudge-letter {
+    background: var(--bg-elev);
+    border: 1px solid var(--line-2);
+    padding: 20px;
+    font-size: 14px;
+    line-height: 1.7;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .nudge-from {
+    font-size: 11px;
+    color: var(--fg-2);
+    border-bottom: 1px dashed var(--line-2);
+    padding-bottom: 8px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .nudge-btn { align-self: flex-start; pointer-events: none; }
+
+  /* ─── Use cases ─── */
+  .usecases { padding: 80px 40px; max-width: 1080px; margin: 0 auto; }
+  .usecases .label { margin-bottom: 12px; }
+  .usecases-title {
+    font-family: var(--serif);
+    font-size: 36px;
+    letter-spacing: -0.02em;
+    font-weight: 500;
+    margin-bottom: 40px;
+    max-width: 24ch;
+  }
+  .usecases-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  .usecase {
+    background: var(--bg-1);
+    border: 1px solid var(--line-1);
+    padding: 26px;
+    display: flex;
+    flex-direction: column;
+    min-height: 280px;
+  }
+  .usecase-highlight {
+    background: var(--bg-elev);
+    box-shadow: 4px 4px 0 0 var(--line-1);
+  }
+  .usecase-glyph {
+    font-family: var(--serif);
+    font-size: 56px;
+    line-height: 1;
+    margin-bottom: 18px;
+    color: var(--fg-1);
+  }
+  .usecase-glyph-orange { color: var(--orange); }
+  .usecase .label { margin-bottom: 10px; }
+  .usecase h3 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 10px;
+    line-height: 1.25;
+  }
+  .usecase p {
+    font-size: 13px;
+    color: var(--fg-1);
+    line-height: 1.6;
+    margin-bottom: auto;
+  }
+  .usecase-meta {
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--line-2);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--fg-2);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* ─── Vault detail ─── */
+  .vault {
+    margin-top: 40px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: center;
+    background: var(--bg-1);
+    border: 1px solid var(--line-1);
+    padding: 32px;
+  }
+  .vault-copy .label { margin-bottom: 10px; }
+  .vault-copy h3 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    margin-bottom: 12px;
+    line-height: 1.25;
+  }
+  .vault-copy p {
+    font-size: 14px;
+    color: var(--fg-1);
+    line-height: 1.7;
+    margin-bottom: 14px;
+  }
+  .vault-list {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    gap: 6px 18px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-1);
+    letter-spacing: 0.02em;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .vault-pre {
+    font-size: 11px;
+    background: var(--bg-elev);
+    margin: 0;
+  }
+
+  /* ─── Testimonial ─── */
+  .testimonial {
+    background: var(--bg-1);
+    border-top: 1px solid var(--line-1);
+    padding: 80px 40px;
+  }
+  .testimonial-inner {
+    max-width: 760px;
+    margin: 0 auto;
     text-align: center;
-    padding: 1.5rem;
-    border-radius: 8px;
-    background-color: white;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    transition: transform 0.3s ease;
+  }
+  .testimonial-inner .label { margin-bottom: 18px; }
+  .testimonial-quote {
+    font-family: var(--serif);
+    font-size: 26px;
+    line-height: 1.55;
+    font-style: italic;
+    color: var(--fg-0);
+    margin-bottom: 24px;
+  }
+  .testimonial-byline {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-2);
+    letter-spacing: 0.06em;
   }
 
-  .feature-card:hover {
-    transform: translateY(-5px);
-  }
-
-  .feature-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
-  }
-
-  /* Security section */
-  .alternate-bg {
-    background-color: #f8f9fa;
-  }
-
-  .security-features {
-    max-width: 800px;
+  /* ─── CTA ─── */
+  .cta {
+    padding: 90px 40px;
+    text-align: center;
+    max-width: 720px;
     margin: 0 auto;
   }
-
-  .security-item {
-    margin-bottom: 2rem;
+  .cta-title {
+    font-family: var(--serif);
+    font-size: 44px;
+    letter-spacing: -0.02em;
+    font-weight: 500;
+    margin-bottom: 16px;
+    line-height: 1.15;
+  }
+  .cta-lede {
+    font-size: 16px;
+    color: var(--fg-1);
+    line-height: 1.65;
+    margin-bottom: 28px;
   }
 
-  /* CTA section */
-  .cta-section {
-    background: linear-gradient(135deg, var(--primary-color), var(--primary-color-light));
-    color: white;
-    padding: 4rem 0;
-    text-align: center;
-    border-radius: 8px;
-    margin: 3rem 0;
-  }
+  /* ─── Responsive collapse ─── */
+  @media (max-width: 880px) {
+    .hero { padding: 60px 24px 40px; }
+    .hero-grid { grid-template-columns: 1fr; gap: 48px; }
+    .hero-title { font-size: 44px; }
+    .hero-letters { height: 360px; }
+    .envelope { width: 260px; height: 170px; padding: 18px; }
+    .envelope-name { font-size: 20px; }
 
-  .cta-content {
-    max-width: 700px;
-    margin: 0 auto;
-    padding: 0 1rem;
-  }
+    .rhythm { padding: 56px 24px; }
+    .rhythm-title { font-size: 30px; margin-bottom: 36px; }
+    .rhythm-grid { grid-template-columns: 1fr; gap: 28px; }
 
-  .cta-section h2 {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-  }
+    .channels { padding: 56px 24px; }
+    .channels-grid { grid-template-columns: 1fr; gap: 36px; }
 
-  .cta-section p {
-    font-size: 1.2rem;
-    margin-bottom: 2rem;
-    opacity: 0.9;
-  }
+    .usecases { padding: 56px 24px; }
+    .usecases-title { font-size: 28px; }
+    .usecases-grid { grid-template-columns: 1fr; }
+    .vault { grid-template-columns: 1fr; gap: 20px; padding: 24px; }
 
-  @media (max-width: 768px) {
-    .hero h1 {
-      font-size: 2.5rem;
-    }
+    .testimonial { padding: 56px 24px; }
+    .testimonial-quote { font-size: 22px; }
 
-    .section-header h2,
-    .cta-section h2 {
-      font-size: 2rem;
-    }
+    .cta { padding: 60px 24px; }
+    .cta-title { font-size: 32px; }
   }
 </style>
 {{ end }}

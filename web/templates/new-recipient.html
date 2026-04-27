@@ -1,118 +1,249 @@
 {{ template "layout.html" . }}
 
-{{ define "content" }}
-<div class="new-recipient-page">
-    <div class="header-actions">
-        <h1>{{ if .Data.Recipient }}Edit Recipient{{ else }}Add Recipient{{ end }}</h1>
-        <a href="/recipients" class="btn btn-secondary">Back to Recipients</a>
-    </div>
-
-    <div class="card">
-        <div class="card-body">
-            <form action="{{ if .Data.Recipient }}/recipients/{{ .Data.Recipient.ID }}{{ else }}/recipients/new{{ end }}" method="POST">
-                <div class="form-group">
-                    <label for="name" class="form-label">Full Name</label>
-                    <input type="text" name="name" id="name" class="form-control" required
-                           value="{{ if .Data.Recipient }}{{ .Data.Recipient.Name }}{{ end }}"
-                           placeholder="Enter recipient's full name">
-                </div>
-
-                <div class="form-group">
-                    <label for="email" class="form-label">Email Address</label>
-                    <input type="email" name="email" id="email" class="form-control" required
-                           value="{{ if .Data.Recipient }}{{ .Data.Recipient.Email }}{{ end }}"
-                           placeholder="Their email address for receiving secrets">
-                    <small class="form-help">This is where secrets will be sent when your switch is triggered.</small>
-                </div>
-
-                <div class="form-group">
-                    <label for="relationship" class="form-label">Relationship</label>
-                    <select name="relationship" id="relationship" class="form-control" required>
-                        <option value="">-- Select Relationship --</option>
-                        <option value="family" {{ if and .Data.Recipient (eq .Data.Recipient.Relationship "family") }}selected{{ end }}>Family</option>
-                        <option value="friend" {{ if and .Data.Recipient (eq .Data.Recipient.Relationship "friend") }}selected{{ end }}>Friend</option>
-                        <option value="colleague" {{ if and .Data.Recipient (eq .Data.Recipient.Relationship "colleague") }}selected{{ end }}>Colleague</option>
-                        <option value="legal" {{ if and .Data.Recipient (eq .Data.Recipient.Relationship "legal") }}selected{{ end }}>Legal Representative</option>
-                        <option value="other" {{ if and .Data.Recipient (eq .Data.Recipient.Relationship "other") }}selected{{ end }}>Other</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="contactMethod" class="form-label">Preferred Contact Method</label>
-                    <select name="contactMethod" id="contactMethod" class="form-control" required onchange="toggleContactFields()">
-                        <option value="">-- Select Contact Method --</option>
-                        <option value="email" {{ if and .Data.Recipient (eq .Data.Recipient.ContactMethod "email") }}selected{{ end }}>Email Only</option>
-                        <option value="telegram" {{ if and .Data.Recipient (eq .Data.Recipient.ContactMethod "telegram") }}selected{{ end }}>Email + Telegram</option>
-                    </select>
-                </div>
-
-
-
-                <div id="telegramFields" class="contact-fields" style="display: none;">
-                    <div class="form-group">
-                        <label for="telegramUsername" class="form-label">Telegram Username</label>
-                        <input type="text" name="telegramUsername" id="telegramUsername" class="form-control"
-                               value="{{ if .Data.Recipient }}{{ .Data.Recipient.TelegramUsername }}{{ end }}"
-                               placeholder="Username without @ symbol">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="notes" class="form-label">Additional Notes</label>
-                    <textarea name="notes" id="notes" class="form-control" rows="3"
-                              placeholder="Optional notes about this recipient">{{ if .Data.Recipient }}{{ .Data.Recipient.Notes }}{{ end }}</textarea>
-                </div>
-
-                <div class="form-group">
-                    <div class="form-check">
-                        <input type="checkbox" id="verified" name="verified" class="form-check-input"
-                               {{ if and .Data.Recipient .Data.Recipient.Verified }}checked{{ end }}>
-                        <label for="verified" class="form-check-label">I trust this recipient to access my sensitive information</label>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary">{{ if .Data.Recipient }}Update Recipient{{ else }}Add Recipient{{ end }}</button>
-                    <a href="/recipients" class="btn btn-secondary">Cancel</a>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
+{{ define "styles" }}
 <style>
-.header-actions {
+  .hb-new-recipient { max-width: 760px; }
+
+  .hb-page-head { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 16px; margin-bottom: 32px; }
+  .hb-page-head .page-head { margin-bottom: 0; }
+
+  .hb-steps {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-}
+    gap: 14px;
+    margin-bottom: 24px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+  }
+  .hb-step { display: inline-flex; align-items: center; gap: 8px; }
+  .hb-step .num {
+    width: 22px; height: 22px;
+    border: 1px solid var(--line-1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    background: var(--bg-elev);
+  }
+  .hb-step.active .num { background: var(--fg-0); color: var(--bg-0); }
+  .hb-step.active .name { color: var(--fg-0); font-weight: 500; }
+  .hb-steps .sep { flex: 0 0 24px; border-top: 1px dashed var(--line-2); }
 
-.contact-fields {
-    padding: 15px;
-    border-left: 3px solid var(--primary-color);
-    background-color: rgba(var(--primary-color-rgb), 0.05);
-    margin-bottom: 20px;
-}
+  .hb-section { margin-bottom: 28px; }
+  .hb-section .heading {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+    margin-bottom: 12px;
+  }
+
+  .hb-form-row { display: grid; gap: 16px; }
+  .hb-form-row.cols-2 { grid-template-columns: 1fr 1fr; }
+  @media (max-width: 640px) { .hb-form-row.cols-2 { grid-template-columns: 1fr; } }
+
+  .hb-preview-card {
+    background: var(--bg-1);
+    border: 1px solid var(--line-2);
+    padding: 18px;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .hb-preview-card .hdr {
+    border-bottom: 1px dashed var(--line-2);
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+  }
+  .hb-preview-card .demo-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: var(--fg-0);
+    color: var(--bg-0);
+    font-size: 12px;
+    border: 1px solid var(--line-1);
+  }
+
+  .hb-form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line-2);
+  }
 </style>
+{{ end }}
 
+{{ define "content" }}
+{{ $editing := .Data.Recipient }}
+<div class="hb-new-recipient" data-test="new-recipient">
+  <div class="hb-page-head">
+    <div class="page-head">
+      <div class="label">{{ if $editing }}· EDIT ENVELOPE{{ else }}· ADD SOMEONE TO YOUR CIRCLE{{ end }}</div>
+      <h1>{{ if $editing }}Edit envelope{{ else }}Add someone{{ end }}</h1>
+      <p class="lede">
+        {{ if $editing }}
+          Change what we know about this person, or update where their letters will go.
+        {{ else }}
+          Tell us who they are. We'll send them a short message asking them to confirm their email — that's the only contact they'll have until your letters need to go out.
+        {{ end }}
+      </p>
+    </div>
+    <div class="actions">
+      <a href="/recipients" class="btn ghost">← Back</a>
+    </div>
+  </div>
+
+  <div class="hb-steps" data-test="steps">
+    <div class="hb-step active" data-test="step-1">
+      <span class="num">1</span>
+      <span class="name">Who they are</span>
+    </div>
+    <span class="sep" aria-hidden="true"></span>
+    <div class="hb-step" data-test="step-2">
+      <span class="num">2</span>
+      <span class="name">What we'll send them</span>
+    </div>
+  </div>
+
+  <form action="{{ if $editing }}/recipients/{{ $editing.ID }}{{ else }}/recipients/new{{ end }}" method="POST" id="recipient-form">
+    <div class="card">
+      <div class="hb-section" data-test="section-who">
+        <div class="heading">· STEP 1 · WHO THEY ARE</div>
+
+        <div class="field">
+          <div class="field-label"><span class="label">· THEIR NAME</span></div>
+          <input type="text" name="name" id="name" class="input" required
+                 value="{{ if $editing }}{{ $editing.Name }}{{ end }}"
+                 placeholder="What you want to call them" autofocus>
+        </div>
+
+        <div class="field">
+          <div class="field-label"><span class="label">· THEIR EMAIL</span></div>
+          <input type="email" name="email" id="email" class="input" required
+                 value="{{ if $editing }}{{ $editing.Email }}{{ end }}"
+                 placeholder="them@example.com">
+          <div class="field-help">They'll get one short confirmation email — and nothing else, until the time comes.</div>
+        </div>
+
+        <div class="hb-form-row cols-2">
+          <div class="field">
+            <div class="field-label"><span class="label">· WHO THEY ARE TO YOU</span></div>
+            <select name="relationship" id="relationship" class="select">
+              <option value="">— Optional label —</option>
+              <option value="family" {{ if and $editing (eq $editing.Relationship "family") }}selected{{ end }}>Family</option>
+              <option value="friend" {{ if and $editing (eq $editing.Relationship "friend") }}selected{{ end }}>Friend</option>
+              <option value="colleague" {{ if and $editing (eq $editing.Relationship "colleague") }}selected{{ end }}>Colleague</option>
+              <option value="legal" {{ if and $editing (eq $editing.Relationship "legal") }}selected{{ end }}>Legal representative</option>
+              <option value="other" {{ if and $editing (eq $editing.Relationship "other") }}selected{{ end }}>Other</option>
+            </select>
+            <div class="field-help">Just for your own labelling. They won't see this.</div>
+          </div>
+
+          <div class="field">
+            <div class="field-label"><span class="label">· REACH THEM ALSO BY</span></div>
+            <select name="contactMethod" id="contactMethod" class="select" onchange="toggleContactFields()">
+              <option value="email" {{ if and $editing (eq $editing.ContactMethod "email") }}selected{{ end }}>Email only</option>
+              <option value="telegram" {{ if and $editing (eq $editing.ContactMethod "telegram") }}selected{{ end }}>Email + Telegram</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="telegramFields" class="contact-fields" style="display: none;">
+          <div class="field">
+            <div class="field-label"><span class="label">· TELEGRAM USERNAME</span></div>
+            <input type="text" name="telegramUsername" id="telegramUsername" class="input"
+                   value="{{ if $editing }}{{ $editing.TelegramUsername }}{{ end }}"
+                   placeholder="username (without @)">
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="field-label"><span class="label">· A NOTE TO YOURSELF</span></div>
+          <textarea name="notes" id="notes" class="textarea" rows="3"
+                    placeholder="Optional. Anything you'd want to remember about this person.">{{ if $editing }}{{ $editing.Notes }}{{ end }}</textarea>
+        </div>
+      </div>
+
+      <hr class="divider dashed">
+
+      <div class="hb-section" data-test="section-preview">
+        <div class="heading">· STEP 2 · WHAT WE'LL SEND THEM</div>
+
+        <p style="margin: 0 0 14px; color: var(--fg-1); font-size: 13px;">
+          Here's exactly what they will receive in their inbox today:
+        </p>
+
+        <div class="hb-preview-card" data-test="preview">
+          <div class="hdr">
+            From: heartbeat &lt;hello@heartbeat.local&gt;<br>
+            To: <span data-test="preview-to">{{ if $editing }}{{ $editing.Email }}{{ else }}them@example.com{{ end }}</span><br>
+            Subject: A small heads-up from {{ if .User }}{{ .User.Email }}{{ else }}someone you know{{ end }}
+          </div>
+          <p style="margin: 0 0 12px;">Hi <span data-test="preview-name">{{ if $editing }}{{ $editing.Name }}{{ else }}there{{ end }}</span>,</p>
+          <p style="margin: 0 0 12px;">
+            Someone you know has set up a small kind of safety net using a service called heartbeat. They've named you as someone they'd want a letter from, someday, if anything ever happened to them.
+          </p>
+          <p style="margin: 0 0 12px;">
+            You don't need to do anything — except tap the button below to confirm we have your right email. We will not contact you again unless that day actually comes.
+          </p>
+          <span class="demo-btn">Yes, this is my email →</span>
+        </div>
+
+        <div class="field-help" style="margin-top: 14px;">
+          They won't see any letter content. Only that you've thought of them.
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="verified" style="display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px;">
+          <input type="checkbox" id="verified" name="verified"
+                 {{ if and $editing $editing.Verified }}checked{{ end }}>
+          <span>I trust this person to be sent my letters when the time comes.</span>
+        </label>
+      </div>
+
+      <div class="hb-form-actions">
+        <button type="submit" class="btn primary">
+          {{ if $editing }}Save changes{{ else }}Send invitation{{ end }}
+        </button>
+        <a href="/recipients" class="btn ghost">Cancel</a>
+      </div>
+    </div>
+  </form>
+</div>
+{{ end }}
+
+{{ define "scripts" }}
 <script>
 function toggleContactFields() {
-    // Hide all contact fields first
-    const fields = document.querySelectorAll('.contact-fields');
-    fields.forEach(field => field.style.display = 'none');
-
-    // Show fields based on selected contact method
-    const contactMethod = document.getElementById('contactMethod').value;
-
-    if (contactMethod === 'telegram') {
-        document.getElementById('telegramFields').style.display = 'block';
-    }
+  document.querySelectorAll('.contact-fields').forEach(function (el) { el.style.display = 'none'; });
+  var method = document.getElementById('contactMethod');
+  if (method && method.value === 'telegram') {
+    document.getElementById('telegramFields').style.display = 'block';
+  }
 }
-
-// Initialize fields on page load
-document.addEventListener('DOMContentLoaded', function() {
-    toggleContactFields();
+document.addEventListener('DOMContentLoaded', function () {
+  toggleContactFields();
+  // Live preview updates
+  var nameEl = document.getElementById('name');
+  var emailEl = document.getElementById('email');
+  var prevName = document.querySelector('[data-test="preview-name"]');
+  var prevTo = document.querySelector('[data-test="preview-to"]');
+  if (nameEl && prevName) {
+    nameEl.addEventListener('input', function () { prevName.textContent = nameEl.value || 'there'; });
+  }
+  if (emailEl && prevTo) {
+    emailEl.addEventListener('input', function () { prevTo.textContent = emailEl.value || 'them@example.com'; });
+  }
 });
 </script>
 {{ end }}

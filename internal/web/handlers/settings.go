@@ -42,11 +42,17 @@ func (h *SettingsHandler) HandleSettings(w http.ResponseWriter, r *http.Request)
 		Title:           "Account Settings",
 		ActivePage:      "settings",
 		IsAuthenticated: true,
+		User: map[string]interface{}{
+			"Email": user.Email,
+			"Name":  user.Email,
+		},
 		Data: map[string]interface{}{
 			"User":     user,
 			"Settings": settingsData,
 		},
 	}
+
+	data.SetHeartbeat(user)
 
 	if err := templates.RenderTemplate(w, "settings.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
@@ -75,15 +81,15 @@ func (h *SettingsHandler) HandleUpdateDeadManSwitchSettings(w http.ResponseWrite
 	pingMethod := r.FormValue("pingMethod")
 	pingingEnabled := r.FormValue("pingingEnabled") == "on"
 
-	// Parse ping frequency
+	// Parse ping frequency. Bounds match the settings form's slider/number inputs (1–90 days).
 	pingFrequency, err := strconv.Atoi(pingFrequencyStr)
-	if err != nil || pingFrequency < 1 || pingFrequency > 30 {
+	if err != nil || pingFrequency < 1 || pingFrequency > 90 {
 		pingFrequency = 7 // Default to weekly
 	}
 
-	// Parse ping deadline
+	// Parse ping deadline. Bounds match the settings form's slider/number inputs (1–90 days).
 	pingDeadline, err := strconv.Atoi(pingDeadlineStr)
-	if err != nil || pingDeadline < 3 || pingDeadline > 30 {
+	if err != nil || pingDeadline < 1 || pingDeadline > 90 {
 		pingDeadline = 14 // Default to 2 weeks
 	}
 

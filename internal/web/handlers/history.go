@@ -4,7 +4,9 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
+	"time"
 
 	"github.com/korjavin/deadmanswitch/internal/storage"
 	"github.com/korjavin/deadmanswitch/internal/web/middleware"
@@ -46,52 +48,64 @@ func (h *HistoryHandler) HandleHistory(w http.ResponseWriter, r *http.Request) {
 		// Continue anyway, we'll just show an empty list
 	}
 
-	// Combine ping history and audit logs into a single activity list
-	activities := make([]map[string]interface{}, 0)
+	// Combine ping history and audit logs into a single activity list,
+	// each carrying its raw time.Time alongside the formatted Timestamp
+	// so the slice can be sorted newest-first before rendering.
+	type entry struct {
+		when time.Time
+		row  map[string]interface{}
+	}
+	combined := make([]entry, 0, len(pingHistory)+len(auditLogs))
 
-	// Add ping history entries
 	for _, ping := range pingHistory {
-		activity := map[string]interface{}{
+		row := map[string]interface{}{
 			"Type":        "checkin",
 			"Title":       "Check-in " + ping.Status,
 			"Description": "Check-in via " + ping.Method,
 			"Timestamp":   ping.SentAt.Format("Jan 2, 2006 at 3:04 PM"),
 			"Details":     nil,
 		}
-
 		if ping.RespondedAt != nil {
-			activity["Details"] = "Responded at: " + ping.RespondedAt.Format("Jan 2, 2006 at 3:04 PM")
+			row["Details"] = "Responded at: " + ping.RespondedAt.Format("Jan 2, 2006 at 3:04 PM")
 		}
-
-		activities = append(activities, activity)
+		combined = append(combined, entry{when: ping.SentAt, row: row})
 	}
 
-	// Add audit log entries
 	for _, log := range auditLogs {
-		activity := map[string]interface{}{
+		row := map[string]interface{}{
 			"Type":        determineActivityType(log.Action),
 			"Title":       formatActivityTitle(log.Action),
 			"Description": log.Action,
 			"Timestamp":   log.Timestamp.Format("Jan 2, 2006 at 3:04 PM"),
 			"Details":     log.Details,
 		}
-
-		activities = append(activities, activity)
+		combined = append(combined, entry{when: log.Timestamp, row: row})
 	}
 
-	// Sort activities by timestamp (newest first)
-	// In a real implementation, we would sort by timestamp
-	// For now, we'll just use the order they were added
+	sort.Slice(combined, func(i, j int) bool {
+		return combined[i].when.After(combined[j].when)
+	})
+
+	activities := make([]map[string]interface{}, 0, len(combined))
+	for _, e := range combined {
+		activities = append(activities, e.row)
+	}
 
 	data := templates.TemplateData{
 		Title:           "Activity History",
 		ActivePage:      "history",
 		IsAuthenticated: true,
+		User: map[string]interface{}{
+			"Email": user.Email,
+			"Name":  user.Email,
+		},
 		Data: map[string]interface{}{
 			"User":       map[string]interface{}{"Email": user.Email},
 			"Activities": activities,
 		},
 	}
+
+	data.SetHeartbeat(user)
 
 	if err := templates.RenderTemplate(w, "history.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)

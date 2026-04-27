@@ -22,7 +22,7 @@ func (h *IndexHandler) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	isAuthenticated := err == nil && cookie.Value != ""
 
 	data := templates.TemplateData{
-		Title:           "Dead Man's Switch",
+		Title:           "A quiet kind of safety net",
 		ActivePage:      "home",
 		IsAuthenticated: isAuthenticated,
 		Data:            make(map[string]interface{}),

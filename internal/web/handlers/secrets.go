@@ -98,6 +98,8 @@ func (h *SecretsHandler) HandleListSecrets(w http.ResponseWriter, r *http.Reques
 		},
 	}
 
+	data.SetHeartbeat(user)
+
 	if err := templates.RenderTemplate(w, "secrets.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
 		log.Printf("Error rendering secrets template: %v", err)
@@ -144,6 +146,8 @@ func (h *SecretsHandler) HandleNewSecretForm(w http.ResponseWriter, r *http.Requ
 			"Recipients": recipients,
 		},
 	}
+
+	data.SetHeartbeat(user)
 
 	if err := templates.RenderTemplate(w, "new-secret.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
@@ -235,6 +239,8 @@ func (h *SecretsHandler) HandleManageRecipients(w http.ResponseWriter, r *http.R
 			"Recipients": recipients,
 		},
 	}
+
+	data.SetHeartbeat(user)
 
 	if err := templates.RenderTemplate(w, "manage-secret-recipients.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
@@ -527,6 +533,8 @@ func (h *SecretsHandler) HandleViewSecretForm(w http.ResponseWriter, r *http.Req
 			"Recipients": recipients,
 		},
 	}
+
+	data.SetHeartbeat(user)
 
 	if err := templates.RenderTemplate(w, "view-secret.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)

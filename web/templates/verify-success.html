@@ -1,50 +1,47 @@
 {{ template "layout.html" . }}
 
-{{ define "content" }}
-<div class="auth-container">
-  <div class="card">
-    <div class="card-body text-center">
-      <div class="success-icon">✓</div>
-      <h1>Email Verified!</h1>
-      <p>Thank you for verifying your email address.</p>
-      <p>Your account is now fully active and you can start using the Dead Man's Switch service.</p>
-
-      <div class="action-buttons">
-        <a href="/login" class="btn btn-primary btn-lg">Log In Now</a>
-      </div>
-    </div>
-  </div>
-</div>
-{{ end }}
-
 {{ define "styles" }}
 <style>
-  .auth-container {
-    max-width: 600px;
-    margin: 4rem auto;
+  .auth-card {
+    max-width: 520px;
+    margin: 96px auto;
+    padding: 40px 32px;
+    text-align: center;
+    background: var(--bg-elev);
+    border: 1px solid var(--line-1);
+    box-shadow: 4px 4px 0 0 var(--line-1);
   }
-
-  .success-icon {
-    font-size: 5rem;
-    color: var(--success-color);
-    margin-bottom: 1rem;
+  .auth-kicker {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+    margin-bottom: 14px;
   }
-
-  .card-body {
-    padding: 3rem;
+  .auth-title {
+    font-family: var(--serif);
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0 0 12px;
   }
-
-  .action-buttons {
-    margin-top: 2rem;
-  }
-
-  h1 {
-    margin-bottom: 1rem;
-  }
-
-  p {
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
+  .auth-sub {
+    color: var(--fg-1);
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0 auto 28px;
+    max-width: 38ch;
   }
 </style>
+{{ end }}
+
+{{ define "content" }}
+<div class="auth-card" data-test="auth-verify-success">
+  <div class="auth-kicker">· EMAIL VERIFIED</div>
+  <h1 class="auth-title">You're all set.</h1>
+  <p class="auth-sub">Your account is active. Sign in whenever you're ready to write your first letter.</p>
+  <a href="/login" class="btn primary lg">Sign in →</a>
+</div>
 {{ end }}

@@ -1,251 +1,345 @@
 {{ template "layout.html" . }}
 
+{{ define "styles" }}
+<style>
+  .hb-settings { max-width: 760px; }
+  .hb-settings .page-head { margin-bottom: 24px; }
+  .hb-settings .card { margin-bottom: 24px; }
+  .hb-settings .card.danger {
+    border-color: var(--orange-soft, var(--line-1));
+    background: #fff8f3;
+  }
+  .hb-settings .danger .label { color: var(--orange); }
+  .hb-settings .danger .btn.danger-btn {
+    border-color: var(--orange);
+    color: var(--orange);
+    box-shadow: none;
+  }
+  .hb-settings .danger .btn.danger-btn:hover {
+    background: var(--orange);
+    color: var(--bg-0);
+  }
+
+  .hb-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .hb-slider-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--fg-0);
+  }
+  .hb-slider-row input[type="number"] {
+    width: 88px;
+    padding: 6px 8px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    border: 1px solid var(--line-1);
+    background: var(--bg-elev);
+    color: var(--fg-0);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .hb-slider-row .unit {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--fg-2);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    min-width: 36px;
+  }
+
+  .hb-channel-list { padding: 0; }
+  .hb-channel-row {
+    display: grid;
+    grid-template-columns: 20px 1fr auto auto;
+    gap: 14px;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .hb-channel-row:last-child { border-bottom: 0; }
+  .hb-channel-row .ch-name { font-size: 13px; font-weight: 600; }
+  .hb-channel-row .ch-meta {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--fg-2);
+    margin-top: 2px;
+  }
+  .hb-channel-row .required {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-3);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .hb-method-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .hb-method-card {
+    border: 1px solid var(--line-2);
+    background: var(--bg-elev);
+    padding: 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .hb-method-card.selected {
+    border-color: var(--fg-0);
+    box-shadow: 2px 2px 0 0 var(--line-1);
+  }
+  .hb-method-card input { display: none; }
+  .hb-method-card .label { color: var(--fg-0); font-weight: 700; }
+  .hb-method-card .sub { font-size: 11px; color: var(--fg-2); }
+
+  .hb-check-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 0;
+  }
+  .hb-check-row input[type="checkbox"] { margin-top: 3px; accent-color: var(--fg-0); }
+  .hb-check-row .text { font-size: 13px; }
+  .hb-check-row .help {
+    font-size: 12px;
+    color: var(--fg-2);
+    margin-top: 2px;
+    line-height: 1.5;
+  }
+
+  .hb-action-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 18px;
+  }
+</style>
+{{ end }}
+
 {{ define "content" }}
-<div class="settings-page">
-    <div class="header-actions">
-        <h1>Account Settings</h1>
-    </div>
+<div class="hb-settings" data-test="settings-page">
+  <div class="page-head">
+    <div class="label">· ACCOUNT · CADENCE</div>
+    <h1>How often we check in</h1>
+    <p class="lede">Tune the rhythm. We'll send a gentle nudge if you've gone silent — and only deliver your letters if you stay silent past the grace period.</p>
+  </div>
 
+  <form action="/settings/deadmanswitch" method="POST" data-test="cadence-form">
+    <div class="section-head"><h2>Cadence</h2></div>
     <div class="card">
-        <div class="card-header">
-            <h3>Dead Man's Switch Settings</h3>
+      <div class="field">
+        <div class="field-label"><span class="label">· WAIT BEFORE NUDGING</span></div>
+        <div class="hb-slider-row">
+          <input type="range" min="1" max="90" id="cadence_days" value="{{ .Data.User.PingFrequency }}"
+                 data-test="cadence-range">
+          <input type="number" min="1" max="90" name="pingFrequency" id="pingFrequency"
+                 value="{{ .Data.User.PingFrequency }}" data-test="cadence-number">
+          <span class="unit">DAYS</span>
         </div>
-        <div class="card-body">
-            <form action="/settings/deadmanswitch" method="POST">
-                <div class="form-group">
-                    <h4>Check-in Schedule</h4>
-                    <p>How often do you want to check in to keep your switch from triggering?</p>
+        <div class="field-help">If you've been silent this many days, we send a gentle nudge.</div>
+      </div>
 
-                    <select name="pingFrequency" id="pingFrequency" class="form-control">
-                        <option value="1" {{ if eq .Data.User.PingFrequency 1 }}selected{{ end }}>Daily</option>
-                        <option value="3" {{ if eq .Data.User.PingFrequency 3 }}selected{{ end }}>Every 3 days</option>
-                        <option value="7" {{ if eq .Data.User.PingFrequency 7 }}selected{{ end }}>Weekly</option>
-                        <option value="14" {{ if eq .Data.User.PingFrequency 14 }}selected{{ end }}>Every 2 weeks</option>
-                        <option value="30" {{ if eq .Data.User.PingFrequency 30 }}selected{{ end }}>Monthly</option>
-                    </select>
-                    <small class="form-help">This is how often you need to show activity or check in manually.</small>
-                </div>
-
-                <div class="form-group">
-                    <h4>Grace Period</h4>
-                    <p>How long after missing a check-in should the system wait before triggering?</p>
-
-                    <select name="pingDeadline" id="pingDeadline" class="form-control">
-                        <option value="3" {{ if eq .Data.User.PingDeadline 3 }}selected{{ end }}>3 days</option>
-                        <option value="7" {{ if eq .Data.User.PingDeadline 7 }}selected{{ end }}>1 week</option>
-                        <option value="14" {{ if eq .Data.User.PingDeadline 14 }}selected{{ end }}>2 weeks</option>
-                        <option value="21" {{ if eq .Data.User.PingDeadline 21 }}selected{{ end }}>3 weeks</option>
-                        <option value="30" {{ if eq .Data.User.PingDeadline 30 }}selected{{ end }}>1 month</option>
-                    </select>
-                    <small class="form-help">This is the total time since your last activity before the switch triggers.</small>
-                </div>
-
-                <div class="form-group">
-                    <h4>Notification Method</h4>
-                    <p>How would you like to receive check-in reminders?</p>
-
-                    <select name="pingMethod" id="pingMethod" class="form-control">
-                        <option value="email" {{ if eq .Data.User.PingMethod "email" }}selected{{ end }}>Email only</option>
-                        <option value="telegram" {{ if eq .Data.User.PingMethod "telegram" }}selected{{ end }}>Telegram only</option>
-                        <option value="both" {{ if eq .Data.User.PingMethod "both" }}selected{{ end }}>Both Email and Telegram</option>
-                    </select>
-                    <small class="form-help">To use Telegram, you must connect your Telegram account in your profile.</small>
-                </div>
-
-                <div class="form-group">
-                    <div class="form-check">
-                        <input type="checkbox" id="pingingEnabled" name="pingingEnabled" class="form-check-input"
-                               {{ if .Data.User.PingingEnabled }}checked{{ end }}>
-                        <label for="pingingEnabled" class="form-check-label">
-                            Enable check-in reminders and deadlines
-                        </label>
-                    </div>
-                    <small class="form-help">If disabled, the system will not send reminders or trigger the switch.</small>
-                </div>
-
-                <div class="form-group">
-                    <h4>Email Notifications</h4>
-
-                    <div class="form-check">
-                        <input type="checkbox" id="emailCheckIn" name="notifications[]" value="email_checkin" class="form-check-input"
-                               {{ if .Data.Settings.EmailCheckIn }}checked{{ end }}>
-                        <label for="emailCheckIn" class="form-check-label">
-                            Send check-in reminders via email
-                        </label>
-                    </div>
-
-                    <div class="form-check">
-                        <input type="checkbox" id="emailWarning" name="notifications[]" value="email_warning" class="form-check-input"
-                               {{ if .Data.Settings.EmailWarning }}checked{{ end }}>
-                        <label for="emailWarning" class="form-check-label">
-                            Send warning notifications when check-in deadline is approaching
-                        </label>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary">Save Dead Man's Switch Settings</button>
-                </div>
-            </form>
+      <div class="field">
+        <div class="field-label"><span class="label">· GRACE PERIOD</span></div>
+        <div class="hb-slider-row">
+          <input type="range" min="1" max="90" id="grace_days" value="{{ .Data.User.PingDeadline }}"
+                 data-test="grace-range">
+          <input type="number" min="1" max="90" name="pingDeadline" id="pingDeadline"
+                 value="{{ .Data.User.PingDeadline }}" data-test="grace-number">
+          <span class="unit">DAYS</span>
         </div>
+        <div class="field-help">After the first nudge, how long before we deliver — escalating reminders along the way.</div>
+      </div>
+
+      <pre class="mono-pre" data-test="cadence-preview" id="cadence-preview">today ──{{ .Data.User.PingFrequency }}d──● nudge ──{{ .Data.User.PingDeadline }}d──● delivered</pre>
     </div>
 
-    <div class="card" style="margin-top: 2rem;">
-        <div class="card-header">
-            <h3>Security Settings</h3>
+    <div class="section-head"><h2>Channels we reach out on</h2></div>
+    <div class="card hb-channel-list" style="padding: 0;">
+      <div class="hb-channel-row" data-test="channel-email">
+        {{ template "icon-mail" . }}
+        <div>
+          <div class="ch-name">Email</div>
+          <div class="ch-meta">{{ .Data.User.Email }}</div>
         </div>
-        <div class="card-body">
-            <form action="/settings/security" method="POST">
-                <div class="form-group">
-                    <h4>Two-Factor Authentication</h4>
-
-                    <div class="form-check">
-                        <input type="checkbox" id="enable2fa" name="enable2fa" class="form-check-input"
-                               {{ if .Data.Settings.TwoFactorEnabled }}checked{{ end }}>
-                        <label for="enable2fa" class="form-check-label">
-                            Enable two-factor authentication
-                        </label>
-                    </div>
-
-                    {{ if not .Data.Settings.TwoFactorEnabled }}
-                        <div class="setup-2fa" style="margin-top: 1rem; display: none;">
-                            <p>Scan this QR code with your authenticator app:</p>
-                            <div class="qr-placeholder" style="width: 200px; height: 200px; background-color: #f0f0f0; display: flex; align-items: center; justify-content: center;">
-                                QR Code Placeholder
-                            </div>
-
-                            <div class="form-group" style="margin-top: 1rem;">
-                                <label for="verificationCode" class="form-label">Verification Code</label>
-                                <input type="text" name="verificationCode" id="verificationCode" class="form-control" placeholder="Enter the 6-digit code">
-                            </div>
-                        </div>
-                    {{ else }}
-                        <div style="margin-top: 1rem;">
-                            <p>Two-factor authentication is enabled for your account.</p>
-                            <button type="button" class="btn btn-danger" id="disable2fa">Disable Two-Factor Authentication</button>
-                        </div>
-                    {{ end }}
-                </div>
-
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary">Save Security Settings</button>
-                </div>
-            </form>
+        <span class="badge solid">· ALWAYS ON</span>
+        <span class="required">required</span>
+      </div>
+      <div class="hb-channel-row" data-test="channel-telegram">
+        {{ template "icon-send" . }}
+        <div>
+          <div class="ch-name">Telegram</div>
+          <div class="ch-meta">{{ if .Data.User.TelegramID }}@{{ .Data.User.TelegramUsername }}{{ else }}—{{ end }}</div>
         </div>
+        {{ if .Data.User.TelegramID }}
+          <span class="badge solid">· CONNECTED</span>
+        {{ else }}
+          <span class="badge dashed">· NOT YET</span>
+        {{ end }}
+        <a href="/profile" class="btn sm ghost">configure</a>
+      </div>
+      <div class="hb-channel-row" data-test="channel-web">
+        {{ template "icon-heart" . }}
+        <div>
+          <div class="ch-name">Web check-in</div>
+          <div class="ch-meta">Sign in or tap "I'm here" on the dashboard</div>
+        </div>
+        <span class="badge solid">· ALWAYS ON</span>
+        <span class="required">required</span>
+      </div>
     </div>
 
-    <div class="card danger-zone" style="margin-top: 2rem; border-color: var(--danger-color);">
-        <div class="card-header" style="background-color: rgba(var(--danger-color-rgb), 0.1); color: var(--danger-color);">
-            <h3>Danger Zone</h3>
+    <div class="section-head"><h2>How we'll nudge you</h2></div>
+    <div class="card">
+      <div class="field">
+        <div class="field-label"><span class="label">· METHOD</span></div>
+        <div class="hb-method-row" data-test="method-row">
+          <label class="hb-method-card{{ if eq .Data.User.PingMethod "email" }} selected{{ end }}">
+            <input type="radio" name="pingMethod" value="email"{{ if eq .Data.User.PingMethod "email" }} checked{{ end }}>
+            <span class="label">EMAIL</span>
+            <span class="sub">Quiet inbox nudges</span>
+          </label>
+          <label class="hb-method-card{{ if eq .Data.User.PingMethod "telegram" }} selected{{ end }}">
+            <input type="radio" name="pingMethod" value="telegram"{{ if eq .Data.User.PingMethod "telegram" }} checked{{ end }}>
+            <span class="label">TELEGRAM</span>
+            <span class="sub">One-tap reply</span>
+          </label>
+          <label class="hb-method-card{{ if eq .Data.User.PingMethod "both" }} selected{{ end }}">
+            <input type="radio" name="pingMethod" value="both"{{ if eq .Data.User.PingMethod "both" }} checked{{ end }}>
+            <span class="label">BOTH</span>
+            <span class="sub">Belt and braces</span>
+          </label>
         </div>
-        <div class="card-body">
-            <div class="form-group">
-                <h4>Delete Account</h4>
-                <p>Once you delete your account, there is no going back. Please be certain.</p>
-                <button type="button" class="btn btn-danger" id="deleteAccount">Delete My Account</button>
-            </div>
-        </div>
+        <div class="field-help">Telegram requires a connected account — set it up on your profile.</div>
+      </div>
+
+      <hr class="divider dashed">
+
+      <div class="hb-check-row">
+        <input type="checkbox" id="pingingEnabled" name="pingingEnabled"
+               {{ if .Data.User.PingingEnabled }}checked{{ end }}>
+        <label for="pingingEnabled">
+          <div class="text">Enable check-in reminders and deadlines</div>
+          <div class="help">If disabled, the system won't send reminders or trigger delivery.</div>
+        </label>
+      </div>
+      <div class="hb-check-row">
+        <input type="checkbox" id="emailCheckIn" name="notifications[]" value="email_checkin"
+               {{ if .Data.Settings.EmailCheckIn }}checked{{ end }}>
+        <label for="emailCheckIn">
+          <div class="text">Send check-in reminders via email</div>
+        </label>
+      </div>
+      <div class="hb-check-row">
+        <input type="checkbox" id="emailWarning" name="notifications[]" value="email_warning"
+               {{ if .Data.Settings.EmailWarning }}checked{{ end }}>
+        <label for="emailWarning">
+          <div class="text">Send warning notifications when delivery is approaching</div>
+        </label>
+      </div>
+
+      <div class="hb-action-row">
+        <button type="submit" class="btn primary">Save cadence</button>
+      </div>
     </div>
+  </form>
+
+  <div class="section-head"><h2>Two-factor authentication</h2></div>
+  <form action="/settings/security" method="POST" class="card" data-test="security-form">
+    <div class="hb-check-row">
+      <input type="checkbox" id="enable2fa" name="enable2fa"
+             {{ if .Data.Settings.TwoFactorEnabled }}checked{{ end }}>
+      <label for="enable2fa">
+        <div class="text">Enable two-factor authentication</div>
+        <div class="help">Adds a second key when you sign in. Recommended.</div>
+      </label>
+    </div>
+    {{ if .Data.Settings.TwoFactorEnabled }}
+      <p style="font-size: 13px; color: var(--fg-1); margin: 12px 0;">
+        Two-factor is on. You'll be asked for a code from your authenticator app each time you sign in.
+      </p>
+      <div class="hb-action-row">
+        <a href="/profile" class="btn danger-btn" id="disable2fa">Manage on profile →</a>
+      </div>
+    {{ else }}
+      <div class="setup-2fa" style="margin-top: 14px; display: none;">
+        <div class="field">
+          <div class="field-label"><span class="label">· VERIFICATION CODE</span></div>
+          <input type="text" name="verificationCode" id="verificationCode" class="input"
+                 placeholder="Enter the 6-digit code" pattern="[0-9]{6}" maxlength="6">
+        </div>
+      </div>
+      <div class="hb-action-row">
+        <button type="submit" class="btn primary">Save</button>
+      </div>
+    {{ end }}
+  </form>
+
+  <div class="section-head"><h2>Danger zone</h2></div>
+  <div class="card danger" data-test="danger-zone">
+    <div class="label">· DANGER ZONE</div>
+    <p style="font-size: 13px; color: var(--fg-1); margin: 12px 0; line-height: 1.6;">
+      Deleting your account erases all letters, recipients, and your encrypted vault. Your circle won't be notified — they'll simply never hear anything.
+    </p>
+    <p data-test="delete-account-notice" style="font-size: 13px; color: var(--fg-1); margin: 12px 0 0; line-height: 1.6;">
+      Account deletion isn't available from the web UI yet. Ask your administrator to remove your account.
+    </p>
+  </div>
 </div>
 {{ end }}
 
-{{ define "styles" }}
-<style>
-.header-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.danger-zone {
-    border-width: 1px;
-    border-style: solid;
-}
-
-.form-check {
-    margin-bottom: 10px;
-}
-
-.form-help {
-    display: block;
-    margin-top: 0.25rem;
-    color: var(--gray-color);
-    font-size: 0.85rem;
-}
-
-.form-group {
-    margin-bottom: 1.5rem;
-}
-
-.form-group h4 {
-    margin-bottom: 0.5rem;
-    font-size: 1.1rem;
-    font-weight: 500;
-}
-
-.card-header {
-    background-color: rgba(var(--primary-color-rgb), 0.05);
-    padding: 0.75rem 1.25rem;
-    border-bottom: 1px solid rgba(var(--primary-color-rgb), 0.1);
-}
-
-.card-header h3 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 500;
-}
-</style>
-{{ end }}
+{{ define "icon-send" }}<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>{{ end }}
 
 {{ define "scripts" }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Toggle 2FA setup section
-    const enable2faCheckbox = document.getElementById('enable2fa');
-    const setup2faSection = document.querySelector('.setup-2fa');
+    // Cadence + grace sliders mirror their number inputs and update the preview.
+    var cadRange = document.getElementById('cadence_days');
+    var cadNum = document.getElementById('pingFrequency');
+    var graceRange = document.getElementById('grace_days');
+    var graceNum = document.getElementById('pingDeadline');
+    var preview = document.getElementById('cadence-preview');
 
+    function refreshPreview() {
+        if (!preview) return;
+        var c = (cadNum && cadNum.value) || '0';
+        var g = (graceNum && graceNum.value) || '0';
+        preview.textContent = 'today ──' + c + 'd──● nudge ──' + g + 'd──● delivered';
+    }
+    function syncPair(rangeEl, numEl) {
+        if (!rangeEl || !numEl) return;
+        rangeEl.addEventListener('input', function() { numEl.value = rangeEl.value; refreshPreview(); });
+        numEl.addEventListener('input', function() { rangeEl.value = numEl.value; refreshPreview(); });
+    }
+    syncPair(cadRange, cadNum);
+    syncPair(graceRange, graceNum);
+
+    // Selected-state highlight on method radio cards.
+    var methodRow = document.querySelector('[data-test="method-row"]');
+    if (methodRow) {
+        methodRow.addEventListener('change', function() {
+            methodRow.querySelectorAll('.hb-method-card').forEach(function(card) {
+                var input = card.querySelector('input[type="radio"]');
+                card.classList.toggle('selected', !!(input && input.checked));
+            });
+        });
+    }
+
+    // Toggle 2FA setup section.
+    var enable2faCheckbox = document.getElementById('enable2fa');
+    var setup2faSection = document.querySelector('.setup-2fa');
     if (enable2faCheckbox && setup2faSection) {
         enable2faCheckbox.addEventListener('change', function() {
             setup2faSection.style.display = this.checked ? 'block' : 'none';
         });
     }
 
-    // Delete account confirmation
-    const deleteAccountButton = document.getElementById('deleteAccount');
-    if (deleteAccountButton) {
-        deleteAccountButton.addEventListener('click', function() {
-            if (confirm('Are you absolutely sure you want to delete your account? This action cannot be undone.')) {
-                if (confirm('This will permanently delete all your secrets, recipients, and account data. Type "DELETE" to confirm.')) {
-                    const confirmation = prompt('Type "DELETE" to confirm account deletion:');
-                    if (confirmation === 'DELETE') {
-                        // Submit the delete request
-                        const form = document.createElement('form');
-                        form.method = 'POST';
-                        form.action = '/account/delete';
-                        document.body.appendChild(form);
-                        form.submit();
-                    }
-                }
-            }
-        });
-    }
-
-    // Disable 2FA confirmation
-    const disable2faButton = document.getElementById('disable2fa');
-    if (disable2faButton) {
-        disable2faButton.addEventListener('click', function() {
-            if (confirm('Are you sure you want to disable two-factor authentication? This will make your account less secure.')) {
-                // Set a hidden field to indicate 2FA should be disabled
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'disable2fa';
-                input.value = 'true';
-                this.closest('form').appendChild(input);
-                this.closest('form').submit();
-            }
-        });
-    }
 });
 </script>
 {{ end }}

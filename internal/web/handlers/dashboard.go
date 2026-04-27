@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/korjavin/deadmanswitch/internal/storage"
 	"github.com/korjavin/deadmanswitch/internal/web/middleware"
@@ -67,38 +70,42 @@ func (h *DashboardHandler) HandleDashboard(w http.ResponseWriter, r *http.Reques
 	triggerTime := ""
 
 	if timeUntilNextCheckIn <= 0 {
-		// Check-in is due
-		if timeUntilDeadline <= 48*time.Hour && timeUntilDeadline > 0 {
-			// Less than 48 hours until deadline
-			status = "caution"
-			statusMessage = "Your check-in deadline is approaching. Please check in to keep your switch active."
-		} else if timeUntilDeadline <= 0 {
-			// Past deadline
+		// Check-in is due. Three states fan out from here:
+		// past deadline > danger; within 48h of deadline > caution-imminent;
+		// past nudge but >48h from deadline > caution-quiet.
+		if timeUntilDeadline <= 0 {
 			status = "danger"
 			statusMessage = "Your check-in deadline has passed! Your switch will trigger soon if you don't check in."
 			triggerTime = deadline.Format("Jan 2, 2006 15:04 MST")
+		} else if timeUntilDeadline <= 48*time.Hour {
+			status = "caution"
+			statusMessage = "Your check-in deadline is approaching. Please check in to keep your switch active."
+		} else {
+			status = "caution"
+			statusMessage = "We haven't heard from you in a while. A quick check-in keeps your switch quiet."
 		}
 	}
 
-	// Get recent activity logs
+	// Get recent activity logs. The repo returns rows ORDER BY timestamp DESC,
+	// so iterate forward to pick the five newest. The synthetic "Account
+	// created" row is appended at the end so it never displaces a fresher entry.
 	activityLogs, err := h.repo.ListAuditLogsByUserID(r.Context(), user.ID)
-	activities := []map[string]string{{
-		"Time":        user.CreatedAt.Format("Jan 2, 2006 15:04"),
-		"Description": "Account created",
-	}}
+	activities := make([]map[string]string, 0, 6)
 
 	if err == nil && len(activityLogs) > 0 {
-		// Add the most recent 5 activity logs
-		count := 0
-		for i := len(activityLogs) - 1; i >= 0 && count < 5; i-- {
+		for i := 0; i < len(activityLogs) && i < 5; i++ {
 			log := activityLogs[i]
 			activities = append(activities, map[string]string{
 				"Time":        log.Timestamp.Format("Jan 2, 2006 15:04"),
 				"Description": formatActivityDescription(log.Action, log.Details),
 			})
-			count++
 		}
 	}
+
+	activities = append(activities, map[string]string{
+		"Time":        user.CreatedAt.Format("Jan 2, 2006 15:04"),
+		"Description": "Account created",
+	})
 
 	// Get the latest ping history
 	latestPing, err := h.repo.GetLatestPingByUserID(r.Context(), user.ID)
@@ -118,17 +125,56 @@ func (h *DashboardHandler) HandleDashboard(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
+	// Heartbeat soft-status variant ("ok" | "warn" | "crit") derived from
+	// the existing alarm-style Status field. Drives both copy and pulse class.
+	statusVariant := softStatusVariant(status)
+
+	// Build the "circle" — top 4 confirmed-or-awaiting recipients with a
+	// rough letter count, used by the dashboard's right-rail.
+	circle := make([]map[string]interface{}, 0, 4)
+	for i, rcp := range recipients {
+		if i >= 4 {
+			break
+		}
+		letterCount := 0
+		if assigns, err := h.repo.ListSecretAssignmentsByRecipientID(r.Context(), rcp.ID); err == nil {
+			letterCount = len(assigns)
+		}
+		circle = append(circle, map[string]interface{}{
+			"Name":        rcp.Name,
+			"Email":       rcp.Email,
+			"LetterCount": letterCount,
+			"Verified":    rcp.IsConfirmed,
+		})
+	}
+
+	// Passkey presence — used by the "Passkey tap" channel card.
+	hasPasskey := false
+	if passkeys, err := h.repo.ListPasskeysByUserID(r.Context(), user.ID); err == nil {
+		hasPasskey = len(passkeys) > 0
+	}
+
+	firstName := firstNameFromUser(user.Email)
+
 	data := templates.TemplateData{
 		Title:           "Dashboard",
 		ActivePage:      "dashboard",
 		IsAuthenticated: true,
 		User: map[string]interface{}{
-			"Email": user.Email,
-			"Name":  user.Email, // Use email as name since we don't have a separate name field
+			"Email":             user.Email,
+			"Name":              user.Email,
+			"FirstName":         firstName,
+			"GitHubUsername":    user.GitHubUsername,
+			"GitHubConnected":   user.GitHubUsername != "",
+			"TelegramUsername":  user.TelegramUsername,
+			"TelegramConnected": user.TelegramID != "",
+			"HasPasskey":        hasPasskey,
 		},
 		Data: map[string]interface{}{
 			"Status":        status,
+			"StatusVariant": statusVariant,
 			"StatusMessage": statusMessage,
+			"TodayLabel":    strings.ToUpper(now.Format("Mon, Jan 2")),
 			"NextCheckIn":   nextCheckIn.Format("Jan 2, 2006 15:04 MST"),
 			"Deadline":      deadline.Format("Jan 2, 2006 15:04 MST"),
 			"TriggerTime":   triggerTime,
@@ -144,8 +190,25 @@ func (h *DashboardHandler) HandleDashboard(w http.ResponseWriter, r *http.Reques
 				"DaysActive":       daysActive,
 			},
 			"Activities": activities,
+			"Circle":     circle,
+			"Timeline": map[string]interface{}{
+				"LastSeen": map[string]string{
+					"Value": humanizeAgo(time.Since(user.LastActivity)),
+					"Sub":   user.LastActivity.Format("Jan 2, 2006"),
+				},
+				"NextNudge": map[string]string{
+					"Value": humanizeUntil(timeUntilNextCheckIn),
+					"Sub":   nextCheckIn.Format("Jan 2, 2006"),
+				},
+				"Delivery": map[string]string{
+					"Value": humanizeUntil(timeUntilDeadline),
+					"Sub":   deadline.Format("Jan 2, 2006"),
+				},
+			},
 		},
 	}
+
+	data.SetHeartbeat(user)
 
 	if err := templates.RenderTemplate(w, "dashboard.html", data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
@@ -208,6 +271,90 @@ func formatPingStatus(status string) string {
 	default:
 		return status
 	}
+}
+
+// softStatusVariant maps the alarm-style Status string to the soft
+// "ok" / "warn" / "crit" variant used by the Heartbeat dashboard.
+func softStatusVariant(status string) string {
+	switch status {
+	case "active":
+		return "ok"
+	case "caution":
+		return "warn"
+	default:
+		return "crit"
+	}
+}
+
+// firstNameFromUser returns a friendly first-name token. We don't have a
+// real name field on User, so we fall back to the local-part of the email
+// (capitalized). Used by the soft "You're good, {name}." copy.
+func firstNameFromUser(email string) string {
+	local := email
+	if at := strings.IndexByte(email, '@'); at > 0 {
+		local = email[:at]
+	}
+	if dot := strings.IndexByte(local, '.'); dot > 0 {
+		local = local[:dot]
+	}
+	if local == "" {
+		return "there"
+	}
+	r, size := utf8.DecodeRuneInString(local)
+	if r == utf8.RuneError {
+		return "there"
+	}
+	return string(unicode.ToUpper(r)) + local[size:]
+}
+
+// humanizeUntil formats a positive forward-looking duration for the
+// "NEXT NUDGE" / "DELIVERY" cells of the timeline strip. Negative values
+// collapse to "now".
+func humanizeUntil(d time.Duration) string {
+	if d <= 0 {
+		return "now"
+	}
+	days := int(d.Hours() / 24)
+	if days >= 1 {
+		if days == 1 {
+			return "1 day"
+		}
+		return fmt.Sprintf("%d days", days)
+	}
+	hours := int(d.Hours())
+	if hours >= 1 {
+		if hours == 1 {
+			return "1 hour"
+		}
+		return fmt.Sprintf("%d hours", hours)
+	}
+	return "soon"
+}
+
+// humanizeAgo formats a positive elapsed duration for the "LAST SEEN" cell.
+func humanizeAgo(d time.Duration) string {
+	if d <= 0 {
+		return "just now"
+	}
+	days := int(d.Hours() / 24)
+	if days >= 1 {
+		if days == 1 {
+			return "1 day ago"
+		}
+		return fmt.Sprintf("%d days ago", days)
+	}
+	hours := int(d.Hours())
+	if hours >= 1 {
+		if hours == 1 {
+			return "1 hour ago"
+		}
+		return fmt.Sprintf("%d hours ago", hours)
+	}
+	mins := int(d.Minutes())
+	if mins >= 1 {
+		return fmt.Sprintf("%d min ago", mins)
+	}
+	return "just now"
 }
 
 // formatDuration formats a duration in a human-readable way

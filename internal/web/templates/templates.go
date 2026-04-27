@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/korjavin/deadmanswitch/internal/models"
 )
 
 // TemplatePaths contains possible paths where templates might be located
@@ -18,12 +20,40 @@ var TemplatePaths = []string{
 
 // TemplateData represents the data passed to templates
 type TemplateData struct {
-	Title           string
-	ActivePage      string
-	IsAuthenticated bool
-	User            map[string]interface{}
-	Data            map[string]interface{}
-	Flash           map[string]string
+	Title            string
+	ActivePage       string
+	IsAuthenticated  bool
+	User             map[string]interface{}
+	Data             map[string]interface{}
+	Flash            map[string]string
+	HeartbeatVariant string // "ok" | "warn" | "crit"; empty means layout falls back to "ok"
+	HeartbeatLabel   string // short suffix shown in the topbar pill (e.g. "OK", "OVERDUE", "URGENT")
+}
+
+// SetHeartbeat fills the topbar HeartbeatVariant/Label from the user's
+// LastActivity + ping cadence. Call this from every authenticated handler
+// before RenderTemplate so the topbar pulse reflects real status instead
+// of a hardcoded "OK".
+func (d *TemplateData) SetHeartbeat(user *models.User) {
+	if user == nil {
+		return
+	}
+	d.HeartbeatVariant, d.HeartbeatLabel = HeartbeatStatus(user, time.Now())
+}
+
+// HeartbeatStatus collapses the user's ping schedule into the soft
+// "ok" / "warn" / "crit" variant + matching uppercase label used by the
+// topbar pulse. Mirrors the dashboard's status derivation.
+func HeartbeatStatus(user *models.User, now time.Time) (variant, label string) {
+	nextCheckIn := user.LastActivity.AddDate(0, 0, user.PingFrequency)
+	deadline := user.LastActivity.AddDate(0, 0, user.PingDeadline)
+	if !now.Before(deadline) {
+		return "crit", "URGENT"
+	}
+	if !now.Before(nextCheckIn) {
+		return "warn", "OVERDUE"
+	}
+	return "ok", "OK"
 }
 
 // FuncMap returns a template.FuncMap with common template functions

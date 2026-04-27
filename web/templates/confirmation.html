@@ -1,52 +1,64 @@
 {{ template "layout.html" . }}
 
-{{ define "content" }}
-<div class="confirmation-page">
-    <div class="card">
-        <div class="card-header">
-            <h2>Confirmation Successful</h2>
-        </div>
-        <div class="card-body">
-            <div class="alert alert-success">
-                <p>{{ .Data.Message }}</p>
-            </div>
-            <p>You have successfully confirmed your contact information. The user who added you as a contact has been notified.</p>
-            <p>This confirmation helps ensure that the Dead Man's Switch system can reach you if needed.</p>
-            <p>You don't need to take any further action at this time.</p>
-        </div>
-    </div>
-</div>
-
+{{ define "styles" }}
 <style>
-.confirmation-page {
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 20px;
-}
-
-.card {
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.card-header {
-    background-color: #f8f9fa;
-    padding: 15px 20px;
-    border-bottom: 1px solid #ddd;
-}
-
-.card-body {
-    padding: 20px;
-}
-
-.alert-success {
-    color: #155724;
-    background-color: #d4edda;
-    border-color: #c3e6cb;
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 4px;
-}
+  .auth-card {
+    max-width: 560px;
+    margin: 96px auto;
+    padding: 40px 32px;
+    text-align: center;
+    background: var(--bg-elev);
+    border: 1px solid var(--line-1);
+    box-shadow: 4px 4px 0 0 var(--line-1);
+  }
+  .auth-kicker {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+    margin-bottom: 14px;
+  }
+  .auth-title {
+    font-family: var(--serif);
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0 0 12px;
+  }
+  .auth-sub {
+    color: var(--fg-1);
+    font-size: 14px;
+    line-height: 1.7;
+    margin: 0 auto 12px;
+    max-width: 48ch;
+  }
+  .auth-message {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--fg-1);
+    background: var(--bg-1);
+    border: 1px dashed var(--line-2);
+    padding: 14px 16px;
+    margin: 22px auto;
+    max-width: 48ch;
+    text-align: left;
+    line-height: 1.6;
+  }
 </style>
+{{ end }}
+
+{{ define "content" }}
+<div class="auth-card" data-test="auth-confirmation">
+  <div class="auth-kicker">· CONFIRMED</div>
+  <h1 class="auth-title">Thank you for confirming.</h1>
+  <p class="auth-sub">The person who chose you has been gently let know.</p>
+
+  {{ if .Data.Message }}
+  <div class="auth-message">{{ .Data.Message }}</div>
+  {{ end }}
+
+  <p class="auth-sub" style="color: var(--fg-2); font-size: 12px; margin-top: 8px;">No further action is needed from you right now.</p>
+</div>
 {{ end }}

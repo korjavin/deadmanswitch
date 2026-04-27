@@ -2,82 +2,153 @@
 
 {{ define "styles" }}
 <style>
-  .auth-container {
-    max-width: 480px;
-    margin: 2rem auto;
+  .auth-card {
+    max-width: 420px;
+    margin: 64px auto;
+    padding: 32px 28px;
+    background: var(--bg-elev);
+    border: 1px solid var(--line-1);
+    box-shadow: 4px 4px 0 0 var(--line-1);
   }
-
+  .auth-kicker {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+    margin-bottom: 10px;
+  }
   .auth-title {
-    text-align: center;
-    margin-bottom: 2rem;
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin: 0 0 8px;
   }
-
-  .auth-options {
+  .auth-sub {
+    color: var(--fg-1);
+    font-size: 13px;
+    line-height: 1.6;
+    margin: 0 0 24px;
+  }
+  .auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 18px 0;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+  }
+  .auth-divider::before,
+  .auth-divider::after {
+    content: "";
+    flex: 1;
+    border-top: 1px dashed var(--line-2);
+  }
+  .auth-foot {
+    margin-top: 22px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--fg-2);
+    text-align: center;
+  }
+  .auth-foot a { color: var(--fg-0); }
+  .password-wrap { position: relative; }
+  .password-toggle {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--fg-2);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    padding: 4px 6px;
+  }
+  .password-toggle:hover { color: var(--fg-0); }
+  .field-row-meta {
     display: flex;
     justify-content: space-between;
-    margin-top: 1rem;
+    align-items: center;
+    margin-top: 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-2);
   }
+  .auth-status {
+    margin-top: 14px;
+    padding: 10px 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    border: 1px dashed var(--line-2);
+    background: var(--bg-1);
+  }
+  .auth-status.ok { border-color: var(--line-1); }
+  .auth-status.err { border-color: var(--orange); }
 </style>
 {{ end }}
 
 {{ define "content" }}
-<div class="auth-container">
-  <h1 class="auth-title">Login</h1>
+<div class="auth-card" data-test="auth-login">
+  <div class="auth-kicker">· WELCOME BACK</div>
+  <h1 class="auth-title">Sign in to Heartbeat</h1>
+  <p class="auth-sub">The letters you've written are right where you left them.</p>
 
-  <div class="card mb-4">
-    <div class="card-header">
-      <h2>Login with Passkey</h2>
+  <button id="passkey-login-button" type="button" class="btn full">
+    {{ template "icon-key" . }}
+    <span>Sign in with passkey</span>
+  </button>
+
+  <div class="field" style="margin-top: 14px; margin-bottom: 0;">
+    <div class="field-label"><span class="label">· EMAIL FOR PASSKEY</span></div>
+    <input type="email" id="passkey-email" class="input" autocomplete="email" placeholder="you@example.com">
+  </div>
+  <div id="passkey-status" class="auth-status" style="display: none;"></div>
+
+  <div class="auth-divider">OR PASSWORD</div>
+
+  <form action="/login" method="POST">
+    <div class="field">
+      <div class="field-label"><span class="label">· EMAIL</span></div>
+      <input type="email" id="email" name="email" class="input" required autocomplete="email" placeholder="you@example.com">
     </div>
-    <div class="card-body">
-      <p>Use your passkey to sign in without a password.</p>
-      <div class="form-group">
-        <label for="passkey-email" class="form-label">Email Address</label>
-        <input type="email" id="passkey-email" class="form-control" required>
+
+    <div class="field">
+      <div class="field-label">
+        <span class="label">· PASSWORD</span>
+        <a href="/forgot-password" style="font-family: var(--mono); font-size: 11px;">forgot?</a>
       </div>
-      <button id="passkey-login-button" class="btn btn-primary btn-block">
-        <i class="fas fa-key"></i> Sign in with Passkey
-      </button>
-      <div id="passkey-status" class="mt-3" style="display: none;"></div>
+      <div class="password-wrap">
+        <input type="password" id="password" name="password" class="input" required autocomplete="current-password" placeholder="••••••••">
+        <button type="button" class="password-toggle" data-target="password">show</button>
+      </div>
     </div>
-  </div>
 
-  <div class="card">
-    <div class="card-header">
-      <h2>Login with Password</h2>
+    <div class="field" style="margin-bottom: 16px;">
+      <label class="row" style="gap: 8px; cursor: pointer;">
+        <input type="checkbox" id="remember" name="remember" style="margin: 0;">
+        <span class="label" style="color: var(--fg-1);">· Remember me</span>
+      </label>
     </div>
-    <div class="card-body">
-      <form action="/login" method="POST">
-        <div class="form-group">
-          <label for="email" class="form-label">Email Address</label>
-          <input type="email" id="email" name="email" class="form-control" required>
-        </div>
 
-        <div class="form-group">
-          <label for="password" class="form-label">Password</label>
-          <div style="position: relative;">
-            <input type="password" id="password" name="password" class="form-control" required>
-            <button type="button" class="password-toggle" data-target="password" style="position: absolute; right: 10px; top: 5px; border: none; background: none; cursor: pointer;">Show</button>
-          </div>
-        </div>
+    <button type="submit" class="btn primary full">Continue →</button>
+  </form>
 
-        <div class="form-group">
-          <div class="form-check">
-            <input type="checkbox" id="remember" name="remember" class="form-check-input">
-            <label for="remember" class="form-check-label">Remember me</label>
-          </div>
-        </div>
-
-        <button type="submit" class="btn btn-primary btn-block">Log In with Password</button>
-      </form>
-    </div>
-  </div>
-
-  <div class="auth-options">
-    <a href="/register">Don't have an account? Register</a>
-    <a href="/forgot-password">Forgot password?</a>
+  <div class="auth-foot">
+    New here? <a href="/register">Create your account</a>
   </div>
 </div>
+{{ end }}
 
+{{ define "scripts" }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const passkeyLoginButton = document.getElementById('passkey-login-button');
@@ -87,21 +158,17 @@ document.addEventListener('DOMContentLoaded', function() {
     passkeyLoginButton.addEventListener('click', async function() {
         const email = passkeyEmailInput.value;
         if (!email) {
-            showStatus('error', 'Please enter your email address.');
+            showStatus('err', 'Please enter your email address.');
             return;
         }
 
-        // Disable the button and show loading state
         passkeyLoginButton.disabled = true;
-        passkeyLoginButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in...';
+        passkeyLoginButton.innerHTML = 'Signing in…';
 
         try {
-            // Begin login
             const beginResponse = await fetch('/login/passkey/begin', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email })
             });
 
@@ -110,8 +177,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             const credentialRequestOptions = await beginResponse.json();
-
-            // Convert base64 strings to ArrayBuffers
             credentialRequestOptions.publicKey.challenge = base64URLToArrayBuffer(credentialRequestOptions.publicKey.challenge);
 
             if (credentialRequestOptions.publicKey.allowCredentials) {
@@ -122,13 +187,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
 
-            // Get credential
-            showStatus('info', 'Please follow your browser\'s instructions to sign in with your passkey...');
+            showStatus('ok', 'Follow your browser\'s prompt to sign in with your passkey…');
             const credential = await navigator.credentials.get({
                 publicKey: credentialRequestOptions.publicKey
             });
 
-            // Prepare credential for sending to server
             const credentialResponse = {
                 id: credential.id,
                 rawId: arrayBufferToBase64URL(credential.rawId),
@@ -141,16 +204,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             };
 
-            // Finish login
             const finishResponse = await fetch('/login/passkey/finish', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    credential: credentialResponse,
-                    email: email
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential: credentialResponse, email: email })
             });
 
             if (!finishResponse.ok) {
@@ -160,7 +217,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const result = await finishResponse.json();
 
             if (result.success) {
-                showStatus('success', 'Login successful! Redirecting...');
+                showStatus('ok', 'Signed in. Redirecting…');
                 window.location.href = result.redirect || '/dashboard';
             } else {
                 throw new Error(result.message || 'Login failed');
@@ -168,30 +225,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
         } catch (error) {
             console.error('Error logging in with passkey:', error);
-            showStatus('error', 'Error logging in with passkey: ' + error.message);
-
-            // Re-enable the button
+            showStatus('err', 'Couldn\'t sign in with passkey: ' + error.message);
             passkeyLoginButton.disabled = false;
-            passkeyLoginButton.innerHTML = '<i class="fas fa-key"></i> Sign in with Passkey';
+            passkeyLoginButton.innerHTML = '<span>Sign in with passkey</span>';
         }
+    });
+
+    document.querySelectorAll('.password-toggle').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const target = document.getElementById(btn.getAttribute('data-target'));
+            if (!target) return;
+            if (target.type === 'password') {
+                target.type = 'text';
+                btn.textContent = 'hide';
+            } else {
+                target.type = 'password';
+                btn.textContent = 'show';
+            }
+        });
     });
 
     function showStatus(type, message) {
         statusDiv.style.display = 'block';
-        statusDiv.className = 'alert mt-3';
-
-        if (type === 'error') {
-            statusDiv.className += ' alert-danger';
-        } else if (type === 'success') {
-            statusDiv.className += ' alert-success';
-        } else {
-            statusDiv.className += ' alert-info';
-        }
-
+        statusDiv.className = 'auth-status ' + (type === 'err' ? 'err' : 'ok');
         statusDiv.textContent = message;
     }
 
-    // Helper functions for ArrayBuffer <-> Base64URL conversion
     function base64URLToArrayBuffer(base64URL) {
         const base64 = base64URL.replace(/-/g, '+').replace(/_/g, '/');
         const padLen = (4 - (base64.length % 4)) % 4;
@@ -199,22 +258,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const binary = atob(padded);
         const buffer = new ArrayBuffer(binary.length);
         const view = new Uint8Array(buffer);
-
         for (let i = 0; i < binary.length; i++) {
             view[i] = binary.charCodeAt(i);
         }
-
         return buffer;
     }
 
     function arrayBufferToBase64URL(buffer) {
         const bytes = new Uint8Array(buffer);
         let binary = '';
-
         for (let i = 0; i < bytes.byteLength; i++) {
             binary += String.fromCharCode(bytes[i]);
         }
-
         const base64 = btoa(binary);
         return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
     }

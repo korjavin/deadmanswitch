@@ -1,255 +1,231 @@
 {{ template "layout.html" . }}
 
+{{ define "styles" }}
+<style>
+  .hb-profile { max-width: 760px; }
+  .hb-profile .page-head { margin-bottom: 24px; }
+  .hb-profile .card { margin-bottom: 24px; }
+
+  .hb-meta-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--fg-2);
+    letter-spacing: 0.04em;
+  }
+  .hb-meta-row .label { display: block; margin-bottom: 4px; }
+  .hb-meta-row .value { color: var(--fg-1); font-size: 13px; letter-spacing: 0; }
+
+  .hb-channel-list { padding: 0; }
+  .hb-channel-row {
+    display: grid;
+    grid-template-columns: 24px 1fr auto auto;
+    gap: 14px;
+    align-items: center;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .hb-channel-row:last-child { border-bottom: 0; }
+  .hb-channel-row .ch-name { font-size: 13px; font-weight: 600; }
+  .hb-channel-row .ch-name .handle {
+    color: var(--fg-2);
+    font-family: var(--mono);
+    font-weight: 400;
+  }
+  .hb-channel-row .ch-desc {
+    font-size: 12px;
+    color: var(--fg-2);
+    line-height: 1.5;
+    margin-top: 2px;
+  }
+
+  .hb-tg-instructions {
+    margin-top: 12px;
+    padding: 14px 16px;
+    border: 1px dashed var(--line-2);
+    background: var(--bg-1);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .hb-tg-instructions ol { margin: 8px 0 0 18px; padding: 0; }
+  .hb-tg-instructions code {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 1px 4px;
+    background: var(--bg-elev);
+    border: 1px solid var(--line-2);
+  }
+
+  .hb-action-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  .hb-inline-form {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .hb-inline-form .input { flex: 1; }
+</style>
+{{ end }}
+
 {{ define "content" }}
-<div class="profile-page">
-    <div class="header-actions">
-        <h1>My Profile</h1>
+<div class="hb-profile" data-test="profile-page">
+  <div class="page-head">
+    <div class="label">· ABOUT YOU · PROFILE</div>
+    <h1>Your account</h1>
+    <p class="lede">The basics about you, where we can reach you, and how you sign in.</p>
+  </div>
+
+  <div class="section-head"><h2>Identity</h2></div>
+  <form action="/profile" method="POST" class="card" data-test="identity-form">
+    <div class="field">
+      <div class="field-label"><span class="label">· EMAIL</span></div>
+      <input type="email" name="email" id="email" class="input"
+             value="{{ .Data.User.Email }}" readonly>
+      <div class="field-help">Your email is your unique identifier — it can't be changed.</div>
     </div>
 
-    <div class="card">
-        <div class="card-body">
-            <form action="/profile" method="POST">
-                <div class="form-group">
-                    <label for="email" class="form-label">Email Address</label>
-                    <input type="email" name="email" id="email" class="form-control"
-                           value="{{ .Data.User.Email }}" readonly>
-                    <small class="form-help">Email address cannot be changed. This is your unique identifier.</small>
-                </div>
+    <hr class="divider dashed">
 
-                <div class="form-group">
-                    <h3>Change Password</h3>
-                    <p>Leave blank if you don't want to change your password.</p>
-
-                    <div class="form-group">
-                        <label for="currentPassword" class="form-label">Current Password</label>
-                        <input type="password" name="currentPassword" id="currentPassword" class="form-control">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="newPassword" class="form-label">New Password</label>
-                        <input type="password" name="newPassword" id="newPassword" class="form-control">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="confirmPassword" class="form-label">Confirm New Password</label>
-                        <input type="password" name="confirmPassword" id="confirmPassword" class="form-control">
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                </div>
-            </form>
-        </div>
+    <div class="field">
+      <div class="field-label"><span class="label">· CHANGE PASSWORD</span></div>
+      <p class="field-help" style="margin-top: 0;">Leave blank to keep your current password.</p>
     </div>
 
-    <div class="card" style="margin-top: 2rem;">
-        <div class="card-header">
-            <h3>Account Information</h3>
-        </div>
-        <div class="card-body">
-            <p><strong>Account Created:</strong> {{ .Data.User.CreatedAt }}</p>
-            <p><strong>Last Login:</strong> {{ .Data.User.LastLogin }}</p>
-            <p><strong>Account Status:</strong> <span class="badge badge-success">Active</span></p>
-        </div>
+    <div class="field">
+      <div class="field-label"><span class="label">· CURRENT PASSWORD</span></div>
+      <input type="password" name="currentPassword" id="currentPassword" class="input" autocomplete="current-password">
     </div>
 
-    <div class="card" style="margin-top: 2rem;">
-        <div class="card-header">
-            <h3>Two-Factor Authentication</h3>
-        </div>
-        <div class="card-body">
-            {{ if .Data.TwoFA.Enabled }}
-                <div class="alert alert-success">
-                    <i class="fas fa-check-circle"></i> Two-factor authentication is enabled for your account
-                </div>
-                <p>Your account is protected with an additional layer of security. You'll need to enter a verification code from your authenticator app when logging in.</p>
-                <div class="mt-3">
-                    <form action="/2fa/disable" method="POST" class="inline-form">
-                        <div class="form-group">
-                            <label for="disable_code" class="form-label">Enter verification code to disable 2FA:</label>
-                            <div class="input-group">
-                                <input type="text" name="code" id="disable_code" class="form-control"
-                                       placeholder="Enter 6-digit code" required
-                                       pattern="[0-9]{6}" maxlength="6">
-                                <button type="submit" class="btn btn-danger">
-                                    <i class="fas fa-shield-alt"></i> Disable 2FA
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            {{ else }}
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle"></i> Two-factor authentication is not enabled
-                </div>
-                <p>Add an extra layer of security to your account by enabling two-factor authentication. Once enabled, you'll need to enter a verification code from your authenticator app when logging in.</p>
-                <div class="mt-3">
-                    <a href="/2fa/setup" class="btn btn-primary">
-                        <i class="fas fa-shield-alt"></i> Set Up Two-Factor Authentication
-                    </a>
-                </div>
-            {{ end }}
-        </div>
+    <div class="field">
+      <div class="field-label"><span class="label">· NEW PASSWORD</span></div>
+      <input type="password" name="newPassword" id="newPassword" class="input" autocomplete="new-password">
     </div>
 
-    <div class="card" style="margin-top: 2rem;">
-        <div class="card-header">
-            <h3>Passkeys</h3>
-        </div>
-        <div class="card-body">
-            <p>Passkeys allow you to sign in without a password using biometrics (like fingerprint or face recognition) or a security key.</p>
-            <p>You can register up to 5 passkeys for your account.</p>
-
-            <div class="mt-3">
-                <a href="/profile/passkeys" class="btn btn-primary">
-                    <i class="fas fa-key"></i> Manage Passkeys
-                </a>
-            </div>
-        </div>
+    <div class="field">
+      <div class="field-label"><span class="label">· CONFIRM NEW PASSWORD</span></div>
+      <input type="password" name="confirmPassword" id="confirmPassword" class="input" autocomplete="new-password">
     </div>
 
-    <div class="card" style="margin-top: 2rem;">
-        <div class="card-header">
-            <h3>GitHub Integration</h3>
+    <div class="hb-action-row">
+      <button type="submit" class="btn primary">Save changes</button>
+    </div>
+  </form>
+
+  <div class="section-head">
+    <h2>Account</h2>
+    <span class="meta">· QUIET HISTORY</span>
+  </div>
+  <div class="card" data-test="account-meta">
+    <div class="hb-meta-row">
+      <div>
+        <span class="label">· JOINED</span>
+        <span class="value">{{ .Data.User.CreatedAt }}</span>
+      </div>
+      <div>
+        <span class="label">· LAST SEEN</span>
+        <span class="value">{{ .Data.User.LastLogin }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-head"><h2>Connected channels</h2></div>
+  <div class="card hb-channel-list" style="padding: 0;" data-test="channels-card">
+    <div class="hb-channel-row" data-test="channel-github">
+      {{ template "icon-git-branch-profile" . }}
+      <div>
+        <div class="ch-name">
+          GitHub
+          {{ if .Data.GitHub.Connected }}<span class="handle"> · @{{ .Data.GitHub.Username }}</span>{{ end }}
         </div>
-        <div class="card-body">
-            {{ if .Data.GitHub.Connected }}
-                <div class="alert alert-success">
-                    <i class="fas fa-check-circle"></i> Your account is connected to GitHub
-                </div>
-                <p><strong>GitHub Username:</strong> {{ .Data.GitHub.Username }}</p>
-                <p>Your GitHub activity will be monitored to automatically reschedule pings when you're active.</p>
-                <div class="mt-3">
-                    <form action="/profile/github/disconnect" method="POST">
-                        <button type="submit" class="btn btn-outline-danger btn-sm">
-                            <i class="fas fa-unlink"></i> Disconnect GitHub
-                        </button>
-                    </form>
-                </div>
-            {{ else }}
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> Connect your GitHub account to automatically detect your activity and postpone deadlines.
-                </div>
-                <p>When you connect your GitHub account, we'll monitor your public activity to know you're still active.</p>
-                <form action="/profile" method="POST" class="mt-3">
-                    <div class="form-group">
-                        <label for="github_username" class="form-label">GitHub Username</label>
-                        <div class="input-group">
-                            <input type="text" name="github_username" id="github_username" class="form-control"
-                                   placeholder="Enter your GitHub username" required>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fab fa-github"></i> Connect GitHub
-                            </button>
-                        </div>
-                    </div>
-                </form>
-            {{ end }}
-        </div>
+        <div class="ch-desc">Public commits, comments, and stars count as activity — we know you're alive.</div>
+      </div>
+      {{ if .Data.GitHub.Connected }}
+        <span class="badge solid">· CONNECTED</span>
+        <form action="/profile/github/disconnect" method="POST" style="margin: 0;">
+          <button type="submit" class="btn sm ghost">Disconnect</button>
+        </form>
+      {{ else }}
+        <span class="badge dashed">· NOT YET</span>
+        <form action="/profile" method="POST" class="hb-inline-form" data-test="github-connect-form">
+          <input type="text" name="github_username" class="input" placeholder="username" required style="width: 160px;">
+          <button type="submit" class="btn sm">Connect</button>
+        </form>
+      {{ end }}
     </div>
 
-    <div class="card" style="margin-top: 2rem;">
-        <div class="card-header">
-            <h3>Telegram Integration</h3>
+    <div class="hb-channel-row" data-test="channel-telegram">
+      {{ template "icon-send-profile" . }}
+      <div>
+        <div class="ch-name">
+          Telegram
+          {{ if .Data.Telegram.Connected }}<span class="handle"> · @{{ .Data.Telegram.Username }}</span>{{ end }}
         </div>
-        <div class="card-body">
-            {{ if .Data.Telegram.Connected }}
-                <div class="alert alert-success">
-                    <i class="fas fa-check-circle"></i> Your account is connected to Telegram
-                </div>
-                <p><strong>Telegram Username:</strong> {{ .Data.Telegram.Username }}</p>
-                <p><strong>Telegram ID:</strong> {{ .Data.Telegram.ID }}</p>
-                <div class="mt-3">
-                    <a href="#" class="btn btn-outline-danger btn-sm">
-                        <i class="fas fa-unlink"></i> Disconnect Telegram
-                    </a>
-                </div>
-            {{ else }}
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> Connect your Telegram account to receive notifications and respond to check-ins via Telegram.
-                </div>
-                <p>To connect your Telegram account:</p>
-                <ol>
-                    <li>Open Telegram and search for <strong>{{ .Data.Telegram.BotUsername }}</strong></li>
-                    <li>Start a chat with the bot by clicking <strong>Start</strong></li>
-                    <li>Send the command <strong>/connect {{ .Data.User.Email }}</strong> to the bot</li>
-                </ol>
-            {{ end }}
-        </div>
+        <div class="ch-desc">One-tap reply to our bot to confirm you're around.</div>
+      </div>
+      {{ if .Data.Telegram.Connected }}
+        <span class="badge solid">· CONNECTED</span>
+        <a href="#" class="btn sm ghost">Disconnect</a>
+      {{ else }}
+        <span class="badge dashed">· NOT YET</span>
+        <span class="ch-desc" style="text-align: right; margin: 0;">see below</span>
+      {{ end }}
     </div>
+  </div>
+
+  {{ if not .Data.Telegram.Connected }}
+    <div class="hb-tg-instructions" data-test="telegram-instructions">
+      To connect Telegram:
+      <ol>
+        <li>Open Telegram and search for <strong>{{ .Data.Telegram.BotUsername }}</strong></li>
+        <li>Start a chat by tapping <strong>Start</strong></li>
+        <li>Send <code>/connect {{ .Data.User.Email }}</code> to the bot</li>
+      </ol>
+    </div>
+  {{ end }}
+
+  <div class="section-head"><h2>Authentication</h2></div>
+  <div class="card hb-channel-list" style="padding: 0;" data-test="auth-card">
+    <div class="hb-channel-row" data-test="auth-passkey-row">
+      {{ template "icon-key" . }}
+      <div>
+        <div class="ch-name">Passkeys</div>
+        <div class="ch-desc">Sign in with Face ID, Touch ID, or a hardware key — up to 5 per account.</div>
+      </div>
+      <span class="badge dashed">· MANAGE</span>
+      <a href="/profile/passkeys" class="btn sm ghost">Open</a>
+    </div>
+
+    <div class="hb-channel-row" data-test="auth-2fa-row">
+      {{ template "icon-shield" . }}
+      <div>
+        <div class="ch-name">Two-factor authentication</div>
+        <div class="ch-desc">{{ if .Data.TwoFA.Enabled }}Authenticator app linked. You'll be asked for a code at sign-in.{{ else }}Add a second key at sign-in for stronger protection.{{ end }}</div>
+      </div>
+      {{ if .Data.TwoFA.Enabled }}
+        <span class="badge solid">· ENABLED</span>
+        <form action="/2fa/disable" method="POST" class="hb-inline-form" data-test="disable-2fa-form">
+          <input type="text" name="code" class="input" placeholder="6-digit code" required
+                 pattern="[0-9]{6}" maxlength="6" style="width: 120px;">
+          <button type="submit" class="btn sm danger-btn">Disable</button>
+        </form>
+      {{ else }}
+        <span class="badge dashed">· NOT YET</span>
+        <a href="/2fa/setup" class="btn sm">Set up</a>
+      {{ end }}
+    </div>
+  </div>
 </div>
 {{ end }}
 
-{{ define "styles" }}
-<style>
-.header-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
+{{ define "icon-git-branch-profile" }}<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 01-9 9"/></svg>{{ end }}
 
-.badge {
-    display: inline-block;
-    padding: 0.25em 0.6em;
-    font-size: 0.75rem;
-    font-weight: 700;
-    line-height: 1;
-    text-align: center;
-    white-space: nowrap;
-    vertical-align: baseline;
-    border-radius: 0.25rem;
-}
+{{ define "icon-send-profile" }}<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>{{ end }}
 
-.badge-success {
-    color: #fff;
-    background-color: var(--success-color);
-}
-
-.alert {
-    position: relative;
-    padding: 0.75rem 1.25rem;
-    margin-bottom: 1rem;
-    border: 1px solid transparent;
-    border-radius: 0.25rem;
-}
-
-.alert-success {
-    color: #155724;
-    background-color: #d4edda;
-    border-color: #c3e6cb;
-}
-
-.alert-info {
-    color: #0c5460;
-    background-color: #d1ecf1;
-    border-color: #bee5eb;
-}
-
-.alert-warning {
-    color: #856404;
-    background-color: #fff3cd;
-    border-color: #ffeeba;
-}
-
-.mt-3 {
-    margin-top: 1rem;
-}
-
-.input-group {
-    display: flex;
-    width: 100%;
-}
-
-.input-group .form-control {
-    flex: 1;
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-}
-
-.input-group .btn {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
-}
-</style>
-{{ end }}
+{{ define "icon-shield" }}<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l9 4v6c0 5-3.5 9-9 10-5.5-1-9-5-9-10V6l9-4z"/></svg>{{ end }}

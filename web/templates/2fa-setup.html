@@ -1,142 +1,133 @@
 {{ template "layout.html" . }}
 
-{{ define "content" }}
-<div class="setup-2fa-page">
-    <div class="card">
-        <div class="card-body">
-            <h1 class="card-title">Set Up Two-Factor Authentication</h1>
-            
-            {{ if .Data.Error }}
-            <div class="alert alert-danger">
-                {{ .Data.Error }}
-            </div>
-            {{ end }}
-            
-            <div class="setup-instructions">
-                <p>Two-factor authentication adds an extra layer of security to your account. After enabling, you'll need to provide a verification code from your authenticator app when logging in.</p>
-                
-                <ol>
-                    <li>Install an authenticator app on your mobile device:
-                        <ul>
-                            <li><a href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2" target="_blank">Google Authenticator (Android)</a></li>
-                            <li><a href="https://apps.apple.com/us/app/google-authenticator/id388497605" target="_blank">Google Authenticator (iOS)</a></li>
-                            <li><a href="https://authy.com/download/" target="_blank">Authy (Android/iOS)</a></li>
-                        </ul>
-                    </li>
-                    <li>Scan the QR code below with your authenticator app</li>
-                    <li>Enter the 6-digit verification code from your app</li>
-                </ol>
-            </div>
-            
-            <div class="qr-code-container">
-                <img src="data:image/png;base64,{{ .Data.QRCode }}" alt="QR Code" class="qr-code">
-            </div>
-            
-            <div class="manual-entry">
-                <p>If you can't scan the QR code, enter this code manually in your app:</p>
-                <div class="secret-key">{{ .Data.TOTPSecret }}</div>
-            </div>
-            
-            <form action="/2fa/verify" method="POST">
-                <div class="form-group">
-                    <label for="code" class="form-label">Verification Code</label>
-                    <input type="text" name="code" id="code" class="form-control" 
-                           placeholder="Enter 6-digit code" required
-                           pattern="[0-9]{6}" maxlength="6">
-                    <small class="form-help">Enter the 6-digit code from your authenticator app</small>
-                </div>
-                
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary">Verify and Enable 2FA</button>
-                    <a href="/profile" class="btn btn-secondary">Cancel</a>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
+{{ define "styles" }}
 <style>
-.setup-2fa-page {
-    max-width: 600px;
-    margin: 0 auto;
-    margin-top: 30px;
-    margin-bottom: 30px;
-}
-
-.card-title {
+  .twofa-page {
+    max-width: 560px;
+    margin: 32px auto;
+  }
+  .twofa-page .page-head { margin-bottom: 24px; }
+  .twofa-card {
+    padding: 28px;
+    background: var(--bg-elev);
+    border: 1px solid var(--line-1);
+    box-shadow: 2px 2px 0 0 var(--line-1);
+  }
+  .twofa-steps {
+    list-style: none;
+    counter-reset: step;
+    padding: 0;
+    margin: 0 0 22px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--fg-1);
+  }
+  .twofa-steps li {
+    counter-increment: step;
+    padding: 8px 0 8px 36px;
+    position: relative;
+    border-top: 1px dashed var(--line-2);
+  }
+  .twofa-steps li:first-child { border-top: 0; }
+  .twofa-steps li::before {
+    content: counter(step, decimal-leading-zero);
+    position: absolute;
+    left: 0;
+    top: 8px;
+    font-size: 11px;
+    color: var(--fg-2);
+    letter-spacing: 0.06em;
+  }
+  .twofa-steps a { color: var(--fg-0); }
+  .qr-block {
     text-align: center;
-    margin-bottom: 20px;
-}
-
-.setup-instructions {
-    margin-bottom: 20px;
-}
-
-.qr-code-container {
-    text-align: center;
-    margin: 20px 0;
-}
-
-.qr-code {
-    max-width: 200px;
-    height: auto;
-}
-
-.manual-entry {
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 4px;
-    margin-bottom: 20px;
-}
-
-.secret-key {
-    font-family: monospace;
-    font-size: 1.2em;
-    background-color: #e9ecef;
-    padding: 10px;
-    border-radius: 4px;
-    text-align: center;
-    margin-top: 10px;
+    margin: 18px 0;
+    padding: 18px;
+    background: var(--bg-1);
+    border: 1px dashed var(--line-2);
+  }
+  .qr-block img { max-width: 200px; height: auto; display: inline-block; background: #fff; padding: 8px; }
+  .secret-block {
+    margin: 14px 0 22px;
+    padding: 14px;
+    background: var(--bg-1);
+    border: 1px dashed var(--line-2);
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .secret-block .label { display: block; margin-bottom: 6px; }
+  .secret-key {
+    font-family: var(--mono);
+    font-size: 16px;
+    letter-spacing: 0.05em;
     word-break: break-all;
-}
-
-.form-group {
-    margin-bottom: 20px;
-}
-
-.form-label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 500;
-}
-
-.form-control {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-.form-help {
-    display: block;
-    margin-top: 5px;
-    color: #666;
-}
-
-.btn {
-    margin-right: 10px;
-}
-
-.alert {
-    padding: 10px;
-    margin-bottom: 20px;
-    border-radius: 4px;
-}
-
-.alert-danger {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-}
+    color: var(--fg-0);
+  }
+  .code-input {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 24px;
+    letter-spacing: 0.4em;
+    font-weight: 700;
+    padding: 14px 12px;
+  }
+  .twofa-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+  }
 </style>
+{{ end }}
+
+{{ define "content" }}
+<div class="twofa-page" data-test="auth-2fa-setup">
+  <div class="page-head">
+    <div class="label">· ACCOUNT · A SECOND LOCK</div>
+    <h1>Add a second key</h1>
+    <p class="lede">Two-factor adds an extra step when you sign in. Scan the code below with an authenticator app, then confirm with a six-digit code.</p>
+  </div>
+
+  {{ if .Data.Error }}
+  <div class="alert alert-danger" style="margin-bottom: 18px;">
+    <span class="label">· error</span>
+    <span class="alert-message">{{ .Data.Error }}</span>
+  </div>
+  {{ end }}
+
+  <div class="twofa-card">
+    <ol class="twofa-steps">
+      <li>Install an authenticator app:
+        <a href="https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2" target="_blank" rel="noopener">Google Authenticator (Android)</a>,
+        <a href="https://apps.apple.com/us/app/google-authenticator/id388497605" target="_blank" rel="noopener">Google Authenticator (iOS)</a>,
+        or <a href="https://authy.com/download/" target="_blank" rel="noopener">Authy</a>.
+      </li>
+      <li>Scan the QR code below.</li>
+      <li>Enter the 6-digit code from your app.</li>
+    </ol>
+
+    <div class="qr-block">
+      <img src="data:image/png;base64,{{ .Data.QRCode }}" alt="QR code for two-factor setup">
+    </div>
+
+    <div class="secret-block">
+      <span class="label">· OR ENTER MANUALLY</span>
+      <div class="secret-key">{{ .Data.TOTPSecret }}</div>
+    </div>
+
+    <form action="/2fa/verify" method="POST">
+      <div class="field">
+        <div class="field-label"><span class="label">· VERIFICATION CODE</span></div>
+        <input type="text" name="code" id="code" class="input code-input"
+               placeholder="000000" required
+               pattern="[0-9]{6}" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
+        <div class="field-help">Six digits, refreshed every thirty seconds.</div>
+      </div>
+
+      <div class="twofa-actions">
+        <button type="submit" class="btn primary">Verify and enable →</button>
+        <a href="/profile" class="btn ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
 {{ end }}
