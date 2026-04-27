@@ -3,7 +3,7 @@ version: "3.8"
 services:
   deadmanswitch:
     # The image tag will be replaced by GitHub Actions workflow in the deploy branch
-    image: ghcr.io/korjavin/deadmanswitch:latest
+    image: ghcr.io/korjavin/deadmanswitch:b84743203fa2a3de75ab772a95f0a3d4cde91eea
     container_name: deadmanswitch
     networks:
       - traefik_network
