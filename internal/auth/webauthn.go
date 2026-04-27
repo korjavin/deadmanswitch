@@ -26,12 +26,25 @@ type WebAuthnConfig struct {
 	RPOrigin      string // Relying Party origin (URL)
 }
 
+// sessionEntry wraps a *webauthn.SessionData with a server-enforced expiry so
+// abandoned begin-only flows cannot leak memory in the in-memory session map.
+// The browser cookie's MaxAge does not delete server-side state on its own, so
+// this struct is what the cleanup sweeper checks.
+type sessionEntry struct {
+	data    *webauthn.SessionData
+	expires time.Time
+}
+
+// sessionTTL bounds how long a server-side WebAuthn session can sit in the
+// in-memory map before it's swept. It matches the cookie MaxAge of 5 minutes.
+const sessionTTL = 5 * time.Minute
+
 // WebAuthnService handles WebAuthn operations
 type WebAuthnService struct {
 	webAuthn *webauthn.WebAuthn
 	repo     storage.Repository
-	sessions map[string]*webauthn.SessionData // In-memory session store
-	mutex    sync.Mutex                       // Mutex to protect the sessions map
+	sessions map[string]sessionEntry // In-memory session store
+	mutex    sync.Mutex              // Mutex to protect the sessions map
 }
 
 // NewWebAuthnService creates a new WebAuthnService
@@ -50,8 +63,49 @@ func NewWebAuthnService(config WebAuthnConfig, repo storage.Repository) (*WebAut
 	return &WebAuthnService{
 		webAuthn: w,
 		repo:     repo,
-		sessions: make(map[string]*webauthn.SessionData),
+		sessions: make(map[string]sessionEntry),
 	}, nil
+}
+
+// storeSession records a WebAuthn session under the given ID with an expiry,
+// which the next cleanupExpiredSessions sweep will use to evict abandoned
+// entries.
+func (s *WebAuthnService) storeSession(id string, data *webauthn.SessionData) {
+	s.mutex.Lock()
+	s.sessions[id] = sessionEntry{data: data, expires: time.Now().Add(sessionTTL)}
+	s.mutex.Unlock()
+}
+
+// takeSession atomically removes and returns the session data for id, mirroring
+// the original "pop on consume" semantics. Returns nil if the entry is missing
+// or has expired.
+func (s *WebAuthnService) takeSession(id string) *webauthn.SessionData {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	entry, ok := s.sessions[id]
+	if !ok {
+		return nil
+	}
+	delete(s.sessions, id)
+	if time.Now().After(entry.expires) {
+		return nil
+	}
+	return entry.data
+}
+
+// cleanupExpiredSessions removes session entries whose expiry has passed. Each
+// Begin* call invokes this so the conditional-UI auto-fetch (which posts on
+// every login page load, including from bots) cannot grow s.sessions
+// unboundedly.
+func (s *WebAuthnService) cleanupExpiredSessions() {
+	now := time.Now()
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	for id, entry := range s.sessions {
+		if now.After(entry.expires) {
+			delete(s.sessions, id)
+		}
+	}
 }
 
 // BeginRegistration starts the passkey registration process
@@ -96,10 +150,8 @@ func (s *WebAuthnService) BeginRegistration(ctx context.Context, user *models.Us
 	// Generate a unique session ID
 	sessionID := fmt.Sprintf("%s-%d", user.ID, time.Now().UnixNano())
 
-	// Store the session data in the sessions map
-	s.mutex.Lock()
-	s.sessions[sessionID] = sessionData
-	s.mutex.Unlock()
+	s.cleanupExpiredSessions()
+	s.storeSession(sessionID, sessionData)
 
 	// Set a cookie with the session ID
 	http.SetCookie(response, &http.Cookie{
@@ -130,18 +182,11 @@ func (s *WebAuthnService) FinishRegistration(ctx context.Context, user *models.U
 	sessionID := cookie.Value
 	log.Printf("Found WebAuthn session ID in cookie: %s", sessionID)
 
-	// Get the session data from the sessions map
-	s.mutex.Lock()
-	sessionData, ok := s.sessions[sessionID]
-	if !ok {
-		s.mutex.Unlock()
+	sessionData := s.takeSession(sessionID)
+	if sessionData == nil {
 		log.Printf("Error: webauthn session data not found for ID: %s", sessionID)
 		return nil, fmt.Errorf("webauthn session data not found for ID: %s", sessionID)
 	}
-
-	// Remove the session data from the map (one-time use)
-	delete(s.sessions, sessionID)
-	s.mutex.Unlock()
 
 	log.Printf("Session data found with challenge: %v", sessionData.Challenge)
 
@@ -255,6 +300,8 @@ func (s *WebAuthnService) FinishRegistration(ctx context.Context, user *models.U
 		LastUsedAt:      time.Now(),
 		Transports:      transports,
 		AttestationType: credential.AttestationType,
+		BackupEligible:  credential.Flags.BackupEligible,
+		BackupState:     credential.Flags.BackupState,
 	}
 
 	// Save the passkey to the database
@@ -344,10 +391,8 @@ func (s *WebAuthnService) BeginLogin(ctx context.Context, user *models.User, res
 	// Generate a unique session ID
 	sessionID := fmt.Sprintf("%s-%d", user.ID, time.Now().UnixNano())
 
-	// Store the session data in the sessions map
-	s.mutex.Lock()
-	s.sessions[sessionID] = sessionData
-	s.mutex.Unlock()
+	s.cleanupExpiredSessions()
+	s.storeSession(sessionID, sessionData)
 
 	// Set a cookie with the session ID
 	http.SetCookie(response, &http.Cookie{
@@ -370,18 +415,22 @@ func (s *WebAuthnService) BeginLogin(ctx context.Context, user *models.User, res
 // are populated — the authenticator presents a chooser of every passkey scoped
 // to the relying party and returns the userHandle so the server can resolve
 // the user during FinishDiscoverableLogin. The request is used to derive the
-// Secure cookie flag from r.TLS.
+// Secure cookie flag from r.TLS. UserVerification is required because this is
+// a passwordless flow — a credential that only proves user presence must not
+// complete login.
 func (s *WebAuthnService) BeginDiscoverableLogin(r *http.Request, w http.ResponseWriter) (*protocol.CredentialAssertion, error) {
-	options, sessionData, err := s.webAuthn.BeginDiscoverableLogin()
+	s.cleanupExpiredSessions()
+
+	options, sessionData, err := s.webAuthn.BeginDiscoverableLogin(
+		webauthn.WithUserVerification(protocol.VerificationRequired),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin discoverable login: %w", err)
 	}
 
 	sessionID := fmt.Sprintf("discover-%d", time.Now().UnixNano())
 
-	s.mutex.Lock()
-	s.sessions[sessionID] = sessionData
-	s.mutex.Unlock()
+	s.storeSession(sessionID, sessionData)
 
 	http.SetCookie(w, &http.Cookie{
 		Name:     "webauthn_session_id",
@@ -422,14 +471,10 @@ func (s *WebAuthnService) FinishDiscoverableLogin(ctx context.Context, r *http.R
 	}
 	sessionID := cookie.Value
 
-	s.mutex.Lock()
-	sessionData, ok := s.sessions[sessionID]
-	if !ok {
-		s.mutex.Unlock()
+	sessionData := s.takeSession(sessionID)
+	if sessionData == nil {
 		return nil, nil, fmt.Errorf("webauthn session data not found for ID: %s", sessionID)
 	}
-	delete(s.sessions, sessionID)
-	s.mutex.Unlock()
 
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
@@ -468,17 +513,6 @@ func (s *WebAuthnService) FinishDiscoverableLogin(ctx context.Context, r *http.R
 		return &discoverableUser{User: u, credentials: creds}, nil
 	}
 
-	// Note: the library compares credential.Flags.BackupEligible with the
-	// flag bits parsed from the authenticator response. Our Passkey model
-	// does not currently persist Flags, so getUserCredentials returns
-	// zero-valued Flags. For cloud-synced platform passkeys (iCloud
-	// Keychain, Google Password Manager, 1Password, etc.) the response
-	// will set BackupEligible=1 and the library will reject login with
-	// "BackupEligible flag inconsistency detected during login validation".
-	// Discovered during code review; verification is part of the post-
-	// completion smoke test on real devices and will be addressed by a
-	// follow-up that adds Flags persistence to the passkey schema.
-
 	credential, err := s.webAuthn.FinishDiscoverableLogin(handler, *sessionData, newRequest)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to finish discoverable login: %w", err)
@@ -491,6 +525,7 @@ func (s *WebAuthnService) FinishDiscoverableLogin(ctx context.Context, r *http.R
 
 	passkey.LastUsedAt = time.Now()
 	passkey.SignCount = credential.Authenticator.SignCount
+	passkey.BackupState = credential.Flags.BackupState
 	if err := s.repo.UpdatePasskey(ctx, passkey); err != nil {
 		log.Printf("failed to update passkey after discoverable login: %v", err)
 	}
@@ -511,18 +546,11 @@ func (s *WebAuthnService) FinishLogin(ctx context.Context, user *models.User, re
 	sessionID := cookie.Value
 	log.Printf("Found WebAuthn session ID in cookie: %s", sessionID)
 
-	// Get the session data from the sessions map
-	s.mutex.Lock()
-	sessionData, ok := s.sessions[sessionID]
-	if !ok {
-		s.mutex.Unlock()
+	sessionData := s.takeSession(sessionID)
+	if sessionData == nil {
 		log.Printf("Error: webauthn session data not found for ID: %s", sessionID)
 		return nil, fmt.Errorf("webauthn session data not found for ID: %s", sessionID)
 	}
-
-	// Remove the session data from the map (one-time use)
-	delete(s.sessions, sessionID)
-	s.mutex.Unlock()
 
 	log.Printf("Session data found with challenge: %v", sessionData.Challenge)
 
@@ -635,6 +663,10 @@ func (s *WebAuthnService) getUserCredentials(ctx context.Context, user *models.U
 			PublicKey:       passkey.PublicKey,
 			AttestationType: passkey.AttestationType,
 			Transport:       transports,
+			Flags: webauthn.CredentialFlags{
+				BackupEligible: passkey.BackupEligible,
+				BackupState:    passkey.BackupState,
+			},
 			Authenticator: webauthn.Authenticator{
 				AAGUID:    passkey.AAGUID,
 				SignCount: passkey.SignCount,

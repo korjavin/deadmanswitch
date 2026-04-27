@@ -273,7 +273,9 @@ func TestBeginRegistrationNilUser(t *testing.T) {
 }
 
 // TestBeginDiscoverableLogin asserts the returned options have an empty
-// allowCredentials list, a non-empty challenge, and the configured RPID.
+// allowCredentials list, a non-empty challenge, the configured RPID, and that
+// UserVerification is required for this passwordless flow so a credential that
+// only proves user presence cannot complete login.
 func TestBeginDiscoverableLogin(t *testing.T) {
 	repo := storage.NewMockRepository()
 	config := WebAuthnConfig{
@@ -304,6 +306,146 @@ func TestBeginDiscoverableLogin(t *testing.T) {
 	}
 	if options.Response.RelyingPartyID != config.RPID {
 		t.Errorf("Expected RPID %q, got %q", config.RPID, options.Response.RelyingPartyID)
+	}
+	if options.Response.UserVerification != protocol.VerificationRequired {
+		t.Errorf("Expected UserVerification %q, got %q",
+			protocol.VerificationRequired, options.Response.UserVerification)
+	}
+}
+
+// TestBeginDiscoverableLoginSessionUVRequired asserts the SessionData stored
+// in the in-memory map carries UserVerification=required, which is what the
+// library checks during FinishDiscoverableLogin to enforce the UV bit. Without
+// this, a credential that only proves user presence would complete a
+// passwordless login.
+func TestBeginDiscoverableLoginSessionUVRequired(t *testing.T) {
+	service, sessionID := newTestServiceWithSession(t)
+
+	service.mutex.Lock()
+	entry, ok := service.sessions[sessionID]
+	service.mutex.Unlock()
+	if !ok {
+		t.Fatalf("expected session %q stored", sessionID)
+	}
+	if entry.data.UserVerification != protocol.VerificationRequired {
+		t.Errorf("session UserVerification = %q, want %q",
+			entry.data.UserVerification, protocol.VerificationRequired)
+	}
+}
+
+// TestCleanupExpiredSessions verifies the sweeper drops entries whose expiry
+// has passed and leaves fresh entries alone. This is what keeps abandoned
+// conditional-UI begin calls from leaking memory: the login page now fires
+// /discover/begin on every load, so without expiry-based cleanup the
+// in-memory sessions map would grow without bound.
+func TestCleanupExpiredSessions(t *testing.T) {
+	repo := storage.NewMockRepository()
+	service, err := NewWebAuthnService(WebAuthnConfig{
+		RPDisplayName: "Test Service",
+		RPID:          "localhost",
+		RPOrigin:      "http://localhost:8080",
+	}, repo)
+	if err != nil {
+		t.Fatalf("Failed to create WebAuthnService: %v", err)
+	}
+
+	service.mutex.Lock()
+	service.sessions["fresh"] = sessionEntry{
+		data:    &webauthn.SessionData{Challenge: "fresh"},
+		expires: time.Now().Add(time.Minute),
+	}
+	service.sessions["stale"] = sessionEntry{
+		data:    &webauthn.SessionData{Challenge: "stale"},
+		expires: time.Now().Add(-time.Minute),
+	}
+	service.mutex.Unlock()
+
+	service.cleanupExpiredSessions()
+
+	service.mutex.Lock()
+	_, freshOK := service.sessions["fresh"]
+	_, staleOK := service.sessions["stale"]
+	service.mutex.Unlock()
+
+	if !freshOK {
+		t.Error("expected fresh session to remain after cleanup")
+	}
+	if staleOK {
+		t.Error("expected stale session to be evicted by cleanup")
+	}
+}
+
+// TestTakeSessionExpired ensures takeSession refuses to return data for an
+// entry past its expiry, even before the sweeper has run. This keeps an
+// attacker from replaying a long-abandoned cookie if the cleanup goroutine is
+// slow.
+func TestTakeSessionExpired(t *testing.T) {
+	repo := storage.NewMockRepository()
+	service, err := NewWebAuthnService(WebAuthnConfig{
+		RPDisplayName: "Test Service",
+		RPID:          "localhost",
+		RPOrigin:      "http://localhost:8080",
+	}, repo)
+	if err != nil {
+		t.Fatalf("Failed to create WebAuthnService: %v", err)
+	}
+
+	service.mutex.Lock()
+	service.sessions["expired"] = sessionEntry{
+		data:    &webauthn.SessionData{Challenge: "expired"},
+		expires: time.Now().Add(-time.Second),
+	}
+	service.mutex.Unlock()
+
+	if got := service.takeSession("expired"); got != nil {
+		t.Errorf("expected nil for expired session, got %+v", got)
+	}
+	service.mutex.Lock()
+	_, stillThere := service.sessions["expired"]
+	service.mutex.Unlock()
+	if stillThere {
+		t.Error("expected expired session to be removed by takeSession")
+	}
+}
+
+// TestGetUserCredentialsRestoresFlags verifies that BackupEligible/BackupState
+// stored on the Passkey are propagated into the webauthn.Credential struct.
+// go-webauthn rejects login when the stored BackupEligible disagrees with the
+// assertion, so cloud-synced passkeys (iCloud Keychain, Google Password
+// Manager, 1Password) require these flags to be persisted and restored.
+func TestGetUserCredentialsRestoresFlags(t *testing.T) {
+	repo := storage.NewMockRepository()
+	service, err := NewWebAuthnService(WebAuthnConfig{
+		RPDisplayName: "Test Service",
+		RPID:          "localhost",
+		RPOrigin:      "http://localhost:8080",
+	}, repo)
+	if err != nil {
+		t.Fatalf("Failed to create WebAuthnService: %v", err)
+	}
+
+	user := &models.User{ID: "user-flags", Email: "flags@example.com"}
+	repo.Passkeys = append(repo.Passkeys, &models.Passkey{
+		ID:             "pk-flags",
+		UserID:         user.ID,
+		CredentialID:   []byte("cred-flags"),
+		PublicKey:      []byte("pk"),
+		BackupEligible: true,
+		BackupState:    true,
+	})
+
+	creds, err := service.getUserCredentials(context.Background(), user)
+	if err != nil {
+		t.Fatalf("getUserCredentials failed: %v", err)
+	}
+	if len(creds) != 1 {
+		t.Fatalf("expected 1 credential, got %d", len(creds))
+	}
+	if !creds[0].Flags.BackupEligible {
+		t.Error("expected restored BackupEligible=true")
+	}
+	if !creds[0].Flags.BackupState {
+		t.Error("expected restored BackupState=true")
 	}
 }
 
@@ -359,12 +501,12 @@ func TestBeginDiscoverableLoginSetsSessionCookie(t *testing.T) {
 	if !ok {
 		t.Fatalf("Expected session %q to be stored in sessions map", sessionCookie.Value)
 	}
-	if stored == nil {
+	if stored.data == nil {
 		t.Fatal("Expected non-nil stored session data")
 	}
-	if len(stored.AllowedCredentialIDs) != 0 {
+	if len(stored.data.AllowedCredentialIDs) != 0 {
 		t.Errorf("Expected empty AllowedCredentialIDs in session, got %d",
-			len(stored.AllowedCredentialIDs))
+			len(stored.data.AllowedCredentialIDs))
 	}
 }
 
@@ -658,9 +800,7 @@ func TestWebAuthnSessionHandling(t *testing.T) {
 	}
 
 	// Store the session
-	service.mutex.Lock()
-	service.sessions[sessionID] = sessionData
-	service.mutex.Unlock()
+	service.storeSession(sessionID, sessionData)
 
 	// Set a cookie with the session ID
 	http.SetCookie(rw, &http.Cookie{

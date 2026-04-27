@@ -183,11 +183,12 @@ function serializeAssertion(credential) {
     };
 }
 
-async function fetchDiscoverableOptions() {
+async function fetchDiscoverableOptions(signal) {
     const beginResponse = await fetch('/login/passkey/discover/begin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: '{}'
+        body: '{}',
+        signal
     });
     if (!beginResponse.ok) {
         throw new Error('Failed to begin login');
@@ -218,10 +219,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const statusDiv = document.getElementById('passkey-status');
 
     // Tracks the in-flight conditional-UI request so the explicit-click handler
-    // can cancel it before issuing its own /discover/begin call. Without this,
-    // both flows write to the same webauthn_session_id cookie and the second
-    // begin call orphans the first session, producing a confusing
-    // "session data not found" error.
+    // can cancel both the /discover/begin fetch and the navigator.credentials.get
+    // before issuing its own. The abort signal is wired into the fetch so a
+    // late-resolving conditional begin response cannot overwrite the click
+    // handler's webauthn_session_id cookie and bind login validation to the
+    // wrong challenge.
     let conditionalAbort = null;
 
     function showStatus(type, message) {
@@ -282,7 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const available = await PublicKeyCredential.isConditionalMediationAvailable();
             if (!available) return;
             conditionalAbort = new AbortController();
-            const opts = await fetchDiscoverableOptions();
+            const opts = await fetchDiscoverableOptions(conditionalAbort.signal);
             const credential = await navigator.credentials.get({
                 publicKey: opts.publicKey,
                 mediation: 'conditional',

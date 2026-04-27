@@ -7,6 +7,13 @@ import (
 )
 
 // Passkey represents a WebAuthn credential for a user
+//
+// BackupEligible/BackupState come from the authenticator's flags at registration
+// time (BE/BS bits, see WebAuthn §6.1.4). go-webauthn rejects login when the
+// stored BackupEligible value disagrees with the assertion, which is why these
+// must be persisted — cloud-synced passkeys (iCloud Keychain, Google Password
+// Manager, 1Password) report BackupEligible=true, and an unset stored value
+// would fail validation.
 type Passkey struct {
 	ID              string    `json:"id"`
 	UserID          string    `json:"user_id"`
@@ -19,6 +26,8 @@ type Passkey struct {
 	LastUsedAt      time.Time `json:"last_used_at"`
 	Transports      []string  `json:"transports,omitempty"`
 	AttestationType string    `json:"attestation_type"`
+	BackupEligible  bool      `json:"backup_eligible"`
+	BackupState     bool      `json:"backup_state"`
 }
 
 // WebAuthnID implements webauthn.User interface

@@ -29,12 +29,14 @@ func (r *SQLiteRepository) CreatePasskey(ctx context.Context, passkey *models.Pa
 	_, err = r.db.ExecContext(ctx, `
 		INSERT INTO passkeys (
 			id, user_id, credential_id, public_key, aaguid, sign_count,
-			name, created_at, last_used_at, transports, attestation_type
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			name, created_at, last_used_at, transports, attestation_type,
+			backup_eligible, backup_state
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`,
 		passkey.ID, passkey.UserID, passkey.CredentialID, passkey.PublicKey,
 		passkey.AAGUID, passkey.SignCount, passkey.Name, passkey.CreatedAt,
 		passkey.LastUsedAt, string(transportsJSON), passkey.AttestationType,
+		passkey.BackupEligible, passkey.BackupState,
 	)
 
 	if err != nil {
@@ -52,13 +54,15 @@ func (r *SQLiteRepository) GetPasskeyByID(ctx context.Context, id string) (*mode
 	err := r.db.QueryRowContext(ctx, `
 		SELECT
 			id, user_id, credential_id, public_key, aaguid, sign_count,
-			name, created_at, last_used_at, transports, attestation_type
+			name, created_at, last_used_at, transports, attestation_type,
+			backup_eligible, backup_state
 		FROM passkeys
 		WHERE id = ?
 	`, id).Scan(
 		&passkey.ID, &passkey.UserID, &passkey.CredentialID, &passkey.PublicKey,
 		&passkey.AAGUID, &passkey.SignCount, &passkey.Name, &passkey.CreatedAt,
 		&passkey.LastUsedAt, &transportsJSON, &passkey.AttestationType,
+		&passkey.BackupEligible, &passkey.BackupState,
 	)
 
 	if err != nil {
@@ -86,13 +90,15 @@ func (r *SQLiteRepository) GetPasskeyByCredentialID(ctx context.Context, credent
 	err := r.db.QueryRowContext(ctx, `
 		SELECT
 			id, user_id, credential_id, public_key, aaguid, sign_count,
-			name, created_at, last_used_at, transports, attestation_type
+			name, created_at, last_used_at, transports, attestation_type,
+			backup_eligible, backup_state
 		FROM passkeys
 		WHERE credential_id = ?
 	`, credentialID).Scan(
 		&passkey.ID, &passkey.UserID, &passkey.CredentialID, &passkey.PublicKey,
 		&passkey.AAGUID, &passkey.SignCount, &passkey.Name, &passkey.CreatedAt,
 		&passkey.LastUsedAt, &transportsJSON, &passkey.AttestationType,
+		&passkey.BackupEligible, &passkey.BackupState,
 	)
 
 	if err != nil {
@@ -117,7 +123,8 @@ func (r *SQLiteRepository) ListPasskeysByUserID(ctx context.Context, userID stri
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT
 			id, user_id, credential_id, public_key, aaguid, sign_count,
-			name, created_at, last_used_at, transports, attestation_type
+			name, created_at, last_used_at, transports, attestation_type,
+			backup_eligible, backup_state
 		FROM passkeys
 		WHERE user_id = ?
 		ORDER BY created_at DESC
@@ -136,6 +143,7 @@ func (r *SQLiteRepository) ListPasskeysByUserID(ctx context.Context, userID stri
 			&passkey.ID, &passkey.UserID, &passkey.CredentialID, &passkey.PublicKey,
 			&passkey.AAGUID, &passkey.SignCount, &passkey.Name, &passkey.CreatedAt,
 			&passkey.LastUsedAt, &transportsJSON, &passkey.AttestationType,
+			&passkey.BackupEligible, &passkey.BackupState,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan passkey row: %w", err)
 		}
@@ -173,11 +181,14 @@ func (r *SQLiteRepository) UpdatePasskey(ctx context.Context, passkey *models.Pa
 			name = ?,
 			last_used_at = ?,
 			transports = ?,
-			attestation_type = ?
+			attestation_type = ?,
+			backup_eligible = ?,
+			backup_state = ?
 		WHERE id = ?
 	`,
 		passkey.PublicKey, passkey.AAGUID, passkey.SignCount, passkey.Name,
 		passkey.LastUsedAt, string(transportsJSON), passkey.AttestationType,
+		passkey.BackupEligible, passkey.BackupState,
 		passkey.ID,
 	)
 
@@ -211,7 +222,8 @@ func (r *SQLiteRepository) ListPasskeys(ctx context.Context) ([]*models.Passkey,
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT
 			id, user_id, credential_id, public_key, aaguid, sign_count,
-			name, created_at, last_used_at, transports, attestation_type
+			name, created_at, last_used_at, transports, attestation_type,
+			backup_eligible, backup_state
 		FROM passkeys
 		ORDER BY created_at DESC
 	`)
@@ -229,6 +241,7 @@ func (r *SQLiteRepository) ListPasskeys(ctx context.Context) ([]*models.Passkey,
 			&passkey.ID, &passkey.UserID, &passkey.CredentialID, &passkey.PublicKey,
 			&passkey.AAGUID, &passkey.SignCount, &passkey.Name, &passkey.CreatedAt,
 			&passkey.LastUsedAt, &transportsJSON, &passkey.AttestationType,
+			&passkey.BackupEligible, &passkey.BackupState,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan passkey row: %w", err)
 		}
