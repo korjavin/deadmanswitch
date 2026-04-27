@@ -104,7 +104,11 @@ func (h *ProfileHandler) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		Title:           "My Profile",
 		ActivePage:      "profile",
 		IsAuthenticated: true,
-		Data:            templateData,
+		User: map[string]interface{}{
+			"Email": fullUser.Email,
+			"Name":  fullUser.Email,
+		},
+		Data: templateData,
 	}
 
 	data.SetHeartbeat(fullUser)

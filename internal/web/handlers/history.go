@@ -95,6 +95,10 @@ func (h *HistoryHandler) HandleHistory(w http.ResponseWriter, r *http.Request) {
 		Title:           "Activity History",
 		ActivePage:      "history",
 		IsAuthenticated: true,
+		User: map[string]interface{}{
+			"Email": user.Email,
+			"Name":  user.Email,
+		},
 		Data: map[string]interface{}{
 			"User":       map[string]interface{}{"Email": user.Email},
 			"Activities": activities,

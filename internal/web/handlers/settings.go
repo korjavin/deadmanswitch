@@ -42,6 +42,10 @@ func (h *SettingsHandler) HandleSettings(w http.ResponseWriter, r *http.Request)
 		Title:           "Account Settings",
 		ActivePage:      "settings",
 		IsAuthenticated: true,
+		User: map[string]interface{}{
+			"Email": user.Email,
+			"Name":  user.Email,
+		},
 		Data: map[string]interface{}{
 			"User":     user,
 			"Settings": settingsData,
